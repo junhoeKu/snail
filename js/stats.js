@@ -27,6 +27,7 @@ const StatsModule = (function () {
       document.getElementById('stats-name').textContent = '???';
       document.getElementById('stats-level').textContent = '-';
       document.getElementById('stats-stage').textContent = '알';
+      document.getElementById('stats-traits').textContent = '';
       document.getElementById('exp-text').textContent = '- / -';
       document.getElementById('hunger-text').textContent = '-';
       document.getElementById('happiness-text').textContent = '-';
@@ -34,12 +35,20 @@ const StatsModule = (function () {
       _setBar('bar-hunger', 0);
       _setBar('bar-happiness', 0);
       document.getElementById('stats-next').textContent = '알을 부화시키면 스탯이 표시돼요.';
+      _renderJournal();
       return;
     }
 
     document.getElementById('stats-name').textContent = snail.name;
     document.getElementById('stats-level').textContent = snail.level;
     document.getElementById('stats-stage').textContent = GAME.STAGES[snail.stage].label;
+
+    const personality = GAME.PERSONALITIES[snail.personality];
+    const variant = GAME.VARIANTS[snail.color || 'brown'];
+    document.getElementById('stats-traits').textContent =
+      '성격: ' + (personality ? personality.label : '?') +
+      ' · 껍질: ' + (variant ? variant.label : '갈색') +
+      (variant && variant.id === 'golden' ? ' ✨' : '');
 
     const expNeeded = GAME.expToNext(snail.level);
     document.getElementById('exp-text').textContent = snail.exp + ' / ' + expNeeded;
@@ -52,6 +61,40 @@ const StatsModule = (function () {
     _setBar('bar-happiness', snail.happiness);
 
     document.getElementById('stats-next').textContent = _nextStageText(snail);
+    _renderJournal();
+  }
+
+  function _journalTime(ts) {
+    const d = new Date(ts);
+    return (d.getMonth() + 1) + '/' + d.getDate() + ' ' +
+      String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  }
+
+  /** 성장 일지 타임라인 (최근 순) */
+  function _renderJournal() {
+    const list = document.getElementById('journal-list');
+    list.innerHTML = '';
+
+    const entries = DB.Journal.get().slice().reverse();
+    if (entries.length === 0) {
+      const li = document.createElement('li');
+      li.className = 'journal-empty';
+      li.textContent = '아직 기록이 없어요. 함께한 순간들이 여기에 쌓여요.';
+      list.appendChild(li);
+      return;
+    }
+
+    entries.forEach(function (entry) {
+      const li = document.createElement('li');
+      const time = document.createElement('span');
+      time.className = 'journal-date';
+      time.textContent = _journalTime(entry.ts);
+      const text = document.createElement('span');
+      text.textContent = entry.text;
+      li.appendChild(time);
+      li.appendChild(text);
+      list.appendChild(li);
+    });
   }
 
   return { render: render };

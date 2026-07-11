@@ -69,9 +69,31 @@ body[data-background="garden"] {
   --body-dark: #857053;
 }
 
-.snail-sprite.stage-adult {
-  --shell-light: #e6c47c;
-  --shell-mid: #bb8a3e;
-  --shell-dark: #7c561f;
-  --shell-line: #5d3f14;
+/* 껍질 변이 5종 (부화 시 결정 — snail.color) */
+.snail-sprite.variant-gray {
+  --shell-light: #cfc9bd;
+  --shell-mid: #948d7f;
+  --shell-dark: #5f594e;
+  --shell-line: #464038;
+}
+
+.snail-sprite.variant-russet {
+  --shell-light: #dda27a;
+  --shell-mid: #ab6a42;
+  --shell-dark: #713f20;
+  --shell-line: #572f16;
+}
+
+.snail-sprite.variant-olive {
+  --shell-light: #c9cb90;
+  --shell-mid: #8f9354;
+  --shell-dark: #5c6032;
+  --shell-line: #464a25;
+}
+
+.snail-sprite.variant-golden {
+  --shell-light: #f2d787;
+  --shell-mid: #d2a437;
+  --shell-dark: #8f6a15;
+  --shell-line: #6f5210;
 }

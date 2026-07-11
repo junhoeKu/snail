@@ -44,8 +44,12 @@ const HomeModule = (function () {
     if (isEgg) return;
 
     const stage = GAME.STAGES[snail.stage];
-    // 스프라이트는 인라인 SVG — 단계별 크기/색은 stage-* 클래스가 제어한다
-    document.getElementById('snail-sprite').className = 'snail-sprite stage-' + snail.stage;
+    // 스프라이트는 인라인 SVG — 단계별 크기, 변이 색, 컨디션 표정은 클래스가 제어한다
+    const condition = GAME.conditionOf(snail);
+    document.getElementById('snail-sprite').className =
+      'snail-sprite stage-' + snail.stage +
+      ' variant-' + (snail.color || 'brown') +
+      (condition.id !== 'normal' ? ' cond-' + condition.id : '');
 
     document.getElementById('chip-name-level').textContent =
       snail.name + ' · Lv.' + snail.level + ' ' + stage.label;
@@ -142,20 +146,24 @@ const HomeModule = (function () {
       if (ev === 'fed') _popSprite();
 
       if (ev === 'levelup') {
-        Toast.show('🎉 레벨 업! Lv.' + DB.Snail.get().level);
+        const level = DB.Snail.get().level;
+        Toast.show('🎉 레벨 업! Lv.' + level);
+        DB.Journal.add('levelup', 'Lv.' + level + '이 되었어요!');
       }
 
       if (ev === 'stage_up') {
         const snail = DB.Snail.get();
         const messages = {
           junior: '껍질이 커졌습니다!',
-          adult: '색이 변했어요! 어엿한 성체가 되었습니다.'
+          adult: '색이 짙어졌어요! 어엿한 성체가 되었습니다.'
         };
         Toast.celebrate({
           emoji: GAME.STAGES[snail.stage].emoji,
           title: 'Lv ' + snail.level + ' — ' + GAME.STAGES[snail.stage].label + ' 달팽이',
           message: messages[snail.stage] || '성장했어요!'
         });
+        DB.Journal.add('stage_up',
+          GAME.STAGES[snail.stage].label + ' 달팽이로 자랐어요. ' + (messages[snail.stage] || ''));
       }
     });
   }
@@ -183,11 +191,21 @@ const HomeModule = (function () {
     player.last_seen = DB.now();
     DB.Player.save(player);
 
+    // 성장 일지: 탄생 + 변이 + 성격
+    DB.Journal.add('hatch', result.snail.name + '(이)가 알을 깨고 태어났어요!');
+    const variant = GAME.VARIANTS[result.snail.color];
+    if (variant && variant.id !== 'brown') {
+      DB.Journal.add('variant', (variant.id === 'golden' ? '반짝이는 황금빛' : variant.label) +
+        ' 껍질을 가지고 태어났어요!');
+    }
+    DB.Journal.add('personality',
+      '성격은 "' + GAME.PERSONALITIES[result.snail.personality].label + '"인 것 같아요.');
+
     render();
     StatsModule.render();
     HabitatModule.onHatched();
     Toast.celebrate({
-      emoji: '🐌',
+      emoji: variant && variant.id === 'golden' ? '✨' : '🐌',
       title: '부화 성공!',
       message: result.snail.name + '(이)가 태어났어요. 잘 돌봐주세요!'
     });

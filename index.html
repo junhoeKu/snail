@@ -106,14 +106,15 @@
 
       </section>
 
-      <!-- 스탯 -->
+      <!-- 달팽이 (스탯 + 성장 일지) -->
       <section id="screen-stats" class="screen">
         <div class="card">
-          <h2 class="screen-title"><i class="fa-solid fa-chart-simple"></i> 스탯</h2>
+          <h2 class="screen-title"><i class="fa-solid fa-chart-simple"></i> 달팽이</h2>
           <p class="stats-identity">
             <strong id="stats-name">-</strong> · Lv.<span id="stats-level">-</span>
             <span id="stats-stage"></span> 달팽이
           </p>
+          <p id="stats-traits" class="stats-traits"></p>
 
           <div class="stat">
             <div class="stat-head"><span><i class="fa-solid fa-star"></i> 경험치</span><span id="exp-text">0 / 20</span></div>
@@ -129,6 +130,9 @@
           </div>
 
           <p id="stats-next" class="stats-next"></p>
+
+          <h3 class="journal-title"><i class="fa-solid fa-book-open"></i> 성장 일지</h3>
+          <ul id="journal-list" class="journal-list"></ul>
         </div>
       </section>
 
@@ -182,7 +186,7 @@
     <!-- 하단 탭 바 -->
     <nav class="tab-bar">
       <button class="tab" data-screen="stats">
-        <i class="fa-solid fa-chart-simple"></i><span>스탯</span>
+        <i class="fa-solid fa-chart-simple"></i><span>달팽이</span>
       </button>
       <button class="tab" data-screen="shop">
         <i class="fa-solid fa-store"></i><span>상점</span>

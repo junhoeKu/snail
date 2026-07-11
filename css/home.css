@@ -173,7 +173,28 @@ body[data-weather="fog"] .snail-habitat::before {
 
 .snail-sprite.stage-baby svg { width: 62px; }
 .snail-sprite.stage-junior svg { width: 92px; }
-.snail-sprite.stage-adult svg { width: 114px; }
+
+/* 성체: 최대 크기 + 색이 짙어짐 */
+.snail-sprite.stage-adult svg {
+  width: 114px;
+  filter: drop-shadow(0 2px 2px rgba(20, 18, 10, 0.2)) saturate(1.3);
+}
+
+/* 황금 변이: 은은한 반짝임 */
+.snail-sprite.variant-golden svg {
+  animation: golden-glow 2.6s ease-in-out infinite;
+}
+
+@keyframes golden-glow {
+  0%, 100% {
+    filter: drop-shadow(0 2px 2px rgba(20, 18, 10, 0.2))
+            drop-shadow(0 0 4px rgba(242, 215, 135, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 2px 2px rgba(20, 18, 10, 0.2))
+            drop-shadow(0 0 10px rgba(242, 215, 135, 0.85));
+  }
+}
 
 .snail-sprite.pop {
   animation: sprite-pop 0.5s ease;

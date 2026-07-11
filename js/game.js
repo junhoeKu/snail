@@ -97,6 +97,15 @@ const GAME = (function () {
     sleepy: { id: 'sleepy', label: '잠꾸러기', chance: 0.25, seekFactor: 1, idleFactor: 1, napFactor: 2 }
   };
 
+  /** 껍질 변이 (부화 시 랜덤 — 수집의 씨앗, 도감/세대 교체는 5차) */
+  const VARIANTS = {
+    brown: { id: 'brown', label: '갈색', chance: 0.55 },
+    gray: { id: 'gray', label: '회갈색', chance: 0.18 },
+    russet: { id: 'russet', label: '적갈색', chance: 0.15 },
+    olive: { id: 'olive', label: '올리브', chance: 0.10 },
+    golden: { id: 'golden', label: '황금', chance: 0.02 }
+  };
+
   /** 가중치 테이블에서 하나 추첨 */
   function _pickWeighted(table, roll) {
     const keys = Object.keys(table);
@@ -110,6 +119,10 @@ const GAME = (function () {
 
   function rollPersonality(rng) {
     return _pickWeighted(PERSONALITIES, (rng || Math.random)());
+  }
+
+  function rollVariant(rng) {
+    return _pickWeighted(VARIANTS, (rng || Math.random)());
   }
 
   /** 날짜 키 → 날씨 id (결정적 해시: 맑음 60% / 비 25% / 안개 15%) */
@@ -202,6 +215,7 @@ const GAME = (function () {
     s.hunger = CONFIG.HATCH_HUNGER;
     s.happiness = CONFIG.HATCH_HAPPINESS;
     s.personality = rollPersonality(rng);
+    s.color = rollVariant(rng);
     events.push('hatched');
     return { snail: s, events: events };
   }
@@ -498,10 +512,12 @@ const GAME = (function () {
     STAGES: STAGES,
     WEATHER: WEATHER,
     PERSONALITIES: PERSONALITIES,
+    VARIANTS: VARIANTS,
     MISSION_DEFS: MISSION_DEFS,
     weatherFor: weatherFor,
     conditionOf: conditionOf,
     rollPersonality: rollPersonality,
+    rollVariant: rollVariant,
     applyStreak: applyStreak,
     recordMission: recordMission,
     missionProgress: missionProgress,
