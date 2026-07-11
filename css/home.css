@@ -183,6 +183,22 @@
   right: 12px;
 }
 
+.chip-missions {
+  top: auto;
+  bottom: 24px;
+  left: 12px;
+  cursor: pointer;
+}
+
+.chip-missions.all-done {
+  background: rgba(150, 180, 120, 0.75);
+  color: #fff;
+}
+
+.chip-missions.all-done i {
+  color: #fff;
+}
+
 .fab-group {
   position: absolute;
   right: 16px;

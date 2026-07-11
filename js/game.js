@@ -29,6 +29,16 @@ const GAME = (function () {
     DAILY_COINS: 20,
     FOOD_PRICE: 10,
 
+    // 출석 스트릭
+    STREAK_BONUS_PER_DAY: 2,   // 연속 1일당 추가 코인
+    STREAK_BONUS_CAP: 20,      // 스트릭 보너스 상한
+    STREAK_WEEKLY_FOOD: 3,     // 7일 연속마다 상추 지급
+
+    // 데일리 미션
+    MISSION_REWARD_COINS: 10,  // 미션 1개 달성 보상
+    MISSION_BONUS_COINS: 20,   // 3개 완주 보너스 코인
+    MISSION_BONUS_FOOD: 1,     // 3개 완주 보너스 상추
+
     // 성장
     EXP_PER_LEVEL: 20,
 
@@ -47,6 +57,13 @@ const GAME = (function () {
 
     STAT_MIN: 0,
     STAT_MAX: 100
+  };
+
+  /** 데일리 미션 정의 (UI 라벨/목표 공용) */
+  const MISSION_DEFS = {
+    feed: { id: 'feed', label: '밥 챙겨주기', goal: 2 },
+    walk: { id: 'walk', label: '산책 다녀오기', goal: 1 },
+    pet: { id: 'pet', label: '쓰다듬어주기', goal: 1 }
   };
 
   const STAGES = {
@@ -190,23 +207,109 @@ const GAME = (function () {
     return { snail: s, player: p, events: events };
   }
 
+  /** YYYY-MM-DD의 하루 전 날짜 키 (정오 기준 계산으로 DST 이슈 회피) */
+  function _prevDayKey(dateKey) {
+    const d = new Date(dateKey + 'T12:00:00');
+    d.setDate(d.getDate() - 1);
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return d.getFullYear() + '-' + month + '-' + day;
+  }
+
   /**
-   * 일일 접속 보상 (하루 1회, 날짜 키 YYYY-MM-DD 기준)
-   * @returns {{player: object, events: string[]}}
+   * 출석 스트릭 갱신 + 접속 보상 (하루 1회).
+   * 어제 접속했으면 스트릭 +1, 끊겼으면 조용히 1일차부터 (페널티 없음).
+   * @returns {{player: object, events: string[], coins: number, food: number, streak: number}}
    */
-  function claimDaily(player, todayKey) {
+  function applyStreak(player, todayKey) {
     const p = _clone(player);
     const events = [];
 
     if (p.last_daily_reward === todayKey) {
       events.push('already_claimed');
-      return { player: p, events: events };
+      return { player: p, events: events, coins: 0, food: 0, streak: p.streak ? p.streak.count : 0 };
     }
 
-    p.coins += CONFIG.DAILY_COINS;
+    const prev = p.streak && p.streak.last_date;
+    const count = (prev === _prevDayKey(todayKey)) ? p.streak.count + 1 : 1;
+    p.streak = { count: count, last_date: todayKey };
+
+    const bonus = Math.min((count - 1) * CONFIG.STREAK_BONUS_PER_DAY, CONFIG.STREAK_BONUS_CAP);
+    const coins = CONFIG.DAILY_COINS + bonus;
+    const food = (count % 7 === 0) ? CONFIG.STREAK_WEEKLY_FOOD : 0;
+
+    p.coins += coins;
+    p.food += food;
     p.last_daily_reward = todayKey;
     events.push('daily_claimed');
-    return { player: p, events: events };
+    if (food > 0) events.push('streak_weekly');
+    return { player: p, events: events, coins: coins, food: food, streak: count };
+  }
+
+  /** 오늘 날짜 기준 미션 상태 (지난 날짜면 초기 상태 반환) */
+  function _missionsFor(player, todayKey) {
+    const m = player.missions;
+    if (m && m.date === todayKey) return _clone(m);
+    return { date: todayKey, feed: 0, walk: 0, pet: 0, bonus_given: false };
+  }
+
+  /**
+   * 미션 진행 기록 + 달성/완주 보상 자동 지급
+   * @param {string} kind 'feed' | 'walk' | 'pet'
+   * @returns {{player: object, events: string[], coins: number, food: number}}
+   */
+  function recordMission(player, kind, todayKey) {
+    const p = _clone(player);
+    const events = [];
+    let coins = 0;
+    let food = 0;
+
+    const def = MISSION_DEFS[kind];
+    if (!def) return { player: p, events: events, coins: 0, food: 0 };
+
+    const m = _missionsFor(p, todayKey);
+    const doneBefore = m[kind] >= def.goal;
+    m[kind] += 1;
+
+    if (!doneBefore && m[kind] >= def.goal) {
+      coins += CONFIG.MISSION_REWARD_COINS;
+      events.push('mission_done');
+    }
+
+    const allDone = Object.keys(MISSION_DEFS).every(function (k) {
+      return m[k] >= MISSION_DEFS[k].goal;
+    });
+    if (allDone && !m.bonus_given) {
+      m.bonus_given = true;
+      coins += CONFIG.MISSION_BONUS_COINS;
+      food += CONFIG.MISSION_BONUS_FOOD;
+      events.push('mission_all_done');
+    }
+
+    p.coins += coins;
+    p.food += food;
+    p.missions = m;
+    return { player: p, events: events, coins: coins, food: food };
+  }
+
+  /**
+   * 미션 진행 요약 (UI용)
+   * @returns {{done: number, total: number, allDone: boolean, items: object[]}}
+   */
+  function missionProgress(player, todayKey) {
+    const m = _missionsFor(player, todayKey);
+    const items = Object.keys(MISSION_DEFS).map(function (k) {
+      const def = MISSION_DEFS[k];
+      return {
+        id: k,
+        label: def.label,
+        count: Math.min(m[k], def.goal),
+        goal: def.goal,
+        done: m[k] >= def.goal
+      };
+    });
+    const done = items.filter(function (it) { return it.done; }).length;
+    return { done: done, total: items.length, allDone: done === items.length, items: items };
   }
 
   /**
@@ -306,13 +409,16 @@ const GAME = (function () {
   return {
     CONFIG: CONFIG,
     STAGES: STAGES,
+    MISSION_DEFS: MISSION_DEFS,
+    applyStreak: applyStreak,
+    recordMission: recordMission,
+    missionProgress: missionProgress,
     stageForLevel: stageForLevel,
     expToNext: expToNext,
     gainExp: gainExp,
     hatch: hatch,
     feed: feed,
     walk: walk,
-    claimDaily: claimDaily,
     applyTimeDecay: applyTimeDecay,
     summarizeAway: summarizeAway,
     buyFood: buyFood

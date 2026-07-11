@@ -120,12 +120,18 @@ const App = (function () {
     document.body.dataset.background = player.background || 'default';
   }
 
-  /** 일일 접속 보상 (하루 1회 자동 지급) */
+  /** 접속 보상 + 출석 스트릭 (하루 1회 자동 지급) */
   function _claimDailyReward() {
-    const result = GAME.claimDaily(DB.Player.get(), DB.today());
-    if (result.events.indexOf('daily_claimed') !== -1) {
-      DB.Player.save(result.player);
-      Toast.show('🎁 접속 보상 +' + GAME.CONFIG.DAILY_COINS + ' 코인!');
+    const result = GAME.applyStreak(DB.Player.get(), DB.today());
+    if (result.events.indexOf('daily_claimed') === -1) return;
+
+    DB.Player.save(result.player);
+    let msg = '🎁 접속 보상 +' + result.coins + ' 코인!';
+    if (result.streak > 1) msg += ' (연속 ' + result.streak + '일)';
+    Toast.show(msg);
+    if (result.food > 0) {
+      Toast.show('🥬 ' + result.streak + '일 연속 출석! 상추 +' + result.food);
+      DB.Journal.add('streak', result.streak + '일 연속으로 함께했어요.');
     }
   }
 
