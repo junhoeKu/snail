@@ -166,6 +166,7 @@ const App = (function () {
 
     _bindNav();
     HomeModule.bind();
+    StatsModule.bind();
     ShopModule.bind();
     DecoModule.bind();
     SettingsModule.bind();

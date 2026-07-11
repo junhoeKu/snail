@@ -43,6 +43,11 @@ const GAME = (function () {
     PET_HAPPINESS: 5,
     PET_COOLDOWN_MIN: 30,
 
+    // 여행 보내기 (세대 교체)
+    GRADUATE_MIN_LEVEL: 12,
+    GRADUATE_COINS: 100,
+    GENERATION_BOOST_CAP: 5, // 변이 확률 보정이 커지는 최대 세대 수 (6세대+에서 고정)
+
     // 성장
     EXP_PER_LEVEL: 20,
 
@@ -97,7 +102,7 @@ const GAME = (function () {
     sleepy: { id: 'sleepy', label: '잠꾸러기', chance: 0.25, seekFactor: 1, idleFactor: 1, napFactor: 2 }
   };
 
-  /** 껍질 변이 (부화 시 랜덤 — 수집의 씨앗, 도감/세대 교체는 5차) */
+  /** 껍질 변이 (부화 시 랜덤) — chance는 1세대 기준, 세대 보정은 variantTableFor */
   const VARIANTS = {
     brown: { id: 'brown', label: '갈색', chance: 0.55 },
     gray: { id: 'gray', label: '회갈색', chance: 0.18 },
@@ -105,6 +110,24 @@ const GAME = (function () {
     olive: { id: 'olive', label: '올리브', chance: 0.10 },
     golden: { id: 'golden', label: '황금', chance: 0.02 }
   };
+
+  /** 세대당 변이 확률 변화 (%p) — 합계 0이라 항상 총합 100% 유지 */
+  const VARIANT_GEN_DELTA = { brown: -6, gray: 1, russet: 1.5, olive: 2, golden: 1.5 };
+
+  /** 세대 보정된 변이 확률 테이블 (5차_MVP_구현계획.md §3.2) */
+  function variantTableFor(generation) {
+    const boost = Math.min(Math.max((generation || 1) - 1, 0), CONFIG.GENERATION_BOOST_CAP);
+    const table = {};
+    Object.keys(VARIANTS).forEach(function (key) {
+      const base = VARIANTS[key];
+      table[key] = {
+        id: base.id,
+        label: base.label,
+        chance: (base.chance * 100 + VARIANT_GEN_DELTA[key] * boost) / 100
+      };
+    });
+    return table;
+  }
 
   /** 가중치 테이블에서 하나 추첨 */
   function _pickWeighted(table, roll) {
@@ -121,8 +144,9 @@ const GAME = (function () {
     return _pickWeighted(PERSONALITIES, (rng || Math.random)());
   }
 
-  function rollVariant(rng) {
-    return _pickWeighted(VARIANTS, (rng || Math.random)());
+  /** @param {number} [generation] 세대 보정 (생략 시 1세대 확률) */
+  function rollVariant(rng, generation) {
+    return _pickWeighted(variantTableFor(generation), (rng || Math.random)());
   }
 
   /** 날짜 키 → 날씨 id (결정적 해시: 맑음 60% / 비 25% / 안개 15%) */
@@ -190,11 +214,12 @@ const GAME = (function () {
   }
 
   /**
-   * 알 → 아기 부화 (이름 짓기 + 성격 결정)
+   * 알 → 아기 부화 (이름 짓기 + 성격/변이 결정)
    * @param {Function} [rng] 난수 함수 주입 (테스트용)
+   * @param {number} [generation] 세대 (변이 확률 보정)
    * @returns {{snail: object, events: string[]}}
    */
-  function hatch(snail, name, rng) {
+  function hatch(snail, name, rng, generation) {
     const s = _clone(snail);
     const events = [];
 
@@ -215,9 +240,59 @@ const GAME = (function () {
     s.hunger = CONFIG.HATCH_HUNGER;
     s.happiness = CONFIG.HATCH_HAPPINESS;
     s.personality = rollPersonality(rng);
-    s.color = rollVariant(rng);
+    s.color = rollVariant(rng, generation);
     events.push('hatched');
     return { snail: s, events: events };
+  }
+
+  /** 여행 보내기 가능 여부 (성체 && Lv12+) */
+  function canGraduate(snail) {
+    return snail.stage === 'adult' && snail.level >= CONFIG.GRADUATE_MIN_LEVEL;
+  }
+
+  /**
+   * 여행 보내기 (세대 교체): 앨범 레코드 생성 + 기념 코인 + 새 알 + 세대 +1.
+   * 스탯/코인/상추/스트릭/미션은 유지되고 달팽이만 앨범으로 이동한다.
+   * @returns {{snail: object(새 알), player: object, record: object|null, events: string[]}}
+   */
+  function graduate(snail, player, nowISO) {
+    const p = _clone(player);
+    const events = [];
+
+    if (!canGraduate(snail)) {
+      events.push('cannot_graduate');
+      return { snail: _clone(snail), player: p, record: null, events: events };
+    }
+
+    const record = {
+      name: snail.name,
+      color: snail.color || 'brown',
+      personality: snail.personality,
+      level: snail.level,
+      generation: p.generation || 1,
+      hatched_at: snail.created_at,
+      graduated_at: nowISO
+    };
+
+    p.coins += CONFIG.GRADUATE_COINS;
+    p.generation = (p.generation || 1) + 1;
+
+    const egg = {
+      schema_version: snail.schema_version,
+      name: '',
+      level: 0,
+      exp: 0,
+      hunger: 0,
+      happiness: 100,
+      stage: 'egg',
+      color: 'brown',
+      personality: null,
+      pos: { rx: 0.5, ry: 0.5 },
+      created_at: nowISO
+    };
+
+    events.push('graduated');
+    return { snail: egg, player: p, record: record, events: events };
   }
 
   /**
@@ -518,6 +593,9 @@ const GAME = (function () {
     conditionOf: conditionOf,
     rollPersonality: rollPersonality,
     rollVariant: rollVariant,
+    variantTableFor: variantTableFor,
+    canGraduate: canGraduate,
+    graduate: graduate,
     applyStreak: applyStreak,
     recordMission: recordMission,
     missionProgress: missionProgress,
