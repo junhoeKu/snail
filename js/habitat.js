@@ -17,6 +17,9 @@ const HabitatModule = (function () {
     EAT_DURATION_MS: 1800,
     EAT_DISTANCE: 30,     // px
     ARRIVE_DISTANCE: 2,   // px
+    NAP_CHANCE: 0.1,      // idle 종료 시 낮잠 확률 (성격 배수 적용)
+    NAP_MIN_MS: 60000,
+    NAP_MAX_MS: 120000,
     EDGE_PADDING: 8,      // px (스프라이트 절반 크기에 더하는 여백)
     PET_RADIUS_MIN: 34,   // px (쓰다듬기 터치 판정 최소 반경)
     FLIP_RIGHT: -1,       // 스프라이트가 왼쪽을 보므로 오른쪽 이동 시 반전
@@ -27,7 +30,8 @@ const HabitatModule = (function () {
     IDLE: 'idle',
     WANDERING: 'wandering',
     SEEKING: 'seeking_food',
-    EATING: 'eating'
+    EATING: 'eating',
+    NAPPING: 'napping'
   };
 
   // 현재 위치(px). 영속 저장은 0~1 비율 좌표로 sn_snail.pos에 한다
@@ -38,10 +42,34 @@ const HabitatModule = (function () {
   let _facing = 0;          // MOTION.FLIP_* 값
   let _idleUntil = 0;
   let _eatUntil = 0;
+  let _napUntil = 0;
   let _food = null;         // { x, y, el } — 동시에 1개만
   let _rafId = null;
   let _lastTs = null;
   let _running = false;
+
+  // 날씨/성격/컨디션 모디파이어 (상태 전이 시점마다 재계산해 캐시)
+  let _mods = { wanderSpeed: MOTION.WANDER_SPEED, seekSpeed: MOTION.SEEK_SPEED, idleFactor: 1, napChance: MOTION.NAP_CHANCE };
+
+  function _computeMods() {
+    const snail = DB.Snail.get();
+    const weather = GAME.WEATHER[GAME.weatherFor(DB.today())];
+    const condition = GAME.conditionOf(snail);
+    const personality = GAME.PERSONALITIES[snail.personality] ||
+      { seekFactor: 1, idleFactor: 1, napFactor: 1 };
+
+    _mods = {
+      wanderSpeed: MOTION.WANDER_SPEED * weather.speedFactor * condition.speedFactor,
+      seekSpeed: MOTION.SEEK_SPEED * weather.speedFactor * condition.speedFactor * personality.seekFactor,
+      idleFactor: weather.idleFactor * personality.idleFactor,
+      napChance: MOTION.NAP_CHANCE * personality.napFactor
+    };
+
+    // 컨디션 표정 (배고픔 → 더듬이 처짐)
+    const sprite = document.getElementById('snail-sprite');
+    sprite.classList.toggle('cond-hungry', condition.id === 'hungry');
+    sprite.classList.toggle('cond-happy', condition.id === 'happy');
+  }
 
   // ── 좌표/렌더 ──────────────────────────────────────────
 
@@ -110,11 +138,12 @@ const HabitatModule = (function () {
   function _setState(next) {
     _state = next;
     _entity().className = 'snail-entity state-' + next;
+    _computeMods();
 
     if (next === STATE.IDLE) {
       _target = null;
       _idleUntil = performance.now() +
-        MOTION.IDLE_MIN_MS + Math.random() * (MOTION.IDLE_MAX_MS - MOTION.IDLE_MIN_MS);
+        (MOTION.IDLE_MIN_MS + Math.random() * (MOTION.IDLE_MAX_MS - MOTION.IDLE_MIN_MS)) * _mods.idleFactor;
       // 성장으로 스프라이트가 커졌을 수 있으므로 경계 재보정 후 위치 저장
       const p = _clampPoint(_pos.x, _pos.y);
       _pos.x = p.x;
@@ -122,6 +151,14 @@ const HabitatModule = (function () {
       _renderPosition();
       _savePosition();
     }
+  }
+
+  function _startNap() {
+    _target = null;
+    _napUntil = performance.now() +
+      MOTION.NAP_MIN_MS + Math.random() * (MOTION.NAP_MAX_MS - MOTION.NAP_MIN_MS);
+    _setState(STATE.NAPPING);
+    _floatText('💤');
   }
 
   /** 서식지 안 무작위 지점을 목표로 배회 시작 */
@@ -164,10 +201,16 @@ const HabitatModule = (function () {
   function _update(dt, nowTs) {
     switch (_state) {
       case STATE.IDLE:
-        if (nowTs >= _idleUntil) _startWander();
+        if (nowTs >= _idleUntil) {
+          if (Math.random() < _mods.napChance) _startNap();
+          else _startWander();
+        }
+        break;
+      case STATE.NAPPING:
+        if (nowTs >= _napUntil) _setState(STATE.IDLE);
         break;
       case STATE.WANDERING:
-        if (_moveToward(MOTION.WANDER_SPEED, dt)) _setState(STATE.IDLE);
+        if (_moveToward(_mods.wanderSpeed, dt)) _setState(STATE.IDLE);
         break;
       case STATE.SEEKING:
         if (!_food) {
@@ -176,7 +219,7 @@ const HabitatModule = (function () {
         }
         _target = { x: _food.x, y: _food.y };
         if (Math.hypot(_food.x - _pos.x, _food.y - _pos.y) <= MOTION.EAT_DISTANCE ||
-            _moveToward(MOTION.SEEK_SPEED, dt)) {
+            _moveToward(_mods.seekSpeed, dt)) {
           _startEating();
         }
         break;
@@ -320,6 +363,7 @@ const HabitatModule = (function () {
       const petRadius = Math.max(_edge(), MOTION.PET_RADIUS_MIN);
       if (DB.Snail.get().stage !== 'egg' &&
           Math.hypot(x - _pos.x, y - _pos.y) <= petRadius) {
+        if (_state === STATE.NAPPING) _setState(STATE.IDLE); // 쓰다듬으면 깬다
         HomeModule.handlePet();
         return;
       }

@@ -63,6 +63,7 @@ const App = (function () {
   function _startTick() {
     if (_tickTimer) clearInterval(_tickTimer);
     _tickTimer = setInterval(function () {
+      applyWeather(); // 자정을 넘기면 날씨가 바뀔 수 있다
       if (!_settleTime()) return;
       refreshHeader();
       if (document.getElementById('screen-home').classList.contains('active')) {
@@ -120,6 +121,21 @@ const App = (function () {
     document.body.dataset.background = player.background || 'default';
   }
 
+  /** 오늘의 날씨를 body에 적용 (결정적 — 저장하지 않음) */
+  function applyWeather() {
+    document.body.dataset.weather = GAME.weatherFor(DB.today());
+  }
+
+  /** v2 데이터 마이그레이션: 기존 달팽이에게 성격 1회 소급 부여 */
+  function _ensurePersonality() {
+    const snail = DB.Snail.get();
+    if (snail.stage === 'egg' || snail.personality) return;
+    snail.personality = GAME.rollPersonality();
+    DB.Snail.save(snail);
+    DB.Journal.add('personality',
+      snail.name + '의 성격이 "' + GAME.PERSONALITIES[snail.personality].label + '"라는 걸 알게 됐어요.');
+  }
+
   /** 접속 보상 + 출석 스트릭 (하루 1회 자동 지급) */
   function _claimDailyReward() {
     const result = GAME.applyStreak(DB.Player.get(), DB.today());
@@ -155,9 +171,11 @@ const App = (function () {
     SettingsModule.bind();
     SettingsModule.render();
 
+    _ensurePersonality();
     _settleAway();
     _claimDailyReward();
     applyBackground();
+    applyWeather();
     refreshHeader();
     navigate('home');
     HabitatModule.init();

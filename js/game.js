@@ -50,6 +50,12 @@ const GAME = (function () {
     HATCH_HUNGER: 40,
     HATCH_HAPPINESS: 80,
 
+    // 컨디션 (스탯 파생 — 속도/표정)
+    HUNGRY_THRESHOLD: 70,
+    HUNGRY_SPEED: 0.7,
+    HAPPY_THRESHOLD: 80,
+    HAPPY_SPEED: 1.15,
+
     // 복귀 리포트 / 부재 중 발견
     AWAY_REPORT_MIN: 30,     // 부재 N분 이상이면 복귀 리포트 표시
     FIND_INTERVAL_HOURS: 4,  // 부재 N시간마다 발견 판정 1회
@@ -76,6 +82,55 @@ const GAME = (function () {
     junior: { id: 'junior', label: '어린', emoji: '🐌', minLevel: 5 },
     adult: { id: 'adult', label: '성체', emoji: '🐌', minLevel: 10 }
   };
+
+  /** 날씨 (날짜 해시로 결정적 — 저장 불필요) */
+  const WEATHER = {
+    sunny: { id: 'sunny', label: '맑음', idleFactor: 1, speedFactor: 1 },
+    rain: { id: 'rain', label: '비', idleFactor: 0.6, speedFactor: 1.2 }, // 달팽이는 비를 좋아한다
+    fog: { id: 'fog', label: '안개', idleFactor: 1, speedFactor: 1 }
+  };
+
+  /** 성격 (부화 시 랜덤 1개 — 행동 가중치) */
+  const PERSONALITIES = {
+    foodie: { id: 'foodie', label: '먹보', chance: 0.40, seekFactor: 1.3, idleFactor: 1, napFactor: 1 },
+    explorer: { id: 'explorer', label: '모험가', chance: 0.35, seekFactor: 1, idleFactor: 0.7, napFactor: 1 },
+    sleepy: { id: 'sleepy', label: '잠꾸러기', chance: 0.25, seekFactor: 1, idleFactor: 1, napFactor: 2 }
+  };
+
+  /** 가중치 테이블에서 하나 추첨 */
+  function _pickWeighted(table, roll) {
+    const keys = Object.keys(table);
+    let acc = 0;
+    for (let i = 0; i < keys.length; i++) {
+      acc += table[keys[i]].chance;
+      if (roll < acc) return keys[i];
+    }
+    return keys[keys.length - 1];
+  }
+
+  function rollPersonality(rng) {
+    return _pickWeighted(PERSONALITIES, (rng || Math.random)());
+  }
+
+  /** 날짜 키 → 날씨 id (결정적 해시: 맑음 60% / 비 25% / 안개 15%) */
+  function weatherFor(dateKey) {
+    let hash = 0;
+    for (let i = 0; i < dateKey.length; i++) {
+      hash = ((hash << 5) - hash + dateKey.charCodeAt(i)) | 0;
+    }
+    const roll = Math.abs(hash) % 100;
+    if (roll < 60) return 'sunny';
+    if (roll < 85) return 'rain';
+    return 'fog';
+  }
+
+  /** 스탯 → 컨디션 (표정/속도 배수. 저장하지 않고 파생) */
+  function conditionOf(snail) {
+    if (snail.stage === 'egg') return { id: 'normal', speedFactor: 1 };
+    if (snail.hunger >= CONFIG.HUNGRY_THRESHOLD) return { id: 'hungry', speedFactor: CONFIG.HUNGRY_SPEED };
+    if (snail.happiness >= CONFIG.HAPPY_THRESHOLD) return { id: 'happy', speedFactor: CONFIG.HAPPY_SPEED };
+    return { id: 'normal', speedFactor: 1 };
+  }
 
   function _clamp(value) {
     return Math.max(CONFIG.STAT_MIN, Math.min(CONFIG.STAT_MAX, value));
@@ -122,10 +177,11 @@ const GAME = (function () {
   }
 
   /**
-   * 알 → 아기 부화 (이름 짓기)
+   * 알 → 아기 부화 (이름 짓기 + 성격 결정)
+   * @param {Function} [rng] 난수 함수 주입 (테스트용)
    * @returns {{snail: object, events: string[]}}
    */
-  function hatch(snail, name) {
+  function hatch(snail, name, rng) {
     const s = _clone(snail);
     const events = [];
 
@@ -145,6 +201,7 @@ const GAME = (function () {
     s.exp = 0;
     s.hunger = CONFIG.HATCH_HUNGER;
     s.happiness = CONFIG.HATCH_HAPPINESS;
+    s.personality = rollPersonality(rng);
     events.push('hatched');
     return { snail: s, events: events };
   }
@@ -439,7 +496,12 @@ const GAME = (function () {
   return {
     CONFIG: CONFIG,
     STAGES: STAGES,
+    WEATHER: WEATHER,
+    PERSONALITIES: PERSONALITIES,
     MISSION_DEFS: MISSION_DEFS,
+    weatherFor: weatherFor,
+    conditionOf: conditionOf,
+    rollPersonality: rollPersonality,
     applyStreak: applyStreak,
     recordMission: recordMission,
     missionProgress: missionProgress,
