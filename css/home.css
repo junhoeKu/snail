@@ -85,6 +85,25 @@ body[data-background="garden"] .snail-habitat {
   animation: snail-bob 3s ease-in-out infinite;
 }
 
+.snail-entity.state-wandering .snail-motion,
+.snail-entity.state-seeking_food .snail-motion {
+  animation: snail-crawl 0.9s ease-in-out infinite;
+}
+
+.snail-entity.state-eating .snail-motion {
+  animation: snail-eat 0.45s ease-in-out infinite;
+}
+
+@keyframes snail-crawl {
+  0%, 100% { transform: translateX(0) scaleY(1); }
+  50%      { transform: translateX(2px) scaleY(0.95); }
+}
+
+@keyframes snail-eat {
+  0%, 100% { transform: translateX(0); }
+  50%      { transform: translateX(4px); }
+}
+
 /* 성장 단계별 표현: 어린이는 껍질(크기) 커짐, 성체는 색상 변화 */
 .snail-sprite.stage-baby {
   font-size: 56px;
