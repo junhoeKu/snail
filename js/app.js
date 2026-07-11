@@ -23,7 +23,7 @@ const App = (function () {
     if (screen === 'home' && typeof HomeModule !== 'undefined') HomeModule.render();
     if (screen === 'stats' && typeof StatsModule !== 'undefined') StatsModule.render();
     if (screen === 'shop' && typeof ShopModule !== 'undefined') ShopModule.render();
-    if (screen === 'deco' && typeof DecoModule !== 'undefined') DecoModule.render();
+    if (screen === 'explore' && typeof ExploreModule !== 'undefined') ExploreModule.render();
     if (screen === 'settings' && typeof SettingsModule !== 'undefined') SettingsModule.render();
 
     // 홈에서만 서식지 게임 루프를 돌린다

@@ -104,7 +104,7 @@
         </div>
       </section>
 
-      <!-- 상점 -->
+      <!-- 상점 (먹이/알/꾸미기) -->
       <section id="screen-shop" class="screen">
         <div class="card shop-card">
           <h2 class="screen-title"><i class="fa-solid fa-store"></i> 상점</h2>
@@ -114,20 +114,36 @@
             <div class="shop-item-info">
               <span class="shop-item-icon"><i class="fa-solid fa-leaf"></i></span>
               <div>
-                <div class="shop-item-name">상추</div>
+                <div class="shop-item-name">상추 ×1</div>
                 <div class="shop-item-desc">배고픔 -30 · 경험치 +10</div>
               </div>
             </div>
             <button id="btn-buy-food" class="btn btn-primary btn-sm">10 <i class="fa-solid fa-coins"></i></button>
           </div>
-        </div>
-      </section>
 
-      <!-- 꾸미기 -->
-      <section id="screen-deco" class="screen">
-        <div class="card">
-          <h2 class="screen-title"><i class="fa-solid fa-palette"></i> 꾸미기</h2>
-          <p class="screen-desc">서식지 배경을 선택하세요.</p>
+          <div class="shop-item">
+            <div class="shop-item-info">
+              <span class="shop-item-icon"><i class="fa-solid fa-basket-shopping"></i></span>
+              <div>
+                <div class="shop-item-name">상추 ×10 묶음</div>
+                <div class="shop-item-desc">10% 할인 — 여럿을 키운다면 필수</div>
+              </div>
+            </div>
+            <button id="btn-buy-food-bundle" class="btn btn-primary btn-sm">90 <i class="fa-solid fa-coins"></i></button>
+          </div>
+
+          <div class="shop-item">
+            <div class="shop-item-info">
+              <span class="shop-item-icon">🥚</span>
+              <div>
+                <div class="shop-item-name">달팽이 알</div>
+                <div id="egg-slot-desc" class="shop-item-desc">새 보금자리와 함께 도착해요</div>
+              </div>
+            </div>
+            <button id="btn-buy-egg" class="btn btn-primary btn-sm">500 <i class="fa-solid fa-coins"></i></button>
+          </div>
+
+          <h3 class="settings-subtitle">배경</h3>
           <div class="shop-backgrounds">
             <button class="bg-option" data-bg="default"><i class="fa-solid fa-seedling"></i> 이끼 숲</button>
             <button class="bg-option" data-bg="garden"><i class="fa-solid fa-sun"></i> 햇살 정원</button>
@@ -136,6 +152,14 @@
           <h3 class="settings-subtitle">장식</h3>
           <ul id="deco-list" class="deco-list"></ul>
           <p class="screen-desc deco-hint">장식은 서식지 바닥 슬롯 3곳에 놓여요. 게임 수치에는 영향이 없어요.</p>
+        </div>
+      </section>
+
+      <!-- 탐험 (6차 5단계에서 구현) -->
+      <section id="screen-explore" class="screen">
+        <div class="card">
+          <h2 class="screen-title"><i class="fa-solid fa-compass"></i> 탐험</h2>
+          <p class="screen-desc">곧 열려요! 수풀을 뒤져 코인과 야생 알을 찾게 될 거예요.</p>
         </div>
       </section>
 
@@ -169,8 +193,8 @@
       <button class="tab tab-home" data-screen="home" title="홈">
         <i class="fa-solid fa-house"></i>
       </button>
-      <button class="tab" data-screen="deco">
-        <i class="fa-solid fa-palette"></i><span>꾸미기</span>
+      <button class="tab" data-screen="explore">
+        <i class="fa-solid fa-compass"></i><span>탐험</span>
       </button>
       <button class="tab" data-screen="settings">
         <i class="fa-solid fa-gear"></i><span>설정</span>

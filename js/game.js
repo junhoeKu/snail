@@ -23,6 +23,10 @@ const GAME = (function () {
     // 접속 보상 / 상점
     DAILY_COINS: 20,
     FOOD_PRICE: 10,
+    FOOD_BUNDLE_COUNT: 10,
+    FOOD_BUNDLE_PRICE: 90,   // 10% 할인 묶음
+    MAX_SNAILS: 3,
+    EGG_SLOT_PRICES: [0, 500, 1500], // [현재 슬롯 수] → 다음 보금자리 가격
 
     // 출석 스트릭
     STREAK_BONUS_PER_DAY: 2,   // 연속 1일당 추가 코인
@@ -361,6 +365,48 @@ const GAME = (function () {
     return Object.keys(VARIANTS).filter(function (key) { return found[key]; });
   }
 
+  /** 새 알 레코드 (id는 DB.Snails.add가 부여) */
+  function _newEgg(nowISO) {
+    return {
+      name: '',
+      level: 0,
+      exp: 0,
+      hunger: 0,
+      happiness: 100,
+      stage: 'egg',
+      color: 'brown',
+      personality: null,
+      wild_variant: null,
+      pos: { rx: 0.5, ry: 0.5 },
+      created_at: nowISO
+    };
+  }
+
+  /**
+   * 달팽이 알 구매 = 보금자리(슬롯) 확장 + 알 즉시 도착 (최대 MAX_SNAILS)
+   * @returns {{player: object, egg: object|null, events: string[]}}
+   */
+  function buyEggSlot(player, nowISO) {
+    const p = _clone(player);
+    const events = [];
+    const slots = p.snail_slots || 1;
+
+    if (slots >= CONFIG.MAX_SNAILS) {
+      events.push('max_slots');
+      return { player: p, egg: null, events: events };
+    }
+    const price = CONFIG.EGG_SLOT_PRICES[slots];
+    if (p.coins < price) {
+      events.push('not_enough_coins');
+      return { player: p, egg: null, events: events };
+    }
+
+    p.coins -= price;
+    p.snail_slots = slots + 1;
+    events.push('egg_bought');
+    return { player: p, egg: _newEgg(nowISO), events: events };
+  }
+
   /** 여행 보내기 가능 여부 (성체 && Lv12+) */
   function canGraduate(snail) {
     return snail.stage === 'adult' && snail.level >= CONFIG.GRADUATE_MIN_LEVEL;
@@ -393,22 +439,8 @@ const GAME = (function () {
     p.coins += CONFIG.GRADUATE_COINS;
     p.generation = (p.generation || 1) + 1;
 
-    const egg = {
-      schema_version: snail.schema_version,
-      name: '',
-      level: 0,
-      exp: 0,
-      hunger: 0,
-      happiness: 100,
-      stage: 'egg',
-      color: 'brown',
-      personality: null,
-      pos: { rx: 0.5, ry: 0.5 },
-      created_at: nowISO
-    };
-
     events.push('graduated');
-    return { snail: egg, player: p, record: record, events: events };
+    return { snail: _newEgg(nowISO), player: p, record: record, events: events };
   }
 
   /**
@@ -661,20 +693,25 @@ const GAME = (function () {
   }
 
   /**
-   * 상추 구매
+   * 상추 구매 (묶음 지원 — FOOD_BUNDLE_COUNT개는 할인가)
+   * @param {number} [count] 기본 1
    * @returns {{player: object, events: string[]}}
    */
-  function buyFood(player) {
+  function buyFood(player, count) {
     const p = _clone(player);
     const events = [];
+    const n = count || 1;
+    const price = (n === CONFIG.FOOD_BUNDLE_COUNT)
+      ? CONFIG.FOOD_BUNDLE_PRICE
+      : CONFIG.FOOD_PRICE * n;
 
-    if (p.coins < CONFIG.FOOD_PRICE) {
+    if (p.coins < price) {
       events.push('not_enough_coins');
       return { player: p, events: events };
     }
 
-    p.coins -= CONFIG.FOOD_PRICE;
-    p.food += 1;
+    p.coins -= price;
+    p.food += n;
     events.push('food_bought');
     return { player: p, events: events };
   }
@@ -711,6 +748,7 @@ const GAME = (function () {
     pet: pet,
     applyTimeDecay: applyTimeDecay,
     summarizeAway: summarizeAway,
-    buyFood: buyFood
+    buyFood: buyFood,
+    buyEggSlot: buyEggSlot
   };
 })();
