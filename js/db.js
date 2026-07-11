@@ -8,12 +8,15 @@
 const DB = (function () {
   'use strict';
 
-  const SCHEMA_VERSION = 2;
+  const SCHEMA_VERSION = 3;
 
   const KEYS = {
     PLAYER: 'sn_player',
-    SNAIL: 'sn_snail'
+    SNAIL: 'sn_snail',
+    JOURNAL: 'sn_journal'
   };
+
+  const JOURNAL_MAX = 100; // 성장 일지 최대 보관 건수
 
   /** 현재 타임스탬프 (ISO 문자열, 로컬 기준) */
   function now() {
@@ -62,7 +65,10 @@ const DB = (function () {
       last_seen: now(),
       last_daily_reward: null,
       last_walk: null,
-      background: 'default'
+      last_pet: null,
+      background: 'default',
+      streak: { count: 0, last_date: null },
+      missions: { date: null, feed: 0, walk: 0, pet: 0, bonus_given: false }
     };
   }
 
@@ -75,7 +81,8 @@ const DB = (function () {
       hunger: 0,
       happiness: 100,
       stage: 'egg',
-      color: 'default',
+      color: 'brown',        // 껍질 변이 (부화 시 결정)
+      personality: null,     // 성격 (부화 시 결정, v2 데이터는 부팅 시 소급 부여)
       pos: { rx: 0.5, ry: 0.5 }, // 서식지 내 위치 (0~1 비율 좌표)
       created_at: now()
     };
@@ -116,13 +123,28 @@ const DB = (function () {
     }
   };
 
+  /** 성장 일지 — 최근 JOURNAL_MAX건 유지 */
+  const Journal = {
+    get: function () {
+      const stored = _read(KEYS.JOURNAL);
+      return Array.isArray(stored) ? stored : [];
+    },
+    add: function (type, text) {
+      const list = Journal.get();
+      list.push({ ts: now(), type: type, text: text });
+      while (list.length > JOURNAL_MAX) list.shift();
+      return _write(KEYS.JOURNAL, list);
+    }
+  };
+
   /**
-   * 전체 초기화 — 개발/QA 콘솔 전용.
-   * 앱 코드에서 호출하지 않는다 (사용자 확인 없는 데이터 삭제 금지).
+   * 전체 초기화 — 설정 화면의 확인 모달 또는 개발/QA 콘솔에서만 호출한다.
+   * (사용자 확인 없는 데이터 삭제 금지)
    */
   function reset() {
     localStorage.removeItem(KEYS.PLAYER);
     localStorage.removeItem(KEYS.SNAIL);
+    localStorage.removeItem(KEYS.JOURNAL);
     console.warn('[DB] 초기화 완료. 새로고침하면 온보딩부터 시작합니다.');
   }
 
@@ -130,6 +152,7 @@ const DB = (function () {
     KEYS: KEYS,
     Player: Player,
     Snail: Snail,
+    Journal: Journal,
     reset: reset,
     now: now,
     today: today
