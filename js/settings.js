@@ -11,7 +11,7 @@ const SettingsModule = (function () {
     const rules = [
       (c.DECAY_INTERVAL_MIN / 60) + '시간마다 배고픔 +' + c.DECAY_HUNGER + ', 행복 -' + c.DECAY_HAPPINESS + ' (미접속 시간 포함)',
       '먹이 주기: 배고픔 -' + c.FEED_HUNGER + ', 경험치 +' + c.FEED_EXP + ', 행복 +' + c.FEED_HAPPINESS + ', 코인 +' + c.FEED_COINS,
-      '산책: 행복 +' + c.WALK_HAPPINESS + ', 코인 +' + c.WALK_COINS + ' (' + c.WALK_COOLDOWN_HOURS + '시간마다 1회)',
+      '쓰다듬기: 행복 +' + c.PET_HAPPINESS + ' (달팽이를 직접 터치, 언제든 가능)',
       '접속 보상: 하루 1회 코인 +' + c.DAILY_COINS,
       '상추 가격: ' + c.FOOD_PRICE + '코인 · 레벨업 필요 경험치: 레벨 × ' + c.EXP_PER_LEVEL
     ];
@@ -25,6 +25,11 @@ const SettingsModule = (function () {
     });
 
     _renderSoundToggle();
+
+    // 관리자 모드 표시
+    const versionEl = document.querySelector('.settings-version');
+    const base = versionEl.textContent.replace(' · 🛠️ ADMIN', '');
+    versionEl.textContent = base + (DB.Player.get().admin ? ' · 🛠️ ADMIN' : '');
   }
 
   function _renderSoundToggle() {

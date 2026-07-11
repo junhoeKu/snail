@@ -132,8 +132,8 @@ snail/
 | `GAME.CONFIG` | 게임 수치 상수 (감쇠/보상/가격, 1차_MVP_구현계획.md §3) |
 | `GAME.hatch(snail, name)` | 알 → 아기 부화 |
 | `GAME.feed(snail, player)` | 먹이 주기 → `{ snail, player, events }` |
-| `GAME.walk(snail, player, nowISO)` | 산책 (쿨다운 4시간) |
-| `GAME.claimDaily(player, todayKey)` | 일일 접속 보상 |
+| `GAME.pet(snail, player, nowISO)` | 쓰다듬기 (쿨다운 없음) |
+| `GAME.applyStreak(player, todayKey)` | 접속 보상 + 출석 스트릭 |
 | `GAME.applyTimeDecay(snail, lastSeenISO, nowISO)` | 경과 시간 배고픔/행복도 정산 |
 | `GAME.gainExp(snail, amount)` | 경험치 → 레벨업 → 단계 변화 |
 | `GAME.buyFood(player)` | 상추 구매 |
@@ -143,9 +143,10 @@ snail/
 ```
 1시간 경과  → hunger +5, happiness -5 (미접속분 last_seen 기준 일괄 정산)
 먹이 주기   → hunger -30, exp +10, happiness +5, 코인 +2 (상추 1 소모)
-산책        → happiness +10, 코인 +10 (쿨다운 4시간)
-접속 보상   → 코인 +20 (하루 1회)
+쓰다듬기    → happiness +5 (달팽이 직접 터치, 쿨다운 없음)
+접속 보상   → 코인 +20 + 스트릭 보너스 (하루 1회)
 레벨업      → 필요 exp = level × 20
+관리자 모드 → ?admin=1 (코인/상추 무한, 배고픔 무시, 경험치 ×10 — 실험용)
 ```
 
 행동 함수는 모두 `{ snail, player, events }`를 반환하고, 화면 모듈이 `events`로 토스트/연출을 처리한다. 실패 시(코인 부족/쿨다운) 상태를 바꾸지 않는다.

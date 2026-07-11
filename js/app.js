@@ -24,6 +24,7 @@ const App = (function () {
     if (screen === 'stats' && typeof StatsModule !== 'undefined') StatsModule.render();
     if (screen === 'shop' && typeof ShopModule !== 'undefined') ShopModule.render();
     if (screen === 'deco' && typeof DecoModule !== 'undefined') DecoModule.render();
+    if (screen === 'settings' && typeof SettingsModule !== 'undefined') SettingsModule.render();
 
     // 홈에서만 서식지 게임 루프를 돌린다
     if (typeof HabitatModule !== 'undefined') {
@@ -86,7 +87,7 @@ const App = (function () {
     if (report.happiness_delta < 0) lines.push('조금 심심했나 봐요. (행복 ' + report.happiness_delta + ')');
     report.finds.forEach(function (find) {
       lines.push(find.type === 'coins'
-        ? '산책하다 코인 ' + find.amount + '개를 주웠어요!'
+        ? '돌아다니다 코인 ' + find.amount + '개를 주웠어요!'
         : '어디선가 상추를 하나 물어왔어요!');
     });
     if (lines.length === 0) lines.push('얌전히 기다리고 있었어요.');
@@ -101,7 +102,7 @@ const App = (function () {
 
     result.report.finds.forEach(function (find) {
       DB.Journal.add('find', find.type === 'coins'
-        ? '산책하다 코인 ' + find.amount + '개를 주워왔어요!'
+        ? '돌아다니다 코인 ' + find.amount + '개를 주워왔어요!'
         : '어디선가 상추를 하나 물어왔어요!');
     });
 
@@ -124,6 +125,27 @@ const App = (function () {
   /** 오늘의 날씨를 body에 적용 (결정적 — 저장하지 않음) */
   function applyWeather() {
     document.body.dataset.weather = GAME.weatherFor(DB.today());
+  }
+
+  /**
+   * 관리자 모드: URL에 ?admin=1이면 켜고(?admin=0이면 끔) 자원을 채운다.
+   * 로그인이 없는 정적 앱이라 URL 파라미터로 활성화한다 — 졸업 등 실험용.
+   */
+  function _applyAdminFromURL() {
+    const params = new URLSearchParams(location.search);
+    if (!params.has('admin')) return;
+
+    const player = DB.Player.get();
+    const enable = params.get('admin') !== '0';
+    player.admin = enable;
+    if (enable) {
+      player.coins = GAME.CONFIG.ADMIN_COINS;
+      player.food = GAME.CONFIG.ADMIN_FOOD;
+    }
+    DB.Player.save(player);
+    Toast.show(enable
+      ? '🛠️ 관리자 모드: 코인/상추 무한, 배고픔 무시, 경험치 ×' + GAME.CONFIG.ADMIN_EXP_MULT
+      : '관리자 모드 꺼짐');
   }
 
   /** v2 데이터 마이그레이션: 기존 달팽이에게 성격 1회 소급 부여 */
@@ -174,6 +196,7 @@ const App = (function () {
     SettingsModule.bind();
     SettingsModule.render();
 
+    _applyAdminFromURL();
     _ensurePersonality();
     _settleAway();
     _claimDailyReward();

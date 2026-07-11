@@ -9,7 +9,6 @@ const HomeModule = (function () {
   function _successMessage(event) {
     switch (event) {
       case 'fed': return '냠냠! 맛있게 먹었어요 (+' + GAME.CONFIG.FEED_EXP + ' EXP)';
-      case 'walked': return '산책을 다녀왔어요! (+' + GAME.CONFIG.WALK_COINS + ' 코인)';
       default: return null;
     }
   }
@@ -19,20 +18,9 @@ const HomeModule = (function () {
     switch (event) {
       case 'no_food': return '상추가 없어요. 상점에서 구매하세요!';
       case 'not_hungry': return '지금은 배고프지 않아요.';
-      case 'walk_cooldown': return '산책은 ' + _walkRemainText(player) + ' 후에 갈 수 있어요.';
       case 'name_required': return '이름을 입력해주세요.';
       default: return null;
     }
-  }
-
-  function _walkRemainText(player) {
-    const cooldownMs = GAME.CONFIG.WALK_COOLDOWN_HOURS * 60 * 60 * 1000;
-    const remainMs = cooldownMs - (new Date(DB.now()) - new Date(player.last_walk));
-    const remainMin = Math.max(1, Math.ceil(remainMs / 60000));
-    if (remainMin >= 60) {
-      return Math.floor(remainMin / 60) + '시간 ' + (remainMin % 60) + '분';
-    }
-    return remainMin + '분';
   }
 
   function render() {
@@ -91,7 +79,6 @@ const HomeModule = (function () {
   function _recordMissions(events) {
     const kinds = [];
     if (events.indexOf('fed') !== -1) kinds.push('feed');
-    if (events.indexOf('walked') !== -1) kinds.push('walk');
     if (events.indexOf('petted') !== -1) kinds.push('pet');
 
     kinds.forEach(function (kind) {
@@ -148,12 +135,6 @@ const HomeModule = (function () {
       if (success) Toast.show(success);
 
       if (ev === 'fed') _popSprite();
-
-      if (ev === 'walked') {
-        Sound.play('coin');
-        const fab = document.getElementById('btn-walk').getBoundingClientRect();
-        FX.flyCoins(fab.left + fab.width / 2, fab.top, 2);
-      }
 
       if (ev === 'levelup') {
         const level = DB.Snail.get().level;
@@ -233,28 +214,18 @@ const HomeModule = (function () {
     HabitatModule.dropFoodRandom();
   }
 
-  function _walk() {
-    _handleResult(GAME.walk(DB.Snail.get(), DB.Player.get(), DB.now()));
-  }
-
   /** 쓰다듬기 (서식지에서 달팽이 터치 시 HabitatModule이 호출) */
   function handlePet() {
     const result = GAME.pet(DB.Snail.get(), DB.Player.get(), DB.now());
+    if (result.events.indexOf('petted') === -1) return;
 
-    if (result.events.indexOf('petted') !== -1) {
-      DB.Snail.save(result.snail);
-      DB.Player.save(result.player);
-      render();
-      StatsModule.render();
-      Sound.play('heart');
-      HabitatModule.effect('💗');
-      _recordMissions(result.events);
-      return;
-    }
-    if (result.events.indexOf('pet_cooldown') !== -1) {
-      // 쿨다운 중엔 작은 하트만, 효과/토스트 없음
-      HabitatModule.effect('♡');
-    }
+    DB.Snail.save(result.snail);
+    DB.Player.save(result.player);
+    render();
+    StatsModule.render();
+    Sound.play('heart');
+    HabitatModule.effect('💗');
+    _recordMissions(result.events);
   }
 
   function bind() {
@@ -263,7 +234,6 @@ const HomeModule = (function () {
       if (e.key === 'Enter') _hatch();
     });
     document.getElementById('btn-feed').addEventListener('click', _feed);
-    document.getElementById('btn-walk').addEventListener('click', _walk);
     document.getElementById('snail-chip').addEventListener('click', function () {
       App.navigate('stats');
     });
