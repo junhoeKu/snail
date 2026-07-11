@@ -202,6 +202,25 @@ const HomeModule = (function () {
     _handleResult(GAME.walk(DB.Snail.get(), DB.Player.get(), DB.now()));
   }
 
+  /** 쓰다듬기 (서식지에서 달팽이 터치 시 HabitatModule이 호출) */
+  function handlePet() {
+    const result = GAME.pet(DB.Snail.get(), DB.Player.get(), DB.now());
+
+    if (result.events.indexOf('petted') !== -1) {
+      DB.Snail.save(result.snail);
+      DB.Player.save(result.player);
+      render();
+      StatsModule.render();
+      HabitatModule.effect('💗');
+      _recordMissions(result.events);
+      return;
+    }
+    if (result.events.indexOf('pet_cooldown') !== -1) {
+      // 쿨다운 중엔 작은 하트만, 효과/토스트 없음
+      HabitatModule.effect('♡');
+    }
+  }
+
   function bind() {
     document.getElementById('btn-hatch').addEventListener('click', _hatch);
     document.getElementById('snail-name-input').addEventListener('keydown', function (e) {
@@ -219,6 +238,7 @@ const HomeModule = (function () {
     render: render,
     bind: bind,
     handleResult: _handleResult, // 서식지(HabitatModule)의 먹기 정산에서 재사용
+    handlePet: handlePet,
     failMessage: _failMessage
   };
 })();
