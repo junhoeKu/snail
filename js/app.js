@@ -175,6 +175,7 @@ const App = (function () {
     _ensurePersonality();
     _settleAway();
     _claimDailyReward();
+    DecoModule.claimUnlocks();
     applyBackground();
     applyWeather();
     refreshHeader();

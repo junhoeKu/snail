@@ -112,6 +112,7 @@ const StatsModule = (function () {
 
     HabitatModule.pause(); // 알 상태 — 홈에서 온보딩으로 이어진다
     App.refreshHeader();
+    DecoModule.claimUnlocks(); // 이끼 바위(세대) 해금 확인
     render();
     Toast.celebrate({
       emoji: '🧳',

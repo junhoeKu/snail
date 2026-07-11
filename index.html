@@ -73,6 +73,7 @@
                 </span>
               </div>
             </div>
+            <div id="deco-layer"></div>
             <div id="food-layer"></div>
           </div>
 
@@ -177,6 +178,10 @@
             <button class="bg-option" data-bg="default"><i class="fa-solid fa-seedling"></i> 이끼 숲</button>
             <button class="bg-option" data-bg="garden"><i class="fa-solid fa-sun"></i> 햇살 정원</button>
           </div>
+
+          <h3 class="settings-subtitle">장식</h3>
+          <ul id="deco-list" class="deco-list"></ul>
+          <p class="screen-desc deco-hint">장식은 서식지 바닥 슬롯 3곳에 놓여요. 게임 수치에는 영향이 없어요.</p>
         </div>
       </section>
 
@@ -219,6 +224,42 @@
 
   <div id="toast-container"></div>
   <div id="modal-root"></div>
+
+  <!-- 장식 4종 — HabitatModule/DecoModule이 복제해 사용 -->
+  <template id="deco-pebble">
+    <svg viewBox="0 0 60 40" width="44" height="30" role="img" aria-label="조약돌">
+      <ellipse cx="22" cy="28" rx="16" ry="10" fill="#a8a49a"/>
+      <ellipse cx="41" cy="30" rx="11" ry="7" fill="#8f8b81"/>
+      <ellipse cx="18" cy="24" rx="6" ry="3.5" fill="#c2beb2" opacity="0.7"/>
+    </svg>
+  </template>
+  <template id="deco-mushroom">
+    <svg viewBox="0 0 50 50" width="36" height="36" role="img" aria-label="버섯">
+      <rect x="21" y="24" width="8" height="17" rx="3.5" fill="#e8dcc4"/>
+      <path d="M8 26 Q25 2 42 26 Q25 33 8 26 Z" fill="#b06846"/>
+      <circle cx="18" cy="18" r="2.5" fill="#e8dcc4" opacity="0.85"/>
+      <circle cx="30" cy="14" r="2" fill="#e8dcc4" opacity="0.85"/>
+    </svg>
+  </template>
+  <template id="deco-wildflower">
+    <svg viewBox="0 0 50 60" width="34" height="41" role="img" aria-label="들꽃">
+      <path d="M25 58 Q24 36 25 24" stroke="#6f8f5c" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M25 44 Q15 40 11 33" stroke="#6f8f5c" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <circle cx="25" cy="10" r="5" fill="#d9a0b4"/>
+      <circle cx="17" cy="16" r="5" fill="#d9a0b4"/>
+      <circle cx="33" cy="16" r="5" fill="#d9a0b4"/>
+      <circle cx="20" cy="24" r="5" fill="#d9a0b4"/>
+      <circle cx="30" cy="24" r="5" fill="#d9a0b4"/>
+      <circle cx="25" cy="17" r="4.5" fill="#e8c95c"/>
+    </svg>
+  </template>
+  <template id="deco-mossrock">
+    <svg viewBox="0 0 70 46" width="52" height="34" role="img" aria-label="이끼 바위">
+      <path d="M8 40 Q6 18 24 12 Q46 6 60 20 Q68 30 62 40 Z" fill="#7d8570"/>
+      <path d="M12 26 Q26 12 44 14 Q34 8 22 13 Q12 18 12 26 Z" fill="#8fa878"/>
+      <ellipse cx="27" cy="20" rx="7" ry="3" fill="#9fb886" opacity="0.8"/>
+    </svg>
+  </template>
 
   <!-- 상추 (먹이) — HabitatModule이 복제해 사용 -->
   <template id="food-template">

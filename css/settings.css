@@ -24,6 +24,82 @@
   background: rgba(120, 145, 100, 0.12);
 }
 
+/* ── 장식 목록 (꾸미기) ─────────────── */
+.deco-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.deco-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 2px solid #e2e6de;
+  border-radius: var(--radius-sm);
+}
+
+.deco-row.locked {
+  opacity: 0.65;
+}
+
+.deco-icon {
+  width: 44px;
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.deco-icon svg {
+  display: block;
+}
+
+.deco-info {
+  flex: 1;
+}
+
+.deco-name {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.deco-status {
+  font-size: 11px;
+  color: var(--color-text-sub);
+  margin-top: 2px;
+}
+
+.deco-action {
+  display: flex;
+  gap: 6px;
+}
+
+.slot-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid #d5dbd0;
+  background: var(--color-surface);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--color-text-sub);
+  cursor: pointer;
+}
+
+.slot-btn.active {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.deco-hint {
+  margin-top: 10px;
+  margin-bottom: 0;
+}
+
 /* ── 설정 ───────────────────────────── */
 .settings-subtitle {
   font-size: 15px;

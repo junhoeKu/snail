@@ -229,6 +229,35 @@ const HabitatModule = (function () {
     }
   }
 
+  // ── 장식 ──────────────────────────────────────────────
+
+  // 슬롯 위치 (서식지 바닥, % 좌표 — 연출 상수)
+  const DECO_SLOTS = [
+    { x: '16%', y: '84%' },
+    { x: '50%', y: '91%' },
+    { x: '82%', y: '86%' }
+  ];
+
+  /** 배치된 장식을 서식지에 렌더 (DecoModule이 변경 시 호출) */
+  function renderDecorations() {
+    const layer = document.getElementById('deco-layer');
+    layer.innerHTML = '';
+
+    const player = DB.Player.get();
+    const slots = (player.decorations && player.decorations.slots) || [];
+    slots.forEach(function (id, i) {
+      if (!id) return;
+      const template = document.getElementById('deco-' + id);
+      if (!template) return;
+      const el = document.createElement('div');
+      el.className = 'deco-item';
+      el.style.left = DECO_SLOTS[i].x;
+      el.style.top = DECO_SLOTS[i].y;
+      el.appendChild(template.content.cloneNode(true));
+      layer.appendChild(el);
+    });
+  }
+
   // ── 먹이 ──────────────────────────────────────────────
 
   function _foodLayer() { return document.getElementById('food-layer'); }
@@ -370,6 +399,8 @@ const HabitatModule = (function () {
       dropFood(x, y);
     });
 
+    renderDecorations();
+
     if (DB.Snail.get().stage !== 'egg') {
       _loadPosition();
       _setState(STATE.IDLE);
@@ -393,6 +424,7 @@ const HabitatModule = (function () {
     dropFood: dropFood,
     dropFoodRandom: dropFoodRandom,
     effect: _floatText,
+    renderDecorations: renderDecorations,
     /** QA/디버그용 현재 상태 */
     debugState: function () {
       return { state: _state, x: _pos.x, y: _pos.y, running: _running };

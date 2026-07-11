@@ -107,6 +107,24 @@ body[data-weather="fog"] .snail-habitat::before {
   z-index: 1;
 }
 
+#deco-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.deco-item {
+  position: absolute;
+  transform: translate(-50%, -80%);
+  opacity: 0.95;
+}
+
+.deco-item svg {
+  display: block;
+  filter: drop-shadow(0 2px 2px rgba(20, 18, 10, 0.2));
+}
+
 .snail-sprite {
   display: block;
   line-height: 1;
