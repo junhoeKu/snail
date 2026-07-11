@@ -8,11 +8,12 @@
 const DB = (function () {
   'use strict';
 
-  const SCHEMA_VERSION = 4;
+  const SCHEMA_VERSION = 5;
 
   const KEYS = {
     PLAYER: 'sn_player',
-    SNAIL: 'sn_snail',
+    SNAIL: 'sn_snail',   // ~v4 단일 달팽이 (v5에서 sn_snails로 마이그레이션)
+    SNAILS: 'sn_snails',
     JOURNAL: 'sn_journal',
     ALBUM: 'sn_album'
   };
@@ -71,13 +72,21 @@ const DB = (function () {
       generation: 1,             // 현재 세대 (여행 보내기마다 +1)
       mission_completions: 0,    // 미션 완주 누적 (장식 해금 조건)
       sound_on: true,
-      decorations: { owned: [], slots: [null, null, null] }
+      decorations: { owned: [], slots: [null, null, null] },
+      snail_slots: 1,            // 보금자리 수 (최대 3 — 상점에서 확장)
+      explore: { date: null, searches: 0 }, // 탐험 스태미나 (하루 리셋)
+      unlocked_maps: []
     };
+  }
+
+  function _newId() {
+    return 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   }
 
   function _defaultSnail() {
     return {
       schema_version: SCHEMA_VERSION,
+      id: _newId(),
       name: '',
       level: 0,
       exp: 0,
@@ -85,7 +94,8 @@ const DB = (function () {
       happiness: 100,
       stage: 'egg',
       color: 'brown',        // 껍질 변이 (부화 시 결정)
-      personality: null,     // 성격 (부화 시 결정, v2 데이터는 부팅 시 소급 부여)
+      personality: null,     // 성격 (부화 시 결정, 구버전 데이터는 부팅 시 소급 부여)
+      wild_variant: null,    // 야생 알: 발견한 맵에서 예약된 변이 (부화 시 사용)
       pos: { rx: 0.5, ry: 0.5 }, // 서식지 내 위치 (0~1 비율 좌표)
       created_at: now()
     };
@@ -117,12 +127,64 @@ const DB = (function () {
     }
   };
 
+  /** 달팽이 목록 (v5) — 각 레코드는 id를 가진다. 알도 목록의 한 원소 */
+  const Snails = {
+    get: function () {
+      let list = _read(KEYS.SNAILS);
+      let dirty = false;
+
+      if (!Array.isArray(list)) {
+        // v4 이하 단일 레코드 → 배열 마이그레이션 (무손실)
+        const legacy = _read(KEYS.SNAIL);
+        list = [legacy || _defaultSnail()];
+        localStorage.removeItem(KEYS.SNAIL);
+        dirty = true;
+      }
+
+      // 필드 치유 (기본값 병합 + id/버전 보장). 치유가 일어나면 영속화해 id를 고정한다
+      const healed = list.map(function (record) {
+        if (!record.id || record.schema_version !== SCHEMA_VERSION) dirty = true;
+        const merged = Object.assign(_defaultSnail(), record);
+        merged.schema_version = SCHEMA_VERSION;
+        return merged;
+      });
+      if (dirty) _write(KEYS.SNAILS, healed);
+      return healed;
+    },
+    save: function (list) {
+      return _write(KEYS.SNAILS, list);
+    },
+    getById: function (id) {
+      return Snails.get().find(function (s) { return s.id === id; }) || null;
+    },
+    /** 같은 id 레코드를 교체 저장 */
+    saveOne: function (snail) {
+      const list = Snails.get().map(function (s) { return s.id === snail.id ? snail : s; });
+      return _write(KEYS.SNAILS, list);
+    },
+    /** 추가 (id 없으면 부여) */
+    add: function (snail) {
+      if (!snail.id) snail.id = _newId();
+      const list = Snails.get();
+      list.push(snail);
+      return _write(KEYS.SNAILS, list) && snail.id;
+    },
+    removeById: function (id) {
+      const list = Snails.get().filter(function (s) { return s.id !== id; });
+      return _write(KEYS.SNAILS, list);
+    }
+  };
+
+  /**
+   * 대표 달팽이 (첫 번째 레코드) — v4 호환 shim.
+   * 멀티 전환(6차 2~3단계) 동안만 사용하고 이후 제거한다.
+   */
   const Snail = {
     get: function () {
-      return _getOrInit(KEYS.SNAIL, _defaultSnail);
+      return Snails.get()[0];
     },
     save: function (snail) {
-      return _write(KEYS.SNAIL, snail);
+      return Snails.saveOne(snail);
     }
   };
 
@@ -160,17 +222,44 @@ const DB = (function () {
   function reset() {
     localStorage.removeItem(KEYS.PLAYER);
     localStorage.removeItem(KEYS.SNAIL);
+    localStorage.removeItem(KEYS.SNAILS);
     localStorage.removeItem(KEYS.JOURNAL);
     localStorage.removeItem(KEYS.ALBUM);
     console.warn('[DB] 초기화 완료. 새로고침하면 온보딩부터 시작합니다.');
+  }
+
+  /** 백업/복구 — 전체 데이터 스냅샷 (설정 탭의 백업 기능이 사용) */
+  function exportAll() {
+    return {
+      version: SCHEMA_VERSION,
+      player: Player.get(),
+      snails: Snails.get(),
+      journal: Journal.get(),
+      album: Album.get()
+    };
+  }
+
+  /** @returns {boolean} 유효하면 덮어쓰고 true */
+  function importAll(data) {
+    if (!data || typeof data !== 'object' || !data.player || !Array.isArray(data.snails)) {
+      return false;
+    }
+    _write(KEYS.PLAYER, data.player);
+    _write(KEYS.SNAILS, data.snails);
+    _write(KEYS.JOURNAL, Array.isArray(data.journal) ? data.journal : []);
+    _write(KEYS.ALBUM, Array.isArray(data.album) ? data.album : []);
+    return true;
   }
 
   return {
     KEYS: KEYS,
     Player: Player,
     Snail: Snail,
+    Snails: Snails,
     Journal: Journal,
     Album: Album,
+    exportAll: exportAll,
+    importAll: importAll,
     reset: reset,
     now: now,
     today: today
