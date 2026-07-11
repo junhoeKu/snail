@@ -74,6 +74,46 @@ const App = (function () {
     }, TICK_MS);
   }
 
+  function _durationText(min) {
+    if (min >= 60) return Math.floor(min / 60) + '시간 ' + (min % 60) + '분';
+    return min + '분';
+  }
+
+  function _awayLines(report) {
+    const lines = [];
+    if (report.hunger_delta > 0) lines.push('배고픔이 ' + report.hunger_delta + ' 올랐어요.');
+    if (report.happiness_delta < 0) lines.push('조금 심심했나 봐요. (행복 ' + report.happiness_delta + ')');
+    report.finds.forEach(function (find) {
+      lines.push(find.type === 'coins'
+        ? '산책하다 코인 ' + find.amount + '개를 주웠어요!'
+        : '어디선가 상추를 하나 물어왔어요!');
+    });
+    if (lines.length === 0) lines.push('얌전히 기다리고 있었어요.');
+    return lines;
+  }
+
+  /** 부팅 시 부재 정산 (감쇠 + 발견) + 복귀 리포트 표시 */
+  function _settleAway() {
+    const result = GAME.summarizeAway(DB.Snail.get(), DB.Player.get(), DB.now());
+    DB.Snail.save(result.snail);
+    DB.Player.save(result.player);
+
+    result.report.finds.forEach(function (find) {
+      DB.Journal.add('find', find.type === 'coins'
+        ? '산책하다 코인 ' + find.amount + '개를 주워왔어요!'
+        : '어디선가 상추를 하나 물어왔어요!');
+    });
+
+    if (result.report.away_minutes >= GAME.CONFIG.AWAY_REPORT_MIN) {
+      Toast.report({
+        emoji: '🐌',
+        title: '다녀오셨어요? (' + _durationText(result.report.away_minutes) + ')',
+        lines: _awayLines(result.report),
+        buttonLabel: '보러 가기'
+      });
+    }
+  }
+
   /** 저장된 배경을 body에 적용 */
   function applyBackground() {
     const player = DB.Player.get();
@@ -109,7 +149,7 @@ const App = (function () {
     SettingsModule.bind();
     SettingsModule.render();
 
-    _settleTime();
+    _settleAway();
     _claimDailyReward();
     applyBackground();
     refreshHeader();

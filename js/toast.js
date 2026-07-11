@@ -63,6 +63,48 @@ const Toast = (function () {
   }
 
   /**
+   * 리포트 모달 — 복귀 요약 등 여러 줄 안내
+   * @param {{emoji: string, title: string, lines: string[], buttonLabel: string}} opts
+   */
+  function report(opts) {
+    const root = document.getElementById('modal-root');
+    root.innerHTML = '';
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+
+    const box = document.createElement('div');
+    box.className = 'modal-box';
+
+    const emoji = document.createElement('div');
+    emoji.className = 'modal-emoji';
+    emoji.textContent = opts.emoji || '🐌';
+
+    const title = document.createElement('h3');
+    title.textContent = opts.title || '';
+
+    const list = document.createElement('ul');
+    list.className = 'report-lines';
+    (opts.lines || []).forEach(function (line) {
+      const li = document.createElement('li');
+      li.textContent = line;
+      list.appendChild(li);
+    });
+
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-primary btn-wide';
+    btn.textContent = opts.buttonLabel || '확인';
+    btn.addEventListener('click', function () { overlay.remove(); });
+
+    box.appendChild(emoji);
+    box.appendChild(title);
+    box.appendChild(list);
+    box.appendChild(btn);
+    overlay.appendChild(box);
+    root.appendChild(overlay);
+  }
+
+  /**
    * 확인 모달 — 되돌릴 수 없는 동작(초기화 등) 전 2단계 확인
    * @param {{title: string, message: string, confirmLabel: string, onConfirm: Function}} opts
    */
@@ -107,5 +149,5 @@ const Toast = (function () {
     root.appendChild(overlay);
   }
 
-  return { show: show, celebrate: celebrate, confirm: confirm };
+  return { show: show, celebrate: celebrate, report: report, confirm: confirm };
 })();
