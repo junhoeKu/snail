@@ -20,11 +20,6 @@ const GAME = (function () {
     FEED_HAPPINESS: 5,
     FEED_COINS: 2,
 
-    // 산책
-    WALK_COOLDOWN_HOURS: 4,
-    WALK_HAPPINESS: 10,
-    WALK_COINS: 10,
-
     // 접속 보상 / 상점
     DAILY_COINS: 20,
     FOOD_PRICE: 10,
@@ -41,7 +36,6 @@ const GAME = (function () {
 
     // 쓰다듬기
     PET_HAPPINESS: 5,
-    PET_COOLDOWN_MIN: 30,
 
     // 여행 보내기 (세대 교체)
     GRADUATE_MIN_LEVEL: 12,
@@ -51,6 +45,11 @@ const GAME = (function () {
     // 장식 해금 조건
     DECO_MISSIONS_REQUIRED: 7, // 들꽃: 미션 완주 누적
     DECO_GENERATION_REQUIRED: 2, // 이끼 바위: 세대
+
+    // 관리자 모드 (?admin=1 — 졸업 등 실험용)
+    ADMIN_COINS: 999999,
+    ADMIN_FOOD: 999,
+    ADMIN_EXP_MULT: 10, // 먹이 경험치 배수 (빠른 레벨업 실험)
 
     // 성장
     EXP_PER_LEVEL: 20,
@@ -81,7 +80,6 @@ const GAME = (function () {
   /** 데일리 미션 정의 (UI 라벨/목표 공용) */
   const MISSION_DEFS = {
     feed: { id: 'feed', label: '밥 챙겨주기', goal: 2 },
-    walk: { id: 'walk', label: '산책 다녀오기', goal: 1 },
     pet: { id: 'pet', label: '쓰다듬어주기', goal: 1 }
   };
 
@@ -417,57 +415,31 @@ const GAME = (function () {
     let s = _clone(snail);
     const p = _clone(player);
     let events = [];
+    const admin = p.admin === true; // 관리자: 배고픔/재고 제약 없이 무한 성장 실험
 
     if (s.stage === 'egg') {
       events.push('not_hatched');
       return { snail: s, player: p, events: events };
     }
-    if (p.food < 1) {
+    if (!admin && p.food < 1) {
       events.push('no_food');
       return { snail: s, player: p, events: events };
     }
-    if (s.hunger <= 0) {
+    if (!admin && s.hunger <= 0) {
       events.push('not_hungry');
       return { snail: s, player: p, events: events };
     }
 
-    p.food -= 1;
+    if (p.food > 0) p.food -= 1;
     p.coins += CONFIG.FEED_COINS;
     s.hunger = _clamp(s.hunger - CONFIG.FEED_HUNGER);
     s.happiness = _clamp(s.happiness + CONFIG.FEED_HAPPINESS);
     events.push('fed');
 
-    const grown = gainExp(s, CONFIG.FEED_EXP);
+    const grown = gainExp(s, CONFIG.FEED_EXP * (admin ? CONFIG.ADMIN_EXP_MULT : 1));
     s = grown.snail;
     events = events.concat(grown.events);
 
-    return { snail: s, player: p, events: events };
-  }
-
-  /**
-   * 산책: 쿨다운(4시간) 검사 후 행복/코인 증가
-   * @returns {{snail: object, player: object, events: string[]}}
-   */
-  function walk(snail, player, nowISO) {
-    const s = _clone(snail);
-    const p = _clone(player);
-    const events = [];
-
-    if (s.stage === 'egg') {
-      events.push('not_hatched');
-      return { snail: s, player: p, events: events };
-    }
-
-    const cooldownMs = CONFIG.WALK_COOLDOWN_HOURS * 60 * 60 * 1000;
-    if (p.last_walk && new Date(nowISO) - new Date(p.last_walk) < cooldownMs) {
-      events.push('walk_cooldown');
-      return { snail: s, player: p, events: events };
-    }
-
-    s.happiness = _clamp(s.happiness + CONFIG.WALK_HAPPINESS);
-    p.coins += CONFIG.WALK_COINS;
-    p.last_walk = nowISO;
-    events.push('walked');
     return { snail: s, player: p, events: events };
   }
 
@@ -514,12 +486,14 @@ const GAME = (function () {
   function _missionsFor(player, todayKey) {
     const m = player.missions;
     if (m && m.date === todayKey) return _clone(m);
-    return { date: todayKey, feed: 0, walk: 0, pet: 0, bonus_given: false };
+    const fresh = { date: todayKey, bonus_given: false };
+    Object.keys(MISSION_DEFS).forEach(function (k) { fresh[k] = 0; });
+    return fresh;
   }
 
   /**
    * 미션 진행 기록 + 달성/완주 보상 자동 지급
-   * @param {string} kind 'feed' | 'walk' | 'pet'
+   * @param {string} kind 'feed' | 'pet'
    * @returns {{player: object, events: string[], coins: number, food: number}}
    */
   function recordMission(player, kind, todayKey) {
@@ -603,7 +577,7 @@ const GAME = (function () {
   }
 
   /**
-   * 쓰다듬기: 행복 상승 (쿨다운 30분)
+   * 쓰다듬기: 행복 상승 (쿨다운 없음 — 언제든 가능)
    * @returns {{snail: object, player: object, events: string[]}}
    */
   function pet(snail, player, nowISO) {
@@ -616,14 +590,7 @@ const GAME = (function () {
       return { snail: s, player: p, events: events };
     }
 
-    const cooldownMs = CONFIG.PET_COOLDOWN_MIN * 60 * 1000;
-    if (p.last_pet && new Date(nowISO) - new Date(p.last_pet) < cooldownMs) {
-      events.push('pet_cooldown');
-      return { snail: s, player: p, events: events };
-    }
-
     s.happiness = _clamp(s.happiness + CONFIG.PET_HAPPINESS);
-    p.last_pet = nowISO;
     events.push('petted');
     return { snail: s, player: p, events: events };
   }
@@ -726,7 +693,6 @@ const GAME = (function () {
     gainExp: gainExp,
     hatch: hatch,
     feed: feed,
-    walk: walk,
     pet: pet,
     applyTimeDecay: applyTimeDecay,
     summarizeAway: summarizeAway,

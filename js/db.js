@@ -65,11 +65,9 @@ const DB = (function () {
       food: 3,
       last_seen: now(),
       last_daily_reward: null,
-      last_walk: null,
-      last_pet: null,
       background: 'default',
       streak: { count: 0, last_date: null },
-      missions: { date: null, feed: 0, walk: 0, pet: 0, bonus_given: false },
+      missions: { date: null, feed: 0, pet: 0, bonus_given: false },
       generation: 1,             // 현재 세대 (여행 보내기마다 +1)
       mission_completions: 0,    // 미션 완주 누적 (장식 해금 조건)
       sound_on: true,

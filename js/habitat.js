@@ -277,11 +277,11 @@ const HabitatModule = (function () {
     }
 
     const player = DB.Player.get();
-    if (player.food < 1) {
+    if (!player.admin && player.food < 1) {
       Toast.show(HomeModule.failMessage('no_food', player), 'warn');
       return;
     }
-    if (snail.hunger <= 0) {
+    if (!player.admin && snail.hunger <= 0) {
       Toast.show(HomeModule.failMessage('not_hungry', player), 'warn');
       return;
     }
