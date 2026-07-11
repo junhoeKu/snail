@@ -48,6 +48,10 @@ const GAME = (function () {
     GRADUATE_COINS: 100,
     GENERATION_BOOST_CAP: 5, // 변이 확률 보정이 커지는 최대 세대 수 (6세대+에서 고정)
 
+    // 장식 해금 조건
+    DECO_MISSIONS_REQUIRED: 7, // 들꽃: 미션 완주 누적
+    DECO_GENERATION_REQUIRED: 2, // 이끼 바위: 세대
+
     // 성장
     EXP_PER_LEVEL: 20,
 
@@ -128,6 +132,14 @@ const GAME = (function () {
     });
     return table;
   }
+
+  /** 장식 (순수 시각 요소 — 게임 수치에 영향 없음) */
+  const DECORATIONS = {
+    pebble: { id: 'pebble', label: '조약돌', type: 'buy', price: 50 },
+    mushroom: { id: 'mushroom', label: '버섯', type: 'buy', price: 80 },
+    wildflower: { id: 'wildflower', label: '들꽃', type: 'unlock', unlockDesc: '미션 완주 누적 7회' },
+    mossrock: { id: 'mossrock', label: '이끼 바위', type: 'unlock', unlockDesc: '2세대 도달' }
+  };
 
   /** 가중치 테이블에서 하나 추첨 */
   function _pickWeighted(table, roll) {
@@ -243,6 +255,95 @@ const GAME = (function () {
     s.color = rollVariant(rng, generation);
     events.push('hatched');
     return { snail: s, events: events };
+  }
+
+  function _ensureDecorations(player) {
+    if (!player.decorations) player.decorations = { owned: [], slots: [null, null, null] };
+  }
+
+  /** 해금형 장식의 조건 충족 여부 */
+  function decorationUnlockMet(id, player) {
+    if (id === 'wildflower') return (player.mission_completions || 0) >= CONFIG.DECO_MISSIONS_REQUIRED;
+    if (id === 'mossrock') return (player.generation || 1) >= CONFIG.DECO_GENERATION_REQUIRED;
+    return false;
+  }
+
+  /**
+   * 구매형 장식 구매
+   * @returns {{player: object, events: string[]}}
+   */
+  function buyDecoration(player, id) {
+    const p = _clone(player);
+    const events = [];
+    const def = DECORATIONS[id];
+    _ensureDecorations(p);
+
+    if (!def || def.type !== 'buy') {
+      events.push('invalid');
+      return { player: p, events: events };
+    }
+    if (p.decorations.owned.indexOf(id) !== -1) {
+      events.push('already_owned');
+      return { player: p, events: events };
+    }
+    if (p.coins < def.price) {
+      events.push('not_enough_coins');
+      return { player: p, events: events };
+    }
+
+    p.coins -= def.price;
+    p.decorations.owned.push(id);
+    events.push('deco_bought');
+    return { player: p, events: events };
+  }
+
+  /**
+   * 해금형 장식 자동 지급 (조건 충족분을 owned에 추가)
+   * @returns {{player: object, unlocked: string[]}}
+   */
+  function claimDecorationUnlocks(player) {
+    const p = _clone(player);
+    const unlocked = [];
+    _ensureDecorations(p);
+
+    Object.keys(DECORATIONS).forEach(function (id) {
+      if (DECORATIONS[id].type === 'unlock' &&
+          p.decorations.owned.indexOf(id) === -1 &&
+          decorationUnlockMet(id, p)) {
+        p.decorations.owned.push(id);
+        unlocked.push(id);
+      }
+    });
+    return { player: p, unlocked: unlocked };
+  }
+
+  /**
+   * 장식을 슬롯에 배치 (다른 슬롯에 있었으면 이동)
+   * @returns {{player: object, events: string[]}}
+   */
+  function placeDecoration(player, id, slotIndex) {
+    const p = _clone(player);
+    const events = [];
+    _ensureDecorations(p);
+
+    if (!DECORATIONS[id] || slotIndex < 0 || slotIndex > 2 ||
+        p.decorations.owned.indexOf(id) === -1) {
+      events.push('invalid');
+      return { player: p, events: events };
+    }
+
+    p.decorations.slots = p.decorations.slots.map(function (s) { return s === id ? null : s; });
+    p.decorations.slots[slotIndex] = id;
+    events.push('deco_placed');
+    return { player: p, events: events };
+  }
+
+  /** 슬롯 비우기 */
+  function removeDecoration(player, slotIndex) {
+    const p = _clone(player);
+    _ensureDecorations(p);
+    p.decorations.slots[slotIndex] = null;
+    return { player: p, events: ['deco_removed'] };
   }
 
   /**
@@ -446,6 +547,7 @@ const GAME = (function () {
       m.bonus_given = true;
       coins += CONFIG.MISSION_BONUS_COINS;
       food += CONFIG.MISSION_BONUS_FOOD;
+      p.mission_completions = (p.mission_completions || 0) + 1; // 장식 해금 조건 누적
       events.push('mission_all_done');
     }
 
@@ -601,7 +703,13 @@ const GAME = (function () {
     WEATHER: WEATHER,
     PERSONALITIES: PERSONALITIES,
     VARIANTS: VARIANTS,
+    DECORATIONS: DECORATIONS,
     MISSION_DEFS: MISSION_DEFS,
+    decorationUnlockMet: decorationUnlockMet,
+    buyDecoration: buyDecoration,
+    claimDecorationUnlocks: claimDecorationUnlocks,
+    placeDecoration: placeDecoration,
+    removeDecoration: removeDecoration,
     weatherFor: weatherFor,
     conditionOf: conditionOf,
     rollPersonality: rollPersonality,
