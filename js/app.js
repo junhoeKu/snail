@@ -24,6 +24,21 @@ const App = (function () {
     document.getElementById('food-count').textContent = player.food;
   }
 
+  /** 저장된 배경을 body에 적용 */
+  function applyBackground() {
+    const player = DB.Player.get();
+    document.body.dataset.background = player.background || 'default';
+  }
+
+  /** 일일 접속 보상 (하루 1회 자동 지급) */
+  function _claimDailyReward() {
+    const result = GAME.claimDaily(DB.Player.get(), DB.today());
+    if (result.events.indexOf('daily_claimed') !== -1) {
+      DB.Player.save(result.player);
+      Toast.show('🎁 접속 보상 +' + GAME.CONFIG.DAILY_COINS + ' 코인!');
+    }
+  }
+
   function _bindNav() {
     document.getElementById('btn-goto-shop').addEventListener('click', function () {
       navigate('shop');
@@ -40,7 +55,10 @@ const App = (function () {
 
     _bindNav();
     HomeModule.bind();
+    ShopModule.bind();
 
+    _claimDailyReward();
+    applyBackground();
     refreshHeader();
     navigate('home');
   }
@@ -49,6 +67,7 @@ const App = (function () {
 
   return {
     navigate: navigate,
-    refreshHeader: refreshHeader
+    refreshHeader: refreshHeader,
+    applyBackground: applyBackground
   };
 })();
