@@ -17,11 +17,28 @@ const HabitatModule = (function () {
     EAT_DURATION_MS: 1800,
     EAT_DISTANCE: 30,     // px
     ARRIVE_DISTANCE: 2,   // px
-    EDGE_PADDING: 8       // px (스프라이트 절반 크기에 더하는 여백)
+    EDGE_PADDING: 8,      // px (스프라이트 절반 크기에 더하는 여백)
+    FLIP_RIGHT: -1,       // 🐌 이모지는 왼쪽을 보므로 오른쪽 이동 시 반전
+    FLIP_LEFT: 1
+  };
+
+  const STATE = {
+    IDLE: 'idle',
+    WANDERING: 'wandering',
+    SEEKING: 'seeking_food',
+    EATING: 'eating'
   };
 
   // 현재 위치(px). 영속 저장은 0~1 비율 좌표로 sn_snail.pos에 한다
   const _pos = { x: 0, y: 0 };
+
+  let _state = STATE.IDLE;
+  let _target = null;       // { x, y }
+  let _facing = 0;          // MOTION.FLIP_* 값
+  let _idleUntil = 0;
+  let _rafId = null;
+  let _lastTs = null;
+  let _running = false;
 
   // ── 좌표/렌더 ──────────────────────────────────────────
 
@@ -85,23 +102,135 @@ const HabitatModule = (function () {
     _renderPosition();
   }
 
+  // ── 상태 머신 ──────────────────────────────────────────
+
+  function _setState(next) {
+    _state = next;
+    _entity().className = 'snail-entity state-' + next;
+
+    if (next === STATE.IDLE) {
+      _target = null;
+      _idleUntil = performance.now() +
+        MOTION.IDLE_MIN_MS + Math.random() * (MOTION.IDLE_MAX_MS - MOTION.IDLE_MIN_MS);
+      // 성장으로 스프라이트가 커졌을 수 있으므로 경계 재보정 후 위치 저장
+      const p = _clampPoint(_pos.x, _pos.y);
+      _pos.x = p.x;
+      _pos.y = p.y;
+      _renderPosition();
+      _savePosition();
+    }
+  }
+
+  /** 서식지 안 무작위 지점을 목표로 배회 시작 */
+  function _startWander() {
+    const b = _bounds();
+    const edge = _edge();
+    _target = _clampPoint(
+      edge + Math.random() * Math.max(b.w - edge * 2, 1),
+      edge + Math.random() * Math.max(b.h - edge * 2, 1)
+    );
+    _setState(STATE.WANDERING);
+  }
+
+  function _setFacing(dir) {
+    if (dir === _facing) return;
+    _facing = dir;
+    document.getElementById('snail-sprite').style.setProperty('--flip', dir);
+  }
+
+  /**
+   * 목표 좌표로 등속 이동 (프레임 독립적)
+   * @returns {boolean} 도착 여부
+   */
+  function _moveToward(speed, dt) {
+    const dx = _target.x - _pos.x;
+    const dy = _target.y - _pos.y;
+    const distance = Math.hypot(dx, dy);
+    if (distance <= MOTION.ARRIVE_DISTANCE) return true;
+
+    const step = Math.min(speed * dt, distance);
+    _pos.x += (dx / distance) * step;
+    _pos.y += (dy / distance) * step;
+    if (Math.abs(dx) > 1) {
+      _setFacing(dx > 0 ? MOTION.FLIP_RIGHT : MOTION.FLIP_LEFT);
+    }
+    _renderPosition();
+    return false;
+  }
+
+  function _update(dt, nowTs) {
+    switch (_state) {
+      case STATE.IDLE:
+        if (nowTs >= _idleUntil) _startWander();
+        break;
+      case STATE.WANDERING:
+        if (_moveToward(MOTION.WANDER_SPEED, dt)) _setState(STATE.IDLE);
+        break;
+    }
+  }
+
+  // ── 게임 루프 (rAF + deltaTime) ────────────────────────
+
+  function _loop(ts) {
+    if (!_running) return;
+    if (_lastTs === null) _lastTs = ts;
+    const dt = Math.min((ts - _lastTs) / 1000, 0.1); // 탭 복귀 등 큰 점프 방지
+    _lastTs = ts;
+    _update(dt, ts);
+    _rafId = requestAnimationFrame(_loop);
+  }
+
+  function _canRun() {
+    return DB.Snail.get().stage !== 'egg' &&
+      document.getElementById('screen-home').classList.contains('active') &&
+      !document.hidden;
+  }
+
+  function pause() {
+    _running = false;
+    if (_rafId) cancelAnimationFrame(_rafId);
+    _rafId = null;
+    _lastTs = null;
+  }
+
+  function resume() {
+    if (_running || !_canRun()) return;
+    _running = true;
+    _rafId = requestAnimationFrame(_loop);
+  }
+
   // ── 라이프사이클 ──────────────────────────────────────
 
   function init() {
     window.addEventListener('resize', _onResize);
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) pause();
+      else resume();
+    });
+
     if (DB.Snail.get().stage !== 'egg') {
       _loadPosition();
+      _setState(STATE.IDLE);
+      resume();
     }
   }
 
   /** 부화 직후 호출 — 저장된 기본 위치(중앙)에서 시작 */
   function onHatched() {
     _loadPosition();
+    _setState(STATE.IDLE);
+    resume();
   }
 
   return {
     MOTION: MOTION,
     init: init,
-    onHatched: onHatched
+    onHatched: onHatched,
+    pause: pause,
+    resume: resume,
+    /** QA/디버그용 현재 상태 */
+    debugState: function () {
+      return { state: _state, x: _pos.x, y: _pos.y, running: _running };
+    }
   };
 })();

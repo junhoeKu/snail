@@ -18,6 +18,12 @@ const App = (function () {
     });
     if (screen === 'home' && typeof HomeModule !== 'undefined') HomeModule.render();
     if (screen === 'shop' && typeof ShopModule !== 'undefined') ShopModule.render();
+
+    // 홈에서만 서식지 게임 루프를 돌린다
+    if (typeof HabitatModule !== 'undefined') {
+      if (screen === 'home') HabitatModule.resume();
+      else HabitatModule.pause();
+    }
   }
 
   /** 헤더 지갑(코인/상추) 갱신 */
