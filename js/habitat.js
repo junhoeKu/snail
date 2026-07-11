@@ -133,6 +133,18 @@ const HabitatModule = (function () {
 
   function _spawn(rec) {
     const root = document.getElementById('snail-template').content.cloneNode(true).firstElementChild;
+
+    // 머리 위 스탯 배지 (배고픔/행복)
+    const badge = document.createElement('div');
+    badge.className = 'snail-badge';
+    const hungerSpan = document.createElement('span');
+    hungerSpan.className = 'b-hunger';
+    const happySpan = document.createElement('span');
+    happySpan.className = 'b-happy';
+    badge.appendChild(hungerSpan);
+    badge.appendChild(happySpan);
+    root.appendChild(badge);
+
     _layer().appendChild(root);
 
     const b = _bounds();
@@ -171,6 +183,12 @@ const HabitatModule = (function () {
     const img = ent.spriteEl.querySelector('.snail-img');
     const src = 'assets/characters/snail_' + (rec.color || 'brown') + '_' + rec.stage + '.png';
     if (img && img.getAttribute('src') !== src) img.setAttribute('src', src);
+
+    // 머리 위 배지 갱신
+    const hungerSpan = ent.root.querySelector('.b-hunger');
+    const happySpan = ent.root.querySelector('.b-happy');
+    if (hungerSpan) hungerSpan.textContent = '🍀' + rec.hunger;
+    if (happySpan) happySpan.textContent = '😊' + rec.happiness;
   }
 
   function _addEggEl(rec, index) {
@@ -193,13 +211,16 @@ const HabitatModule = (function () {
     const weather = GAME.WEATHER[GAME.weatherFor(DB.today())];
     const condition = GAME.conditionOf(rec);
     const personality = GAME.PERSONALITIES[rec.personality] ||
-      { seekFactor: 1, idleFactor: 1, napFactor: 1 };
+      { seekFactor: 1, speedFactor: 1, idleFactor: 1, napFactor: 1, napLenFactor: 1, eatFactor: 1 };
 
+    const speed = weather.speedFactor * condition.speedFactor * personality.speedFactor;
     ent.mods = {
-      wanderSpeed: MOTION.WANDER_SPEED * weather.speedFactor * condition.speedFactor,
-      seekSpeed: MOTION.SEEK_SPEED * weather.speedFactor * condition.speedFactor * personality.seekFactor,
+      wanderSpeed: MOTION.WANDER_SPEED * speed,
+      seekSpeed: MOTION.SEEK_SPEED * speed * personality.seekFactor,
       idleFactor: weather.idleFactor * personality.idleFactor,
-      napChance: MOTION.NAP_CHANCE * personality.napFactor
+      napChance: MOTION.NAP_CHANCE * personality.napFactor,
+      napLenFactor: personality.napLenFactor,
+      eatFactor: personality.eatFactor
     };
     _applyLook(ent, rec);
   }
@@ -247,7 +268,8 @@ const HabitatModule = (function () {
   function _startNap(ent) {
     ent.target = null;
     ent.napUntil = performance.now() +
-      MOTION.NAP_MIN_MS + Math.random() * (MOTION.NAP_MAX_MS - MOTION.NAP_MIN_MS);
+      (MOTION.NAP_MIN_MS + Math.random() * (MOTION.NAP_MAX_MS - MOTION.NAP_MIN_MS)) *
+      (ent.mods.napLenFactor || 1);
     _setState(ent, STATE.NAPPING);
     _floatAt(ent.x, ent.y - _edge(ent), '💤');
   }
@@ -365,6 +387,14 @@ const HabitatModule = (function () {
     _assignFoods();
   }
 
+  /** 개체 팝업의 [먹이주기] — 그 달팽이 근처에 드롭 */
+  function dropFoodNear(snailId) {
+    const ent = _ents.find(function (e) { return e.id === snailId; });
+    if (!ent) return;
+    const angle = Math.random() * Math.PI * 2;
+    dropFood(ent.x + Math.cos(angle) * 44, ent.y + Math.sin(angle) * 44);
+  }
+
   /** [먹이주기] 버튼용 — 서식지 안 임의 위치에 드롭 */
   function dropFoodRandom() {
     const b = _bounds();
@@ -382,7 +412,7 @@ const HabitatModule = (function () {
 
   function _startEating(ent) {
     ent.target = null;
-    ent.eatUntil = performance.now() + MOTION.EAT_DURATION_MS;
+    ent.eatUntil = performance.now() + MOTION.EAT_DURATION_MS * (ent.mods.eatFactor || 1);
     if (ent.food && ent.food.el) ent.food.el.classList.add('eaten');
     _setState(ent, STATE.EATING);
   }
@@ -515,8 +545,8 @@ const HabitatModule = (function () {
         if (d < nearestDist) { nearestDist = d; nearest = ent; }
       });
       if (nearest && nearestDist <= Math.max(_edge(nearest), MOTION.PET_RADIUS_MIN)) {
-        if (nearest.state === STATE.NAPPING) _setState(nearest, STATE.IDLE); // 쓰다듬으면 깬다
-        HomeModule.handlePet(nearest.id);
+        if (nearest.state === STATE.NAPPING) _setState(nearest, STATE.IDLE); // 클릭하면 깬다
+        HomeModule.openSnailPopup(nearest.id);
         return;
       }
       dropFood(x, y);
@@ -534,6 +564,7 @@ const HabitatModule = (function () {
     resume: resume,
     dropFood: dropFood,
     dropFoodRandom: dropFoodRandom,
+    dropFoodNear: dropFoodNear,
     effect: effect,
     renderDecorations: renderDecorations,
     /** QA/디버그용 현재 상태 */

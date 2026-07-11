@@ -206,9 +206,27 @@ body[data-weather="fog"] .snail-habitat::before {
   -webkit-user-drag: none;
 }
 
-.snail-sprite.stage-baby .snail-img { width: 64px; }
-.snail-sprite.stage-junior .snail-img { width: 96px; }
-.snail-sprite.stage-adult .snail-img { width: 122px; }
+.snail-sprite.stage-baby .snail-img { width: 44px; }
+.snail-sprite.stage-junior .snail-img { width: 64px; }
+.snail-sprite.stage-adult .snail-img { width: 84px; }
+
+/* 머리 위 스탯 배지 (배고픔/행복) */
+.snail-badge {
+  position: absolute;
+  bottom: calc(100% + 3px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 800;
+  color: #fff;
+  background: rgba(45, 52, 40, 0.55);
+  padding: 2px 8px;
+  border-radius: 999px;
+  pointer-events: none;
+}
 
 /* 컨디션: 배고프면 시무룩(채도 다운 + 살짝 처짐), 행복하면 생기 */
 .snail-sprite.cond-hungry .snail-img {
@@ -379,6 +397,56 @@ body[data-weather="fog"] .snail-habitat::before {
   55%  { transform: translate(-50%, -50%); opacity: 1; }
   75%  { transform: translate(-50%, -85%); }
   100% { transform: translate(-50%, -50%); }
+}
+
+/* ── 개체 팝업 ──────────────────────── */
+.snail-popup {
+  text-align: center;
+}
+
+.popup-img {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+  margin: 0 auto 4px;
+  filter: drop-shadow(0 3px 3px rgba(20, 18, 10, 0.25));
+}
+
+.popup-img.popup-golden {
+  filter: drop-shadow(0 3px 3px rgba(20, 18, 10, 0.25))
+          drop-shadow(0 0 8px rgba(242, 215, 135, 0.8));
+}
+
+.snail-popup h3 {
+  margin: 0 0 2px;
+}
+
+.popup-sub {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-sub);
+  margin-bottom: 2px !important;
+}
+
+.popup-desc {
+  font-size: 12px;
+  color: var(--color-primary-dark);
+  margin-bottom: 6px !important;
+}
+
+.popup-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.popup-graduate {
+  margin-top: 10px;
+}
+
+.popup-close {
+  margin-top: 10px;
 }
 
 /* ── 플로팅 텍스트 (+EXP) ───────────── */
