@@ -21,8 +21,9 @@
   gap: 12px;
 }
 
-.shop-item-emoji {
-  font-size: 32px;
+.shop-item-icon {
+  font-size: 26px;
+  color: var(--color-primary);
 }
 
 .shop-item-name {

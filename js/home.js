@@ -44,9 +44,8 @@ const HomeModule = (function () {
     if (isEgg) return;
 
     const stage = GAME.STAGES[snail.stage];
-    const sprite = document.getElementById('snail-sprite');
-    sprite.textContent = stage.emoji;
-    sprite.className = 'snail-sprite stage-' + snail.stage;
+    // 스프라이트는 인라인 SVG — 단계별 크기/색은 stage-* 클래스가 제어한다
+    document.getElementById('snail-sprite').className = 'snail-sprite stage-' + snail.stage;
 
     document.getElementById('chip-name-level').textContent =
       snail.name + ' · Lv.' + snail.level + ' ' + stage.label;

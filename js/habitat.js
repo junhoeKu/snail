@@ -216,7 +216,7 @@ const HabitatModule = (function () {
     const p = _clampPoint(x, y);
     const el = document.createElement('div');
     el.className = 'food-item';
-    el.textContent = '🥬';
+    el.appendChild(document.getElementById('food-template').content.cloneNode(true));
     el.style.left = p.x + 'px';
     el.style.top = p.y + 'px';
     _foodLayer().appendChild(el);
