@@ -80,9 +80,10 @@ const App = (function () {
    */
   function _settleTime() {
     const player = DB.Player.get();
+    const decoFx = GAME.decorationEffects(player);
     let intervals = 0;
     const updated = DB.Snails.get().map(function (snail) {
-      const result = GAME.applyTimeDecay(snail, player.last_seen, DB.now());
+      const result = GAME.applyTimeDecay(snail, player.last_seen, DB.now(), decoFx);
       intervals = Math.max(intervals, result.intervals);
       return result.snail;
     });

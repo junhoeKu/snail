@@ -223,13 +223,24 @@ const GAME = (function () {
     return table;
   }
 
-  /** 장식 (순수 시각 요소 — 게임 수치에 영향 없음) */
+  /** 장식 — 배치(슬롯)된 것만 패시브 효과 발동 (7차_MVP_구현계획.md §5) */
   const DECORATIONS = {
-    pebble: { id: 'pebble', label: '조약돌', type: 'buy', price: 50 },
-    mushroom: { id: 'mushroom', label: '버섯', type: 'buy', price: 80 },
-    wildflower: { id: 'wildflower', label: '들꽃', type: 'unlock', unlockDesc: '미션 완주 누적 7회' },
-    mossrock: { id: 'mossrock', label: '이끼 바위', type: 'unlock', unlockDesc: '2세대 도달' }
+    pebble: { id: 'pebble', label: '조약돌', type: 'buy', price: 50, fxDesc: '행복 감소 15% 완화' },
+    mushroom: { id: 'mushroom', label: '버섯', type: 'buy', price: 80, fxDesc: '먹이 배고픔 회복 +10%' },
+    wildflower: { id: 'wildflower', label: '들꽃', type: 'unlock', unlockDesc: '미션 완주 누적 7회', fxDesc: '쓰다듬기 행복 +3' },
+    mossrock: { id: 'mossrock', label: '이끼 바위', type: 'unlock', unlockDesc: '2세대 도달', fxDesc: '배고픔 증가 10% 완화' }
   };
+
+  /** 배치된 장식의 패시브 수정치 집계 */
+  function decorationEffects(player) {
+    const slots = (player && player.decorations && player.decorations.slots) || [];
+    return {
+      happinessDecayMult: slots.indexOf('pebble') !== -1 ? 0.85 : 1,
+      feedHungerMult: slots.indexOf('mushroom') !== -1 ? 1.1 : 1,
+      petHappinessBonus: slots.indexOf('wildflower') !== -1 ? 3 : 0,
+      hungerDecayMult: slots.indexOf('mossrock') !== -1 ? 0.9 : 1
+    };
+  }
 
   /** 가중치 테이블에서 하나 추첨 */
   function _pickWeighted(table, roll) {
@@ -690,7 +701,8 @@ const GAME = (function () {
 
     if ((p.foods[def.id] || 0) > 0) p.foods[def.id] -= 1;
     p.coins += CONFIG.FEED_COINS;
-    s.hunger = _clamp(s.hunger - def.hunger);
+    const fx = decorationEffects(p); // 버섯: 회복 +10%
+    s.hunger = _clamp(s.hunger - Math.round(def.hunger * fx.feedHungerMult));
     s.happiness = _clamp(s.happiness + def.happiness);
     events.push('fed');
 
@@ -812,11 +824,13 @@ const GAME = (function () {
   /**
    * 경과 시간 정산: 1시간 단위로만 적용하고, 적용한 구간 수를 intervals로 반환한다.
    * 호출부는 intervals만큼만 last_seen을 전진시켜 잔여 시간을 잃지 않게 한다.
+   * @param {object} [mods] 장식 패시브 수정치 (decorationEffects — 생략 시 무보정)
    * @returns {{snail: object, events: string[], intervals: number}}
    */
-  function applyTimeDecay(snail, lastSeenISO, nowISO) {
+  function applyTimeDecay(snail, lastSeenISO, nowISO, mods) {
     const s = _clone(snail);
     const events = [];
+    const fx = mods || { hungerDecayMult: 1, happinessDecayMult: 1 };
 
     if (s.stage === 'egg' || !lastSeenISO) {
       return { snail: s, events: events, intervals: 0 };
@@ -828,8 +842,8 @@ const GAME = (function () {
       return { snail: s, events: events, intervals: 0 };
     }
 
-    s.hunger = _clamp(s.hunger + intervals * CONFIG.DECAY_HUNGER);
-    s.happiness = _clamp(s.happiness - intervals * CONFIG.DECAY_HAPPINESS);
+    s.hunger = _clamp(s.hunger + Math.round(intervals * CONFIG.DECAY_HUNGER * (fx.hungerDecayMult || 1)));
+    s.happiness = _clamp(s.happiness - Math.round(intervals * CONFIG.DECAY_HAPPINESS * (fx.happinessDecayMult || 1)));
     events.push('decayed');
     return { snail: s, events: events, intervals: intervals };
   }
@@ -848,7 +862,8 @@ const GAME = (function () {
       return { snail: s, player: p, events: events };
     }
 
-    s.happiness = _clamp(s.happiness + CONFIG.PET_HAPPINESS);
+    const fx = decorationEffects(p); // 들꽃: 쓰다듬기 행복 +3
+    s.happiness = _clamp(s.happiness + CONFIG.PET_HAPPINESS + fx.petHappinessBonus);
     events.push('petted');
     return { snail: s, player: p, events: events };
   }
@@ -874,9 +889,10 @@ const GAME = (function () {
     report.away_minutes = Math.max(0, Math.floor((new Date(nowISO) - new Date(p.last_seen)) / 60000));
 
     // 1) 개체별 시간 감쇠 (last_seen은 적용 구간만큼만 전진 — 잔여 시간 보존)
+    const decoFx = decorationEffects(p);
     let intervals = 0;
     const updated = list.map(function (s) {
-      const decay = applyTimeDecay(s, p.last_seen, nowISO);
+      const decay = applyTimeDecay(s, p.last_seen, nowISO, decoFx);
       if (decay.intervals > 0) {
         intervals = Math.max(intervals, decay.intervals);
         report.snails.push({
@@ -963,6 +979,7 @@ const GAME = (function () {
     PERSONALITIES: PERSONALITIES,
     VARIANTS: VARIANTS,
     DECORATIONS: DECORATIONS,
+    decorationEffects: decorationEffects,
     MISSION_DEFS: MISSION_DEFS,
     FOOD_DEFS: FOOD_DEFS,
     keeperLevel: keeperLevel,
