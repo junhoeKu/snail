@@ -133,7 +133,7 @@ const Toast = (function () {
     cancelBtn.addEventListener('click', function () { overlay.remove(); });
 
     const confirmBtn = document.createElement('button');
-    confirmBtn.className = 'btn btn-danger';
+    confirmBtn.className = 'btn ' + (opts.confirmClass || 'btn-danger');
     confirmBtn.textContent = opts.confirmLabel || '확인';
     confirmBtn.addEventListener('click', function () {
       overlay.remove();

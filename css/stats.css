@@ -28,6 +28,11 @@
   font-weight: 600;
 }
 
+/* ── 여행 보내기 ────────────────────── */
+.graduate-box {
+  margin-top: 14px;
+}
+
 /* ── 성장 일지 ──────────────────────── */
 .journal-title {
   font-size: 15px;

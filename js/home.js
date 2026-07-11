@@ -177,7 +177,8 @@ const HomeModule = (function () {
 
   function _hatch() {
     const input = document.getElementById('snail-name-input');
-    const result = GAME.hatch(DB.Snail.get(), input.value);
+    const generation = DB.Player.get().generation || 1;
+    const result = GAME.hatch(DB.Snail.get(), input.value, undefined, generation);
 
     if (result.events.indexOf('hatched') === -1) {
       _showEvents(result.events, DB.Player.get());
@@ -192,7 +193,8 @@ const HomeModule = (function () {
     DB.Player.save(player);
 
     // 성장 일지: 탄생 + 변이 + 성격
-    DB.Journal.add('hatch', result.snail.name + '(이)가 알을 깨고 태어났어요!');
+    DB.Journal.add('hatch', result.snail.name +
+      (generation > 1 ? ' (' + generation + '세대)' : '') + '(이)가 알을 깨고 태어났어요!');
     const variant = GAME.VARIANTS[result.snail.color];
     if (variant && variant.id !== 'brown') {
       DB.Journal.add('variant', (variant.id === 'golden' ? '반짝이는 황금빛' : variant.label) +
