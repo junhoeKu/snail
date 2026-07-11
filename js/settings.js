@@ -46,8 +46,65 @@ const SettingsModule = (function () {
     if (player.sound_on) Sound.play('tap'); // 켤 때만 확인음
   }
 
+  // ── 백업 & 복구 ───────────────────────────────────────
+
+  const BACKUP_PREFIX = 'SNAIL1.';
+
+  function _encodeBackup() {
+    const json = JSON.stringify(DB.exportAll());
+    return BACKUP_PREFIX + btoa(unescape(encodeURIComponent(json)));
+  }
+
+  /** @returns {object|null} */
+  function _decodeBackup(code) {
+    try {
+      const trimmed = (code || '').trim();
+      if (trimmed.indexOf(BACKUP_PREFIX) !== 0) return null;
+      return JSON.parse(decodeURIComponent(escape(atob(trimmed.slice(BACKUP_PREFIX.length)))));
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function _exportBackup() {
+    const code = _encodeBackup();
+    const done = function () { Toast.show('📋 백업 코드를 복사했어요. 안전한 곳에 보관하세요!'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(code).then(done, function () { _showCodeFallback(code); });
+    } else {
+      _showCodeFallback(code);
+    }
+  }
+
+  /** 클립보드 미지원 시 코드를 입력창에 노출해 수동 복사 */
+  function _showCodeFallback(code) {
+    const input = document.getElementById('backup-input');
+    input.value = code;
+    input.select();
+    Toast.show('코드를 길게 눌러 직접 복사해주세요.');
+  }
+
+  function _importBackup() {
+    const data = _decodeBackup(document.getElementById('backup-input').value);
+    if (!data) {
+      Toast.show('올바른 백업 코드가 아니에요.', 'warn');
+      return;
+    }
+    Toast.confirm({
+      title: '백업 복구',
+      message: '지금 데이터를 백업 코드의 데이터로 완전히 덮어씁니다. 되돌릴 수 없어요!',
+      confirmLabel: '복구',
+      onConfirm: function () {
+        if (DB.importAll(data)) location.reload();
+        else Toast.show('복구에 실패했어요. 코드를 확인해주세요.', 'warn');
+      }
+    });
+  }
+
   function bind() {
     document.getElementById('btn-sound-toggle').addEventListener('click', _toggleSound);
+    document.getElementById('btn-backup-export').addEventListener('click', _exportBackup);
+    document.getElementById('btn-backup-import').addEventListener('click', _importBackup);
     document.getElementById('btn-reset').addEventListener('click', function () {
       Toast.confirm({
         title: '데이터 초기화',
