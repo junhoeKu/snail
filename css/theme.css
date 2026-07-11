@@ -1,23 +1,26 @@
 /* theme.css — 색상 변수 / 배경 */
 
 :root {
-  --color-primary: #4caf7d;
-  --color-primary-dark: #3d9268;
-  --color-secondary: #6fa8dc;
-  --color-secondary-dark: #5b8fc0;
-  --color-surface: #ffffff;
-  --color-text: #2f3e34;
-  --color-text-sub: #7d8a80;
-  --color-warn: #e8a13c;
-  --color-danger: #e07856;
+  --color-primary: #6a8f5c;
+  --color-primary-dark: #55794a;
+  --color-surface: #fbfaf6;
+  --color-glass: rgba(251, 250, 246, 0.72);
+  --color-bar: rgba(251, 250, 246, 0.85);
+  --color-text: #33392e;
+  --color-text-sub: #79806f;
+  --color-warn: #c98f4a;
+  --color-danger: #b06846;
 
-  --color-exp: #8e7cc3;
-  --color-hunger: #e8a13c;
-  --color-happiness: #4caf7d;
+  --color-exp: #8d7fae;
+  --color-hunger: #c98f4a;
+  --color-happiness: #6a8f5c;
+
+  --ground-accent-1: rgba(58, 76, 45, 0.35);
+  --ground-accent-2: rgba(92, 76, 52, 0.3);
 
   --radius: 16px;
   --radius-sm: 10px;
-  --shadow: 0 4px 16px rgba(47, 62, 52, 0.1);
+  --shadow: 0 4px 16px rgba(47, 55, 42, 0.12);
 }
 
 * {

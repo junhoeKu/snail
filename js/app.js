@@ -1,5 +1,5 @@
 /**
- * App — 앱 컨트롤러 (부팅/화면 전환/헤더)
+ * App — 앱 컨트롤러 (부팅/탭 전환/지갑)
  * 전역 네임스페이스: App
  */
 const App = (function () {
@@ -9,15 +9,21 @@ const App = (function () {
   const TICK_MS = 60 * 1000; // 1분마다 경과 시간 확인
 
   /**
-   * 화면 전환
-   * @param {string} screen 'home' | 'shop'
+   * 화면(탭) 전환
+   * @param {string} screen 'home' | 'stats' | 'shop' | 'deco' | 'settings'
    */
   function navigate(screen) {
     document.querySelectorAll('.screen').forEach(function (el) {
       el.classList.toggle('active', el.id === 'screen-' + screen);
     });
+    document.querySelectorAll('.tab-bar .tab').forEach(function (tab) {
+      tab.classList.toggle('active', tab.dataset.screen === screen);
+    });
+
     if (screen === 'home' && typeof HomeModule !== 'undefined') HomeModule.render();
+    if (screen === 'stats' && typeof StatsModule !== 'undefined') StatsModule.render();
     if (screen === 'shop' && typeof ShopModule !== 'undefined') ShopModule.render();
+    if (screen === 'deco' && typeof DecoModule !== 'undefined') DecoModule.render();
 
     // 홈에서만 서식지 게임 루프를 돌린다
     if (typeof HabitatModule !== 'undefined') {
@@ -26,7 +32,7 @@ const App = (function () {
     }
   }
 
-  /** 헤더 지갑(코인/상추) 갱신 */
+  /** 지갑(코인/상추) 표시 갱신 */
   function refreshHeader() {
     const player = DB.Player.get();
     document.getElementById('coin-count').textContent = player.coins;
@@ -62,6 +68,9 @@ const App = (function () {
       if (document.getElementById('screen-home').classList.contains('active')) {
         HomeModule.render();
       }
+      if (document.getElementById('screen-stats').classList.contains('active')) {
+        StatsModule.render();
+      }
     }, TICK_MS);
   }
 
@@ -81,11 +90,10 @@ const App = (function () {
   }
 
   function _bindNav() {
-    document.getElementById('btn-goto-shop').addEventListener('click', function () {
-      navigate('shop');
-    });
-    document.getElementById('btn-back-home').addEventListener('click', function () {
-      navigate('home');
+    document.querySelectorAll('.tab-bar .tab').forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        navigate(tab.dataset.screen);
+      });
     });
   }
 
@@ -97,6 +105,9 @@ const App = (function () {
     _bindNav();
     HomeModule.bind();
     ShopModule.bind();
+    DecoModule.bind();
+    SettingsModule.bind();
+    SettingsModule.render();
 
     _settleTime();
     _claimDailyReward();

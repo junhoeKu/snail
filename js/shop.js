@@ -1,17 +1,12 @@
 /**
- * ShopModule — 상점 (상추 구매 / 배경 교체)
+ * ShopModule — 상점 (상추 구매)
  * 전역 네임스페이스: ShopModule
  */
 const ShopModule = (function () {
   'use strict';
 
   function render() {
-    const player = DB.Player.get();
-    document.getElementById('shop-coins').textContent = player.coins;
-
-    document.querySelectorAll('.bg-option').forEach(function (el) {
-      el.classList.toggle('selected', el.dataset.bg === player.background);
-    });
+    document.getElementById('shop-coins').textContent = DB.Player.get().coins;
   }
 
   function _buyFood() {
@@ -28,24 +23,8 @@ const ShopModule = (function () {
     render();
   }
 
-  function _setBackground(bg) {
-    const player = DB.Player.get();
-    if (player.background === bg) return;
-
-    player.background = bg;
-    DB.Player.save(player);
-    App.applyBackground();
-    render();
-    Toast.show('배경을 바꿨어요!');
-  }
-
   function bind() {
     document.getElementById('btn-buy-food').addEventListener('click', _buyFood);
-    document.querySelectorAll('.bg-option').forEach(function (el) {
-      el.addEventListener('click', function () {
-        _setBackground(el.dataset.bg);
-      });
-    });
   }
 
   return { render: render, bind: bind };

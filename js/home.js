@@ -1,5 +1,5 @@
 /**
- * HomeModule — 홈 화면 (달팽이 상태 / 부화 온보딩 / 먹이·산책 액션)
+ * HomeModule — 홈 화면 (서식지 오버레이 / 부화 온보딩 / 먹이·산책 액션)
  * 전역 네임스페이스: HomeModule
  */
 const HomeModule = (function () {
@@ -48,23 +48,10 @@ const HomeModule = (function () {
     sprite.textContent = stage.emoji;
     sprite.className = 'snail-sprite stage-' + snail.stage;
 
-    document.getElementById('snail-name').textContent = snail.name;
-    document.getElementById('snail-level').textContent = snail.level;
-    document.getElementById('snail-stage-label').textContent = stage.label;
-
-    const expNeeded = GAME.expToNext(snail.level);
-    document.getElementById('exp-text').textContent = snail.exp + ' / ' + expNeeded;
-    _setBar('bar-exp', (snail.exp / expNeeded) * 100);
-
-    document.getElementById('hunger-text').textContent = snail.hunger + '%';
-    _setBar('bar-hunger', snail.hunger);
-
-    document.getElementById('happiness-text').textContent = snail.happiness + '%';
-    _setBar('bar-happiness', snail.happiness);
-  }
-
-  function _setBar(id, percent) {
-    document.getElementById(id).style.width = Math.max(0, Math.min(100, percent)) + '%';
+    document.getElementById('chip-name-level').textContent =
+      snail.name + ' · Lv.' + snail.level + ' ' + stage.label;
+    document.getElementById('chip-hunger').textContent = snail.hunger;
+    document.getElementById('chip-happiness').textContent = snail.happiness;
   }
 
   /** 행동 결과 저장 + 렌더링 + 이벤트 연출 */
@@ -80,6 +67,7 @@ const HomeModule = (function () {
 
     App.refreshHeader();
     render();
+    StatsModule.render();
     _showEvents(result.events, result.player || DB.Player.get());
   }
 
@@ -139,6 +127,7 @@ const HomeModule = (function () {
     DB.Player.save(player);
 
     render();
+    StatsModule.render();
     HabitatModule.onHatched();
     Toast.celebrate({
       emoji: '🐌',
@@ -163,6 +152,9 @@ const HomeModule = (function () {
     });
     document.getElementById('btn-feed').addEventListener('click', _feed);
     document.getElementById('btn-walk').addEventListener('click', _walk);
+    document.getElementById('snail-chip').addEventListener('click', function () {
+      App.navigate('stats');
+    });
   }
 
   return {
