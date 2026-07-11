@@ -8,12 +8,13 @@
 const DB = (function () {
   'use strict';
 
-  const SCHEMA_VERSION = 3;
+  const SCHEMA_VERSION = 4;
 
   const KEYS = {
     PLAYER: 'sn_player',
     SNAIL: 'sn_snail',
-    JOURNAL: 'sn_journal'
+    JOURNAL: 'sn_journal',
+    ALBUM: 'sn_album'
   };
 
   const JOURNAL_MAX = 100; // 성장 일지 최대 보관 건수
@@ -68,7 +69,11 @@ const DB = (function () {
       last_pet: null,
       background: 'default',
       streak: { count: 0, last_date: null },
-      missions: { date: null, feed: 0, walk: 0, pet: 0, bonus_given: false }
+      missions: { date: null, feed: 0, walk: 0, pet: 0, bonus_given: false },
+      generation: 1,             // 현재 세대 (여행 보내기마다 +1)
+      mission_completions: 0,    // 미션 완주 누적 (장식 해금 조건)
+      sound_on: true,
+      decorations: { owned: [], slots: [null, null, null] }
     };
   }
 
@@ -123,6 +128,19 @@ const DB = (function () {
     }
   };
 
+  /** 앨범 — 여행 보낸 역대 달팽이 기록 (세대순 append) */
+  const Album = {
+    get: function () {
+      const stored = _read(KEYS.ALBUM);
+      return Array.isArray(stored) ? stored : [];
+    },
+    add: function (record) {
+      const list = Album.get();
+      list.push(record);
+      return _write(KEYS.ALBUM, list);
+    }
+  };
+
   /** 성장 일지 — 최근 JOURNAL_MAX건 유지 */
   const Journal = {
     get: function () {
@@ -145,6 +163,7 @@ const DB = (function () {
     localStorage.removeItem(KEYS.PLAYER);
     localStorage.removeItem(KEYS.SNAIL);
     localStorage.removeItem(KEYS.JOURNAL);
+    localStorage.removeItem(KEYS.ALBUM);
     console.warn('[DB] 초기화 완료. 새로고침하면 온보딩부터 시작합니다.');
   }
 
@@ -153,6 +172,7 @@ const DB = (function () {
     Player: Player,
     Snail: Snail,
     Journal: Journal,
+    Album: Album,
     reset: reset,
     now: now,
     today: today
