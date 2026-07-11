@@ -68,31 +68,17 @@
 
       </section>
 
-      <!-- 달팽이 (스탯 + 성장 일지) -->
+      <!-- 유저 (양육자/도감/앨범/일지 — 개체 상세는 홈 팝업) -->
       <section id="screen-stats" class="screen">
         <div class="card">
-          <h2 class="screen-title"><i class="fa-solid fa-chart-simple"></i> 달팽이</h2>
-          <div id="snail-select" class="snail-select"></div>
-          <p class="stats-identity">
-            <strong id="stats-name">-</strong> · Lv.<span id="stats-level">-</span>
-            <span id="stats-stage"></span> 달팽이
-          </p>
-          <p id="stats-traits" class="stats-traits"></p>
+          <h2 class="screen-title"><i class="fa-solid fa-user"></i> 유저</h2>
 
-          <div class="stat">
-            <div class="stat-head"><span><i class="fa-solid fa-star"></i> 경험치</span><span id="exp-text">0 / 20</span></div>
-            <div class="stat-bar"><div id="bar-exp" class="stat-fill fill-exp"></div></div>
+          <div class="keeper-box">
+            <div class="keeper-title">🧑‍🌾 양육자 Lv.<span id="keeper-level">1</span></div>
+            <div class="stat-bar"><div id="bar-keeper" class="stat-fill fill-exp"></div></div>
+            <div id="keeper-xp-text" class="keeper-xp"></div>
+            <p id="keeper-next" class="stats-next"></p>
           </div>
-          <div class="stat">
-            <div class="stat-head"><span><i class="fa-solid fa-utensils"></i> 배고픔</span><span id="hunger-text">0%</span></div>
-            <div class="stat-bar"><div id="bar-hunger" class="stat-fill fill-hunger"></div></div>
-          </div>
-          <div class="stat">
-            <div class="stat-head"><span><i class="fa-solid fa-face-smile"></i> 행복</span><span id="happiness-text">0%</span></div>
-            <div class="stat-bar"><div id="bar-happiness" class="stat-fill fill-happiness"></div></div>
-          </div>
-
-          <p id="stats-next" class="stats-next"></p>
 
           <h3 class="journal-title"><i class="fa-solid fa-book"></i> 도감 <span id="dex-count" class="dex-count"></span></h3>
           <div id="dex-grid" class="dex-grid"></div>
@@ -188,7 +174,7 @@
     <!-- 하단 탭 바 -->
     <nav class="tab-bar">
       <button class="tab" data-screen="stats">
-        <i class="fa-solid fa-chart-simple"></i><span>달팽이</span>
+        <i class="fa-solid fa-user"></i><span>유저</span>
       </button>
       <button class="tab" data-screen="shop">
         <i class="fa-solid fa-store"></i><span>상점</span>
