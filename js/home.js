@@ -98,6 +98,9 @@ const HomeModule = (function () {
       const result = GAME.recordMission(DB.Player.get(), kind, DB.today());
       DB.Player.save(result.player);
       if (result.events.indexOf('mission_done') !== -1) {
+        Sound.play('coin');
+        const chip = document.getElementById('mission-chip').getBoundingClientRect();
+        FX.flyCoins(chip.left + chip.width / 2, chip.top, 2);
         Toast.show('✅ 미션 완료: ' + GAME.MISSION_DEFS[kind].label +
           ' (+' + GAME.CONFIG.MISSION_REWARD_COINS + ' 코인)');
       }
@@ -146,8 +149,15 @@ const HomeModule = (function () {
 
       if (ev === 'fed') _popSprite();
 
+      if (ev === 'walked') {
+        Sound.play('coin');
+        const fab = document.getElementById('btn-walk').getBoundingClientRect();
+        FX.flyCoins(fab.left + fab.width / 2, fab.top, 2);
+      }
+
       if (ev === 'levelup') {
         const level = DB.Snail.get().level;
+        Sound.play('fanfare');
         Toast.show('🎉 레벨 업! Lv.' + level);
         DB.Journal.add('levelup', 'Lv.' + level + '이 되었어요!');
       }
@@ -158,6 +168,7 @@ const HomeModule = (function () {
           junior: '껍질이 커졌습니다!',
           adult: '색이 짙어졌어요! 어엿한 성체가 되었습니다.'
         };
+        FX.confetti(14);
         Toast.celebrate({
           emoji: GAME.STAGES[snail.stage].emoji,
           title: 'Lv ' + snail.level + ' — ' + GAME.STAGES[snail.stage].label + ' 달팽이',
@@ -207,6 +218,9 @@ const HomeModule = (function () {
     render();
     StatsModule.render();
     HabitatModule.onHatched();
+    Sound.play('fanfare');
+    Sound.vibrate(30);
+    FX.confetti(16);
     Toast.celebrate({
       emoji: variant && variant.id === 'golden' ? '✨' : '🐌',
       title: '부화 성공!',
@@ -232,6 +246,7 @@ const HomeModule = (function () {
       DB.Player.save(result.player);
       render();
       StatsModule.render();
+      Sound.play('heart');
       HabitatModule.effect('💗');
       _recordMissions(result.events);
       return;

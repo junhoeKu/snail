@@ -327,6 +327,9 @@ const HabitatModule = (function () {
     HomeModule.handleResult(result);
     if (result.events.indexOf('fed') !== -1) {
       _floatText('+' + GAME.CONFIG.FEED_EXP + ' EXP');
+      Sound.play('eat');
+      const rect = _habitat().getBoundingClientRect();
+      FX.flyCoins(rect.left + _pos.x, rect.top + _pos.y, 2);
     }
     // IDLE 진입 시 현재 위치가 (정산으로 덮인) 스냅샷 위에 다시 저장된다
     _setState(STATE.IDLE);

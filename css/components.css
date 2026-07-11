@@ -25,6 +25,12 @@
 
 .screen.active {
   display: block;
+  animation: screen-in 0.16s ease;
+}
+
+@keyframes screen-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* 홈은 서식지가 전체를 차지한다 */
@@ -324,6 +330,70 @@
   0%   { transform: scale(0.3); }
   60%  { transform: scale(1.2); }
   100% { transform: scale(1); }
+}
+
+/* ── 게임필 연출 (FX) ───────────────── */
+.fx-pulse {
+  animation: fx-pulse 0.35s ease;
+}
+
+@keyframes fx-pulse {
+  40% { transform: scale(1.12); }
+}
+
+.fx-delta {
+  position: fixed;
+  z-index: 150;
+  font-size: 12px;
+  font-weight: 800;
+  pointer-events: none;
+  animation: fx-delta 0.9s ease forwards;
+}
+
+.fx-delta.gain { color: var(--color-warn); }
+.fx-delta.loss { color: var(--color-danger); }
+
+@keyframes fx-delta {
+  0%   { opacity: 0; transform: translate(-50%, -4px); }
+  25%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, 14px); }
+}
+
+.fx-coin {
+  position: fixed;
+  z-index: 150;
+  color: var(--color-warn);
+  font-size: 14px;
+  pointer-events: none;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.fx-confetti {
+  position: fixed;
+  top: -14px;
+  width: 8px;
+  height: 12px;
+  border-radius: 2px;
+  z-index: 210;
+  pointer-events: none;
+  animation: fx-confetti-fall 1.6s ease-in forwards;
+}
+
+@keyframes fx-confetti-fall {
+  to {
+    transform: translate(var(--dx, 0), 106vh) rotate(var(--rot, 360deg));
+    opacity: 0.75;
+  }
+}
+
+/* 접근성: 모션 축소 설정 존중 */
+@media (prefers-reduced-motion: reduce) {
+  .screen.active,
+  .fx-pulse,
+  .fx-delta,
+  .fx-confetti {
+    animation: none;
+  }
 }
 
 /* ── 모바일 (390px 기준) ────────────── */

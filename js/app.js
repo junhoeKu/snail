@@ -32,11 +32,11 @@ const App = (function () {
     }
   }
 
-  /** 지갑(코인/상추) 표시 갱신 */
+  /** 지갑(코인/상추) 표시 갱신 (값은 즉시, 연출은 FX가 덧입힘) */
   function refreshHeader() {
     const player = DB.Player.get();
-    document.getElementById('coin-count').textContent = player.coins;
-    document.getElementById('food-count').textContent = player.food;
+    FX.bumpNumber(document.getElementById('coin-count'), player.coins);
+    FX.bumpNumber(document.getElementById('food-count'), player.food);
   }
 
   /**
@@ -142,6 +142,7 @@ const App = (function () {
     if (result.events.indexOf('daily_claimed') === -1) return;
 
     DB.Player.save(result.player);
+    Sound.play('coin');
     let msg = '🎁 접속 보상 +' + result.coins + ' 코인!';
     if (result.streak > 1) msg += ' (연속 ' + result.streak + '일)';
     Toast.show(msg);
@@ -154,6 +155,7 @@ const App = (function () {
   function _bindNav() {
     document.querySelectorAll('.tab-bar .tab').forEach(function (tab) {
       tab.addEventListener('click', function () {
+        Sound.play('tap');
         navigate(tab.dataset.screen);
       });
     });

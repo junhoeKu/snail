@@ -23,9 +23,26 @@ const SettingsModule = (function () {
       li.textContent = rule;
       list.appendChild(li);
     });
+
+    _renderSoundToggle();
+  }
+
+  function _renderSoundToggle() {
+    const on = DB.Player.get().sound_on !== false;
+    document.getElementById('btn-sound-toggle').textContent =
+      on ? '🔊 효과음 켜짐 — 탭해서 끄기' : '🔇 효과음 꺼짐 — 탭해서 켜기';
+  }
+
+  function _toggleSound() {
+    const player = DB.Player.get();
+    player.sound_on = player.sound_on === false;
+    DB.Player.save(player);
+    _renderSoundToggle();
+    if (player.sound_on) Sound.play('tap'); // 켤 때만 확인음
   }
 
   function bind() {
+    document.getElementById('btn-sound-toggle').addEventListener('click', _toggleSound);
     document.getElementById('btn-reset').addEventListener('click', function () {
       Toast.confirm({
         title: '데이터 초기화',

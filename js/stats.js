@@ -114,6 +114,8 @@ const StatsModule = (function () {
     App.refreshHeader();
     DecoModule.claimUnlocks(); // 이끼 바위(세대) 해금 확인
     render();
+    Sound.play('fanfare');
+    FX.confetti(16);
     Toast.celebrate({
       emoji: '🧳',
       title: '잘 다녀와, ' + result.record.name + '!',
