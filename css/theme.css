@@ -1,0 +1,47 @@
+/* theme.css — 색상 변수 / 배경 */
+
+:root {
+  --color-primary: #4caf7d;
+  --color-primary-dark: #3d9268;
+  --color-secondary: #6fa8dc;
+  --color-secondary-dark: #5b8fc0;
+  --color-surface: #ffffff;
+  --color-text: #2f3e34;
+  --color-text-sub: #7d8a80;
+  --color-warn: #e8a13c;
+  --color-danger: #e07856;
+
+  --color-exp: #8e7cc3;
+  --color-hunger: #e8a13c;
+  --color-happiness: #4caf7d;
+
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 4px 16px rgba(47, 62, 52, 0.1);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", system-ui, sans-serif;
+  color: var(--color-text);
+  transition: background 0.5s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 배경 (꾸미기 최소: 2종) */
+body[data-background="default"] {
+  background: linear-gradient(180deg, #dff3e4 0%, #f7fbf3 100%);
+}
+
+body[data-background="garden"] {
+  background: linear-gradient(180deg, #fde8ec 0%, #fdf6e3 100%);
+}

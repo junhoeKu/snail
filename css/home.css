@@ -1,0 +1,84 @@
+/* home.css — 홈(달팽이) 화면 */
+
+/* ── 알(온보딩) ─────────────────────── */
+.egg-view {
+  text-align: center;
+  margin-top: 32px;
+}
+
+.egg-emoji {
+  font-size: 88px;
+  animation: egg-wobble 2.4s ease-in-out infinite;
+}
+
+.egg-guide {
+  margin: 16px 0 20px;
+  color: var(--color-text-sub);
+  line-height: 1.6;
+}
+
+@keyframes egg-wobble {
+  0%, 100% { transform: rotate(0deg); }
+  25%      { transform: rotate(-6deg); }
+  75%      { transform: rotate(6deg); }
+}
+
+/* ── 달팽이 카드 ────────────────────── */
+.snail-card {
+  text-align: center;
+}
+
+.snail-sprite {
+  display: inline-block;
+  line-height: 1;
+  animation: snail-bob 3s ease-in-out infinite;
+}
+
+/* 성장 단계별 표현: 어린이는 껍질(크기) 커짐, 성체는 색상 변화 */
+.snail-sprite.stage-baby {
+  font-size: 56px;
+}
+
+.snail-sprite.stage-junior {
+  font-size: 84px;
+}
+
+.snail-sprite.stage-adult {
+  font-size: 104px;
+  filter: hue-rotate(120deg) saturate(1.4);
+}
+
+.snail-sprite.pop {
+  animation: sprite-pop 0.5s ease;
+}
+
+@keyframes snail-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+
+@keyframes sprite-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+
+.snail-name {
+  margin-top: 12px;
+  font-size: 22px;
+}
+
+.snail-level {
+  color: var(--color-text-sub);
+  font-size: 14px;
+  font-weight: 700;
+  margin: 4px 0 8px;
+}
+
+/* ── 행동 버튼 ──────────────────────── */
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-top: 16px;
+}
