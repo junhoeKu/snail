@@ -177,11 +177,23 @@ const GAME = (function () {
     fog: { id: 'fog', label: '안개', idleFactor: 1, speedFactor: 1 }
   };
 
-  /** 성격 (부화 시 랜덤 1개 — 행동 가중치) */
+  /**
+   * 성격 (부화 시 랜덤 1개) — 행동 연출 전용, 게임 수치에는 무영향.
+   * 배수는 HabitatModule의 모션 계산에서만 쓰인다.
+   */
   const PERSONALITIES = {
-    foodie: { id: 'foodie', label: '먹보', chance: 0.40, seekFactor: 1.3, idleFactor: 1, napFactor: 1 },
-    explorer: { id: 'explorer', label: '모험가', chance: 0.35, seekFactor: 1, idleFactor: 0.7, napFactor: 1 },
-    sleepy: { id: 'sleepy', label: '잠꾸러기', chance: 0.25, seekFactor: 1, idleFactor: 1, napFactor: 2 }
+    foodie: {
+      id: 'foodie', label: '먹보', chance: 0.40, desc: '먹이를 보면 눈빛이 변해요',
+      seekFactor: 1.4, speedFactor: 1, idleFactor: 1, napFactor: 1, napLenFactor: 1, eatFactor: 0.7
+    },
+    explorer: {
+      id: 'explorer', label: '개구쟁이', chance: 0.35, desc: '잠시도 가만히 있지 못해요',
+      seekFactor: 1, speedFactor: 1.25, idleFactor: 0.5, napFactor: 1, napLenFactor: 1, eatFactor: 1
+    },
+    sleepy: {
+      id: 'sleepy', label: '잠꾸러기', chance: 0.25, desc: '어디서든 스르르 잠들어요',
+      seekFactor: 1, speedFactor: 0.85, idleFactor: 1, napFactor: 3, napLenFactor: 1.5, eatFactor: 1
+    }
   };
 
   /** 껍질 변이 (부화 시 랜덤) — chance는 1세대 기준, 세대 보정은 variantTableFor */

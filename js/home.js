@@ -300,8 +300,8 @@ const HomeModule = (function () {
     HabitatModule.dropFoodRandom();
   }
 
-  /** 쓰다듬기 — 서식지에서 터치한 개체에만 적용 */
-  function handlePet(snailId) {
+  /** 쓰다듬기 (개체 팝업 버튼에서 호출) */
+  function _petById(snailId) {
     const rec = DB.Snails.getById(snailId);
     if (!rec) return;
     const result = GAME.pet(rec, DB.Player.get(), DB.now());
@@ -314,6 +314,160 @@ const HomeModule = (function () {
     Sound.play('heart');
     HabitatModule.effect('💗', snailId);
     _recordMissions(result.events);
+  }
+
+  // ── 개체 팝업 (달팽이 클릭) ────────────────────────────
+
+  function openSnailPopup(snailId) {
+    _renderSnailPopup(snailId);
+  }
+
+  function _popupBar(label, valueText, percent, fillClass) {
+    const row = document.createElement('div');
+    row.className = 'stat';
+    const head = document.createElement('div');
+    head.className = 'stat-head';
+    const labelSpan = document.createElement('span');
+    labelSpan.textContent = label;
+    const valueSpan = document.createElement('span');
+    valueSpan.textContent = valueText;
+    head.appendChild(labelSpan);
+    head.appendChild(valueSpan);
+    const bar = document.createElement('div');
+    bar.className = 'stat-bar';
+    const fill = document.createElement('div');
+    fill.className = 'stat-fill ' + fillClass;
+    fill.style.width = Math.max(0, Math.min(100, percent)) + '%';
+    bar.appendChild(fill);
+    row.appendChild(head);
+    row.appendChild(bar);
+    return row;
+  }
+
+  function _renderSnailPopup(snailId) {
+    const rec = DB.Snails.getById(snailId);
+    if (!rec || rec.stage === 'egg') return;
+
+    const root = document.getElementById('modal-root');
+    root.innerHTML = '';
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const box = document.createElement('div');
+    box.className = 'modal-box snail-popup';
+
+    const img = document.createElement('img');
+    img.className = 'popup-img' + (rec.color === 'golden' ? ' popup-golden' : '');
+    img.src = 'assets/characters/snail_' + (rec.color || 'brown') + '_' + rec.stage + '.png';
+    img.alt = rec.name;
+    box.appendChild(img);
+
+    const title = document.createElement('h3');
+    title.textContent = rec.name;
+    box.appendChild(title);
+
+    const personality = GAME.PERSONALITIES[rec.personality];
+    const variant = GAME.VARIANTS[rec.color || 'brown'];
+    const sub = document.createElement('p');
+    sub.className = 'popup-sub';
+    sub.textContent = 'Lv.' + rec.level + ' ' + GAME.STAGES[rec.stage].label + ' · ' +
+      (variant ? variant.label : '갈색') + ' 껍질 · ' + (personality ? personality.label : '?');
+    box.appendChild(sub);
+
+    if (personality && personality.desc) {
+      const desc = document.createElement('p');
+      desc.className = 'popup-desc';
+      desc.textContent = '"' + personality.desc + '"';
+      box.appendChild(desc);
+    }
+
+    const expNeeded = GAME.expToNext(rec.level);
+    box.appendChild(_popupBar('⭐ 경험치', rec.exp + ' / ' + expNeeded, (rec.exp / expNeeded) * 100, 'fill-exp'));
+    box.appendChild(_popupBar('🍀 배고픔', rec.hunger + '%', rec.hunger, 'fill-hunger'));
+    box.appendChild(_popupBar('😊 행복', rec.happiness + '%', rec.happiness, 'fill-happiness'));
+
+    const actions = document.createElement('div');
+    actions.className = 'popup-actions';
+    const feedBtn = document.createElement('button');
+    feedBtn.className = 'btn btn-primary';
+    const selectedDef = GAME.FOOD_DEFS[DB.Player.get().selected_food] || GAME.FOOD_DEFS.lettuce;
+    feedBtn.textContent = selectedDef.emoji + ' 먹이주기';
+    feedBtn.addEventListener('click', function () {
+      overlay.remove();
+      HabitatModule.dropFoodNear(snailId); // 이 아이 근처에 드롭
+    });
+    const petBtn = document.createElement('button');
+    petBtn.className = 'btn btn-ghost';
+    petBtn.textContent = '🖐️ 쓰다듬기';
+    petBtn.addEventListener('click', function () {
+      _petById(snailId);
+      _renderSnailPopup(snailId); // 수치 즉시 갱신
+    });
+    actions.appendChild(feedBtn);
+    actions.appendChild(petBtn);
+    box.appendChild(actions);
+
+    if (GAME.canGraduate(rec)) {
+      const gradBtn = document.createElement('button');
+      gradBtn.className = 'btn btn-primary btn-wide popup-graduate';
+      gradBtn.innerHTML = '<i class="fa-solid fa-suitcase"></i> 여행 보내기';
+      gradBtn.addEventListener('click', function () {
+        overlay.remove();
+        _confirmGraduate(snailId);
+      });
+      box.appendChild(gradBtn);
+    }
+
+    const close = document.createElement('button');
+    close.className = 'btn btn-ghost btn-wide popup-close';
+    close.textContent = '닫기';
+    close.addEventListener('click', function () { overlay.remove(); });
+    box.appendChild(close);
+
+    overlay.appendChild(box);
+    root.appendChild(overlay);
+  }
+
+  // ── 여행 보내기 (팝업에서 진입) ────────────────────────
+
+  function _confirmGraduate(snailId) {
+    const snail = DB.Snails.getById(snailId);
+    if (!snail || !GAME.canGraduate(snail)) return;
+
+    Toast.confirm({
+      title: '여행 보내기',
+      message: snail.name + '(이)가 넓은 세상으로 여행을 떠나요. 영영 이별이 아니라 앨범에 남고, 그 자리에 새 알이 도착해요!',
+      confirmLabel: '보내기',
+      confirmClass: 'btn-primary',
+      onConfirm: function () { _doGraduate(snailId); }
+    });
+  }
+
+  function _doGraduate(snailId) {
+    const rec = DB.Snails.getById(snailId);
+    if (!rec) return;
+    const result = GAME.graduate(rec, DB.Player.get(), DB.now());
+    if (result.events.indexOf('graduated') === -1) return;
+
+    DB.Album.add(result.record);
+    DB.Snails.removeById(snailId);
+    DB.Snails.add(result.snail); // 그 자리의 새 알
+    DB.Player.save(result.player);
+    DB.Journal.add('graduate',
+      result.record.name + '(' + result.record.generation + '세대)가 넓은 세상으로 여행을 떠났어요.');
+
+    HabitatModule.sync();
+    App.refreshHeader();
+    App.gainKeeperXp('graduate');
+    DecoModule.claimUnlocks();
+    render();
+    StatsModule.render();
+    Sound.play('fanfare');
+    FX.confetti(16);
+    Toast.celebrate({
+      emoji: '🧳',
+      title: '잘 다녀와, ' + result.record.name + '!',
+      message: '추억은 앨범에 남았어요. 새 알이 도착했어요! (+' + GAME.CONFIG.GRADUATE_COINS + ' 코인)'
+    });
   }
 
   function bind() {
@@ -333,7 +487,7 @@ const HomeModule = (function () {
     render: render,
     bind: bind,
     handleResult: _handleResult,
-    handlePet: handlePet,
+    openSnailPopup: openSnailPopup,
     openHatchDialog: openHatchDialog,
     recordMissions: _recordMissions, // ExploreModule 등 외부 행동의 미션 반영
     failMessage: _failMessage

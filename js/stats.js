@@ -64,8 +64,6 @@ const StatsModule = (function () {
       _setBar('bar-hunger', 0);
       _setBar('bar-happiness', 0);
       document.getElementById('stats-next').textContent = '서식지에서 알을 터치해 이름을 지어주면 부화해요.';
-      document.getElementById('btn-graduate').classList.add('hidden');
-      document.getElementById('graduate-hint').classList.add('hidden');
       _renderDex();
       _renderAlbum();
       _renderJournal();
@@ -94,72 +92,13 @@ const StatsModule = (function () {
     _setBar('bar-happiness', snail.happiness);
 
     document.getElementById('stats-next').textContent = _nextStageText(snail);
-    _renderGraduate(snail);
     _renderDex();
     _renderAlbum();
     _renderJournal();
   }
 
-  /** 여행 보내기 섹션 (조건 충족 시 버튼, 미충족 시 안내) */
-  function _renderGraduate(snail) {
-    const btn = document.getElementById('btn-graduate');
-    const hint = document.getElementById('graduate-hint');
-
-    if (GAME.canGraduate(snail)) {
-      btn.classList.remove('hidden');
-      hint.classList.add('hidden');
-      return;
-    }
-    btn.classList.add('hidden');
-    hint.classList.remove('hidden');
-    hint.textContent = '🧳 성체 Lv.' + GAME.CONFIG.GRADUATE_MIN_LEVEL +
-      '이 되면 여행을 보내고 새 알을 맞이할 수 있어요.';
-  }
-
-  function _graduate() {
-    const snail = DB.Snails.getById(_selectedId);
-    if (!snail || !GAME.canGraduate(snail)) return;
-
-    Toast.confirm({
-      title: '여행 보내기',
-      message: snail.name + '(이)가 넓은 세상으로 여행을 떠나요. 영영 이별이 아니라 앨범에 남고, 그 자리에 새 알이 도착해요!',
-      confirmLabel: '보내기',
-      confirmClass: 'btn-primary',
-      onConfirm: function () { _doGraduate(snail.id); }
-    });
-  }
-
-  function _doGraduate(snailId) {
-    const rec = DB.Snails.getById(snailId);
-    if (!rec) return;
-    const result = GAME.graduate(rec, DB.Player.get(), DB.now());
-    if (result.events.indexOf('graduated') === -1) return;
-
-    DB.Album.add(result.record);
-    DB.Snails.removeById(snailId);
-    DB.Snails.add(result.snail); // 그 자리의 새 알
-    DB.Player.save(result.player);
-    DB.Journal.add('graduate',
-      result.record.name + '(' + result.record.generation + '세대)가 넓은 세상으로 여행을 떠났어요.');
-
-    _selectedId = null;
-    HabitatModule.sync();
-    App.refreshHeader();
-    App.gainKeeperXp('graduate');
-    DecoModule.claimUnlocks(); // 이끼 바위(세대) 해금 확인
-    render();
-    Sound.play('fanfare');
-    FX.confetti(16);
-    Toast.celebrate({
-      emoji: '🧳',
-      title: '잘 다녀와, ' + result.record.name + '!',
-      message: '추억은 앨범에 남았어요. 새 알이 도착했어요! (+' + GAME.CONFIG.GRADUATE_COINS + ' 코인)'
-    });
-    App.navigate('home');
-  }
-
   function bind() {
-    document.getElementById('btn-graduate').addEventListener('click', _graduate);
+    // (개체 관련 버튼은 홈 팝업으로 이관됨)
   }
 
   /** 도감 — 변이 5종 그리드 (발견: 색상+이름 / 미발견: 실루엣+???) */
