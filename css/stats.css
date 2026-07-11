@@ -1,5 +1,31 @@
 /* stats.css — 스탯 화면 */
 
+/* ── 개체 선택 ──────────────────────── */
+.snail-select {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.snail-select-btn {
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 2px solid #e2e6de;
+  background: var(--color-surface);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--color-text-sub);
+  cursor: pointer;
+}
+
+.snail-select-btn.active {
+  border-color: var(--color-primary);
+  background: rgba(120, 145, 100, 0.14);
+  color: var(--color-text);
+}
+
 .stats-identity {
   color: var(--color-text-sub);
   font-size: 15px;

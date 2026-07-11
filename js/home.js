@@ -1,50 +1,51 @@
 /**
- * HomeModule — 홈 화면 (서식지 오버레이 / 부화 온보딩 / 먹이·산책 액션)
+ * HomeModule — 홈 화면 (요약 칩 / 부화 / 먹이·쓰다듬기 액션 / 미션)
  * 전역 네임스페이스: HomeModule
  */
 const HomeModule = (function () {
   'use strict';
 
-  /** 이벤트 → 사용자 메시지 (성공) */
-  function _successMessage(event) {
-    switch (event) {
-      case 'fed': return '냠냠! 맛있게 먹었어요 (+' + GAME.CONFIG.FEED_EXP + ' EXP)';
-      default: return null;
-    }
-  }
-
   /** 이벤트 → 사용자 메시지 (실패) */
   function _failMessage(event, player) {
     switch (event) {
       case 'no_food': return '상추가 없어요. 상점에서 구매하세요!';
-      case 'not_hungry': return '지금은 배고프지 않아요.';
+      case 'not_hungry': return '지금은 다들 배고프지 않아요.';
       case 'name_required': return '이름을 입력해주세요.';
       default: return null;
     }
   }
 
   function render() {
-    const snail = DB.Snail.get();
-    const isEgg = snail.stage === 'egg';
+    const snails = DB.Snails.get();
+    const onboarding = snails.length === 1 && snails[0].stage === 'egg';
 
-    document.getElementById('egg-view').classList.toggle('hidden', !isEgg);
-    document.getElementById('snail-view').classList.toggle('hidden', isEgg);
-    if (isEgg) return;
+    document.getElementById('egg-view').classList.toggle('hidden', !onboarding);
+    document.getElementById('snail-view').classList.toggle('hidden', onboarding);
+    if (onboarding) return;
 
-    const stage = GAME.STAGES[snail.stage];
-    // 스프라이트는 인라인 SVG — 단계별 크기, 변이 색, 컨디션 표정은 클래스가 제어한다
-    const condition = GAME.conditionOf(snail);
-    document.getElementById('snail-sprite').className =
-      'snail-sprite stage-' + snail.stage +
-      ' variant-' + (snail.color || 'brown') +
-      (condition.id !== 'normal' ? ' cond-' + condition.id : '');
-
-    document.getElementById('chip-name-level').textContent =
-      snail.name + ' · Lv.' + snail.level + ' ' + stage.label;
-    document.getElementById('chip-hunger').textContent = snail.hunger;
-    document.getElementById('chip-happiness').textContent = snail.happiness;
-
+    HabitatModule.sync();
+    _renderChip(snails);
     _renderMissionChip();
+  }
+
+  /** 좌상단 요약 칩: 1마리면 상세, 여럿이면 무리 요약 */
+  function _renderChip(snails) {
+    const hatched = snails.filter(function (s) { return s.stage !== 'egg'; });
+    const eggs = snails.length - hatched.length;
+    const summaryEl = document.getElementById('chip-summary');
+    const subEl = document.getElementById('chip-sub');
+
+    if (hatched.length === 1) {
+      const s = hatched[0];
+      summaryEl.textContent = s.name + ' · Lv.' + s.level + ' ' + GAME.STAGES[s.stage].label +
+        (eggs > 0 ? ' · 알 ' + eggs : '');
+      subEl.textContent = '배고픔 ' + s.hunger + '% · 행복 ' + s.happiness + '%';
+      return;
+    }
+
+    const hungryCount = hatched.filter(function (s) { return s.hunger > 0; }).length;
+    summaryEl.textContent = '달팽이 ' + hatched.length + '마리' + (eggs > 0 ? ' · 알 ' + eggs : '');
+    subEl.textContent = hungryCount > 0 ? '배고픈 아이 ' + hungryCount : '모두 든든해요';
   }
 
   function _renderMissionChip() {
@@ -80,8 +81,10 @@ const HomeModule = (function () {
     const kinds = [];
     if (events.indexOf('fed') !== -1) kinds.push('feed');
     if (events.indexOf('petted') !== -1) kinds.push('pet');
+    if (events.indexOf('explored') !== -1) kinds.push('explore');
 
     kinds.forEach(function (kind) {
+      if (!GAME.MISSION_DEFS[kind]) return;
       const result = GAME.recordMission(DB.Player.get(), kind, DB.today());
       DB.Player.save(result.player);
       if (result.events.indexOf('mission_done') !== -1) {
@@ -95,7 +98,7 @@ const HomeModule = (function () {
         Toast.show('🎉 오늘의 돌봄 완주! +' + GAME.CONFIG.MISSION_BONUS_COINS +
           ' 코인, 상추 +' + GAME.CONFIG.MISSION_BONUS_FOOD);
         DB.Journal.add('mission', '오늘의 돌봄을 모두 완료했어요.');
-        DecoModule.claimUnlocks(); // 들꽃(완주 누적) 해금 확인
+        DecoModule.claimUnlocks();
       }
     });
 
@@ -105,46 +108,48 @@ const HomeModule = (function () {
     }
   }
 
-  /** 행동 결과 저장 + 렌더링 + 이벤트 연출 */
+  /**
+   * 행동 결과 저장 + 렌더링 + 이벤트 연출.
+   * result.snail은 id를 가지므로 해당 개체에만 반영된다.
+   */
   function _handleResult(result) {
     const failed = result.events.some(function (ev) {
       return _failMessage(ev, result.player || DB.Player.get()) !== null;
     });
 
     if (!failed) {
-      if (result.snail) DB.Snail.save(result.snail);
+      if (result.snail && result.snail.id) DB.Snails.saveOne(result.snail);
       if (result.player) DB.Player.save(result.player);
     }
 
     App.refreshHeader();
     render();
     StatsModule.render();
-    _showEvents(result.events, result.player || DB.Player.get());
+    _showEvents(result);
     _recordMissions(result.events);
   }
 
-  function _showEvents(events, player) {
-    events.forEach(function (ev) {
-      const fail = _failMessage(ev, player);
+  function _showEvents(result) {
+    const snail = result.snail;
+    result.events.forEach(function (ev) {
+      const fail = _failMessage(ev, result.player || DB.Player.get());
       if (fail) {
         Toast.show(fail, 'warn');
         return;
       }
 
-      const success = _successMessage(ev);
-      if (success) Toast.show(success);
-
-      if (ev === 'fed') _popSprite();
-
-      if (ev === 'levelup') {
-        const level = DB.Snail.get().level;
-        Sound.play('fanfare');
-        Toast.show('🎉 레벨 업! Lv.' + level);
-        DB.Journal.add('levelup', 'Lv.' + level + '이 되었어요!');
+      if (ev === 'fed') {
+        Toast.show('냠냠! ' + (snail ? snail.name : '') + ' 맛있게 먹었어요 (+' +
+          GAME.CONFIG.FEED_EXP + ' EXP)');
       }
 
-      if (ev === 'stage_up') {
-        const snail = DB.Snail.get();
+      if (ev === 'levelup' && snail) {
+        Sound.play('fanfare');
+        Toast.show('🎉 ' + snail.name + ' 레벨 업! Lv.' + snail.level);
+        DB.Journal.add('levelup', snail.name + '(이)가 Lv.' + snail.level + '이 되었어요!');
+      }
+
+      if (ev === 'stage_up' && snail) {
         const messages = {
           junior: '껍질이 커졌습니다!',
           adult: '색이 짙어졌어요! 어엿한 성체가 되었습니다.'
@@ -152,37 +157,44 @@ const HomeModule = (function () {
         FX.confetti(14);
         Toast.celebrate({
           emoji: GAME.STAGES[snail.stage].emoji,
-          title: 'Lv ' + snail.level + ' — ' + GAME.STAGES[snail.stage].label + ' 달팽이',
+          title: snail.name + ' — ' + GAME.STAGES[snail.stage].label + ' 달팽이',
           message: messages[snail.stage] || '성장했어요!'
         });
         DB.Journal.add('stage_up',
-          GAME.STAGES[snail.stage].label + ' 달팽이로 자랐어요. ' + (messages[snail.stage] || ''));
+          snail.name + '(이)가 ' + GAME.STAGES[snail.stage].label + ' 달팽이로 자랐어요.');
       }
     });
   }
 
-  function _popSprite() {
-    const sprite = document.getElementById('snail-sprite');
-    sprite.classList.remove('pop');
-    void sprite.offsetWidth; // 애니메이션 재시작 트릭
-    sprite.classList.add('pop');
+  /** 알 이름 짓기 다이얼로그 (서식지 알 터치 / 달팽이 탭에서 호출) */
+  function openHatchDialog(snailId) {
+    const rec = DB.Snails.getById(snailId);
+    if (!rec || rec.stage !== 'egg') return;
+    Toast.prompt({
+      title: '알이 꿈틀거려요!',
+      message: '태어날 달팽이의 이름을 지어주세요.',
+      placeholder: '이름 (최대 12자)',
+      onSubmit: function (name) { _hatchById(snailId, name); }
+    });
   }
 
-  function _hatch() {
-    const input = document.getElementById('snail-name-input');
+  function _hatchById(snailId, name) {
+    const rec = DB.Snails.getById(snailId);
+    if (!rec) return;
     const generation = DB.Player.get().generation || 1;
-    const result = GAME.hatch(DB.Snail.get(), input.value, undefined, generation);
+    const result = GAME.hatch(rec, name, undefined, generation);
 
     if (result.events.indexOf('hatched') === -1) {
-      _showEvents(result.events, DB.Player.get());
+      const fail = _failMessage(result.events[0], DB.Player.get());
+      if (fail) Toast.show(fail, 'warn');
       return;
     }
 
-    DB.Snail.save(result.snail);
+    DB.Snails.saveOne(result.snail);
 
-    // 부화 시점부터 시간 감쇠를 시작한다
+    // 시간 감쇠 기준 갱신 (첫 개체 부화 시)
     const player = DB.Player.get();
-    player.last_seen = DB.now();
+    if (!player.last_seen) player.last_seen = DB.now();
     DB.Player.save(player);
 
     // 성장 일지: 탄생 + 변이 + 성격
@@ -190,15 +202,15 @@ const HomeModule = (function () {
       (generation > 1 ? ' (' + generation + '세대)' : '') + '(이)가 알을 깨고 태어났어요!');
     const variant = GAME.VARIANTS[result.snail.color];
     if (variant && variant.id !== 'brown') {
-      DB.Journal.add('variant', (variant.id === 'golden' ? '반짝이는 황금빛' : variant.label) +
-        ' 껍질을 가지고 태어났어요!');
+      DB.Journal.add('variant', result.snail.name + '(이)는 ' +
+        (variant.id === 'golden' ? '반짝이는 황금빛' : variant.label) + ' 껍질을 가졌어요!');
     }
     DB.Journal.add('personality',
-      '성격은 "' + GAME.PERSONALITIES[result.snail.personality].label + '"인 것 같아요.');
+      result.snail.name + '의 성격은 "' + GAME.PERSONALITIES[result.snail.personality].label + '"인 것 같아요.');
 
     render();
     StatsModule.render();
-    HabitatModule.onHatched();
+    HabitatModule.sync();
     Sound.play('fanfare');
     Sound.vibrate(30);
     FX.confetti(16);
@@ -209,29 +221,37 @@ const HomeModule = (function () {
     });
   }
 
+  /** 첫 실행 온보딩 (전체 화면 알) */
+  function _hatchFirst() {
+    const snails = DB.Snails.get();
+    const input = document.getElementById('snail-name-input');
+    _hatchById(snails[0].id, input.value);
+  }
+
   function _feed() {
-    // 즉시 정산하지 않고 서식지에 상추를 떨어뜨린다 (먹기 완료 시 정산)
     HabitatModule.dropFoodRandom();
   }
 
-  /** 쓰다듬기 (서식지에서 달팽이 터치 시 HabitatModule이 호출) */
-  function handlePet() {
-    const result = GAME.pet(DB.Snail.get(), DB.Player.get(), DB.now());
+  /** 쓰다듬기 — 서식지에서 터치한 개체에만 적용 */
+  function handlePet(snailId) {
+    const rec = DB.Snails.getById(snailId);
+    if (!rec) return;
+    const result = GAME.pet(rec, DB.Player.get(), DB.now());
     if (result.events.indexOf('petted') === -1) return;
 
-    DB.Snail.save(result.snail);
+    DB.Snails.saveOne(result.snail);
     DB.Player.save(result.player);
     render();
     StatsModule.render();
     Sound.play('heart');
-    HabitatModule.effect('💗');
+    HabitatModule.effect('💗', snailId);
     _recordMissions(result.events);
   }
 
   function bind() {
-    document.getElementById('btn-hatch').addEventListener('click', _hatch);
+    document.getElementById('btn-hatch').addEventListener('click', _hatchFirst);
     document.getElementById('snail-name-input').addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') _hatch();
+      if (e.key === 'Enter') _hatchFirst();
     });
     document.getElementById('btn-feed').addEventListener('click', _feed);
     document.getElementById('snail-chip').addEventListener('click', function () {
@@ -243,8 +263,10 @@ const HomeModule = (function () {
   return {
     render: render,
     bind: bind,
-    handleResult: _handleResult, // 서식지(HabitatModule)의 먹기 정산에서 재사용
+    handleResult: _handleResult,
     handlePet: handlePet,
+    openHatchDialog: openHatchDialog,
+    recordMissions: _recordMissions, // ExploreModule 등 외부 행동의 미션 반영
     failMessage: _failMessage
   };
 })();
