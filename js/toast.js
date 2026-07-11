@@ -62,5 +62,50 @@ const Toast = (function () {
     root.appendChild(overlay);
   }
 
-  return { show: show, celebrate: celebrate };
+  /**
+   * 확인 모달 — 되돌릴 수 없는 동작(초기화 등) 전 2단계 확인
+   * @param {{title: string, message: string, confirmLabel: string, onConfirm: Function}} opts
+   */
+  function confirm(opts) {
+    const root = document.getElementById('modal-root');
+    root.innerHTML = '';
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+
+    const box = document.createElement('div');
+    box.className = 'modal-box';
+
+    const title = document.createElement('h3');
+    title.textContent = opts.title || '확인';
+
+    const message = document.createElement('p');
+    message.textContent = opts.message || '';
+
+    const actions = document.createElement('div');
+    actions.className = 'modal-actions';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'btn btn-ghost';
+    cancelBtn.textContent = '취소';
+    cancelBtn.addEventListener('click', function () { overlay.remove(); });
+
+    const confirmBtn = document.createElement('button');
+    confirmBtn.className = 'btn btn-danger';
+    confirmBtn.textContent = opts.confirmLabel || '확인';
+    confirmBtn.addEventListener('click', function () {
+      overlay.remove();
+      if (typeof opts.onConfirm === 'function') opts.onConfirm();
+    });
+
+    actions.appendChild(cancelBtn);
+    actions.appendChild(confirmBtn);
+    box.appendChild(title);
+    box.appendChild(message);
+    box.appendChild(actions);
+    overlay.appendChild(box);
+    root.appendChild(overlay);
+  }
+
+  return { show: show, celebrate: celebrate, confirm: confirm };
 })();

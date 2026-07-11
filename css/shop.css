@@ -1,14 +1,5 @@
 /* shop.css — 상점 화면 */
 
-.btn-back {
-  margin-bottom: 12px;
-}
-
-.shop-title {
-  font-size: 20px;
-  margin-bottom: 4px;
-}
-
 .shop-coins {
   color: var(--color-text-sub);
   font-size: 14px;
@@ -19,7 +10,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border: 2px solid #edf2ee;
+  border: 2px solid #e2e6de;
   border-radius: var(--radius-sm);
   padding: 12px 14px;
 }
@@ -41,32 +32,4 @@
 .shop-item-desc {
   font-size: 12px;
   color: var(--color-text-sub);
-}
-
-.shop-subtitle {
-  font-size: 15px;
-  margin: 20px 0 10px;
-}
-
-.shop-backgrounds {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.bg-option {
-  border: 2px solid #edf2ee;
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  padding: 12px;
-  font-size: 14px;
-  font-weight: 700;
-  font-family: inherit;
-  color: var(--color-text);
-  cursor: pointer;
-}
-
-.bg-option.selected {
-  border-color: var(--color-primary);
-  background: #eef8f1;
 }

@@ -2,28 +2,22 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Snail — 달팽이 키우기</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   <link rel="stylesheet" href="css/theme.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/home.css">
+  <link rel="stylesheet" href="css/stats.css">
   <link rel="stylesheet" href="css/shop.css">
+  <link rel="stylesheet" href="css/settings.css">
 </head>
 <body data-background="default">
   <div id="app">
 
-    <header class="app-header">
-      <h1 class="app-title">🐌 Snail</h1>
-      <div class="wallet">
-        <span class="wallet-item"><i class="fa-solid fa-coins"></i> <span id="coin-count">0</span></span>
-        <span class="wallet-item">🥬 <span id="food-count">0</span></span>
-      </div>
-    </header>
-
     <main class="app-main">
 
-      <!-- 홈 화면 -->
+      <!-- 홈 (서식지) -->
       <section id="screen-home" class="screen active">
 
         <!-- 알 상태 (온보딩) -->
@@ -34,50 +28,75 @@
           <button id="btn-hatch" class="btn btn-primary btn-wide">부화시키기</button>
         </div>
 
-        <!-- 달팽이 상태 -->
+        <!-- 달팽이 서식지 -->
         <div id="snail-view" class="hidden">
-          <div class="card snail-card">
-            <div class="snail-habitat" id="snail-habitat">
-              <div class="snail-entity" id="snail-entity">
-                <div class="snail-motion">
-                  <span id="snail-sprite" class="snail-sprite">🐌</span>
-                </div>
+          <div class="snail-habitat" id="snail-habitat">
+            <div class="snail-entity" id="snail-entity">
+              <div class="snail-motion">
+                <span id="snail-sprite" class="snail-sprite">🐌</span>
               </div>
-              <div id="food-layer"></div>
             </div>
-            <h2 id="snail-name" class="snail-name"></h2>
-            <div class="snail-level">Lv.<span id="snail-level">1</span> · <span id="snail-stage-label">아기</span> 달팽이</div>
-
-            <div class="stat">
-              <div class="stat-head"><span>⭐ 경험치</span><span id="exp-text">0 / 20</span></div>
-              <div class="stat-bar"><div id="bar-exp" class="stat-fill fill-exp"></div></div>
-            </div>
-            <div class="stat">
-              <div class="stat-head"><span>🍀 배고픔</span><span id="hunger-text">0%</span></div>
-              <div class="stat-bar"><div id="bar-hunger" class="stat-fill fill-hunger"></div></div>
-            </div>
-            <div class="stat">
-              <div class="stat-head"><span>😊 행복</span><span id="happiness-text">100%</span></div>
-              <div class="stat-bar"><div id="bar-happiness" class="stat-fill fill-happiness"></div></div>
-            </div>
+            <div id="food-layer"></div>
           </div>
 
-          <div class="actions">
-            <button id="btn-feed" class="btn btn-primary">🥬 먹이주기</button>
-            <button id="btn-walk" class="btn btn-secondary">🚶 산책</button>
-            <button id="btn-goto-shop" class="btn btn-ghost">🛒 상점</button>
+          <!-- 서식지 오버레이 -->
+          <div class="home-overlay">
+            <button id="snail-chip" class="chip chip-left">
+              <span id="chip-name-level"></span>
+              <span class="chip-gauges">
+                <i class="fa-solid fa-utensils"></i> <span id="chip-hunger">0</span>%
+                &nbsp;<i class="fa-solid fa-face-smile"></i> <span id="chip-happiness">0</span>%
+              </span>
+            </button>
+            <div class="chip chip-right">
+              <i class="fa-solid fa-coins"></i> <span id="coin-count">0</span>
+              &nbsp;·&nbsp;
+              <i class="fa-solid fa-leaf"></i> <span id="food-count">0</span>
+            </div>
+            <div class="fab-group">
+              <button id="btn-feed" class="fab" title="먹이주기">
+                <i class="fa-solid fa-leaf"></i><span>먹이</span>
+              </button>
+              <button id="btn-walk" class="fab" title="산책">
+                <i class="fa-solid fa-person-walking"></i><span>산책</span>
+              </button>
+            </div>
           </div>
         </div>
 
       </section>
 
-      <!-- 상점 화면 -->
-      <section id="screen-shop" class="screen">
-        <button id="btn-back-home" class="btn btn-ghost btn-back"><i class="fa-solid fa-arrow-left"></i> 홈으로</button>
+      <!-- 스탯 -->
+      <section id="screen-stats" class="screen">
+        <div class="card">
+          <h2 class="screen-title"><i class="fa-solid fa-chart-simple"></i> 스탯</h2>
+          <p class="stats-identity">
+            <strong id="stats-name">-</strong> · Lv.<span id="stats-level">-</span>
+            <span id="stats-stage"></span> 달팽이
+          </p>
 
+          <div class="stat">
+            <div class="stat-head"><span><i class="fa-solid fa-star"></i> 경험치</span><span id="exp-text">0 / 20</span></div>
+            <div class="stat-bar"><div id="bar-exp" class="stat-fill fill-exp"></div></div>
+          </div>
+          <div class="stat">
+            <div class="stat-head"><span><i class="fa-solid fa-utensils"></i> 배고픔</span><span id="hunger-text">0%</span></div>
+            <div class="stat-bar"><div id="bar-hunger" class="stat-fill fill-hunger"></div></div>
+          </div>
+          <div class="stat">
+            <div class="stat-head"><span><i class="fa-solid fa-face-smile"></i> 행복</span><span id="happiness-text">0%</span></div>
+            <div class="stat-bar"><div id="bar-happiness" class="stat-fill fill-happiness"></div></div>
+          </div>
+
+          <p id="stats-next" class="stats-next"></p>
+        </div>
+      </section>
+
+      <!-- 상점 -->
+      <section id="screen-shop" class="screen">
         <div class="card shop-card">
-          <h2 class="shop-title"><i class="fa-solid fa-store"></i> 상점</h2>
-          <p class="shop-coins">보유 코인: <strong id="shop-coins">0</strong> 🪙</p>
+          <h2 class="screen-title"><i class="fa-solid fa-store"></i> 상점</h2>
+          <p class="shop-coins">보유 코인: <strong id="shop-coins">0</strong> <i class="fa-solid fa-coins"></i></p>
 
           <div class="shop-item">
             <div class="shop-item-info">
@@ -87,18 +106,58 @@
                 <div class="shop-item-desc">배고픔 -30 · 경험치 +10</div>
               </div>
             </div>
-            <button id="btn-buy-food" class="btn btn-primary btn-sm">10 🪙</button>
-          </div>
-
-          <h3 class="shop-subtitle">배경 교체</h3>
-          <div class="shop-backgrounds">
-            <button class="bg-option" data-bg="default">🌱 풀밭</button>
-            <button class="bg-option" data-bg="garden">🌷 정원</button>
+            <button id="btn-buy-food" class="btn btn-primary btn-sm">10 <i class="fa-solid fa-coins"></i></button>
           </div>
         </div>
       </section>
 
+      <!-- 꾸미기 -->
+      <section id="screen-deco" class="screen">
+        <div class="card">
+          <h2 class="screen-title"><i class="fa-solid fa-palette"></i> 꾸미기</h2>
+          <p class="screen-desc">서식지 배경을 선택하세요.</p>
+          <div class="shop-backgrounds">
+            <button class="bg-option" data-bg="default">🌿 이끼 숲</button>
+            <button class="bg-option" data-bg="garden">🌤️ 햇살 정원</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 설정 -->
+      <section id="screen-settings" class="screen">
+        <div class="card">
+          <h2 class="screen-title"><i class="fa-solid fa-gear"></i> 설정</h2>
+
+          <h3 class="settings-subtitle">게임 규칙</h3>
+          <ul id="rules-list" class="rules-list"></ul>
+
+          <h3 class="settings-subtitle">데이터</h3>
+          <button id="btn-reset" class="btn btn-danger btn-wide">데이터 초기화</button>
+          <p class="settings-version">Snail v0.3.0 · Vanilla JS + LocalStorage</p>
+        </div>
+      </section>
+
     </main>
+
+    <!-- 하단 탭 바 -->
+    <nav class="tab-bar">
+      <button class="tab" data-screen="stats">
+        <i class="fa-solid fa-chart-simple"></i><span>스탯</span>
+      </button>
+      <button class="tab" data-screen="shop">
+        <i class="fa-solid fa-store"></i><span>상점</span>
+      </button>
+      <button class="tab tab-home" data-screen="home" title="홈">
+        <i class="fa-solid fa-house"></i>
+      </button>
+      <button class="tab" data-screen="deco">
+        <i class="fa-solid fa-palette"></i><span>꾸미기</span>
+      </button>
+      <button class="tab" data-screen="settings">
+        <i class="fa-solid fa-gear"></i><span>설정</span>
+      </button>
+    </nav>
+
   </div>
 
   <div id="toast-container"></div>
@@ -107,8 +166,11 @@
   <script src="js/db.js"></script>
   <script src="js/game.js"></script>
   <script src="js/toast.js"></script>
+  <script src="js/stats.js"></script>
   <script src="js/home.js"></script>
   <script src="js/shop.js"></script>
+  <script src="js/deco.js"></script>
+  <script src="js/settings.js"></script>
   <script src="js/habitat.js"></script>
   <script src="js/app.js"></script>
 </body>

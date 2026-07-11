@@ -1,52 +1,113 @@
-/* components.css — 글로벌 컴포넌트 (레이아웃/버튼/카드/스탯 바/토스트/모달) */
+/* components.css — 글로벌 컴포넌트 (레이아웃/탭 바/버튼/카드/스탯 바/토스트/모달) */
 
 #app {
   max-width: 480px;
-  min-height: 100dvh;
+  height: 100dvh;
   margin: 0 auto;
-  padding: 16px 16px 32px;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
-/* ── 헤더 ───────────────────────────── */
-.app-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 4px 4px 16px;
+/* ── 상단 콘텐츠 영역 / 화면 전환 ───── */
+.app-main {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
 }
 
-.app-title {
-  font-size: 22px;
-}
-
-.wallet {
-  display: flex;
-  gap: 12px;
-  background: var(--color-surface);
-  border-radius: 999px;
-  padding: 6px 14px;
-  box-shadow: var(--shadow);
-  font-weight: 700;
-  font-size: 14px;
-}
-
-.wallet-item .fa-coins {
-  color: var(--color-warn);
-}
-
-/* ── 화면 전환 ──────────────────────── */
 .screen {
   display: none;
+  height: 100%;
+  overflow-y: auto;
+  padding: 20px 16px;
 }
 
 .screen.active {
   display: block;
 }
 
+/* 홈은 서식지가 전체를 차지한다 */
+#screen-home {
+  padding: 0;
+  overflow: hidden;
+  position: relative;
+}
+
 .hidden {
   display: none !important;
+}
+
+.screen-title {
+  font-size: 20px;
+  margin-bottom: 6px;
+}
+
+.screen-desc {
+  color: var(--color-text-sub);
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+/* ── 하단 탭 바 ─────────────────────── */
+.tab-bar {
+  display: flex;
+  align-items: stretch;
+  height: calc(64px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: var(--color-bar);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
+}
+
+.tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-sub);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.tab i {
+  font-size: 17px;
+}
+
+.tab.active {
+  color: var(--color-primary-dark);
+}
+
+/* 중앙 홈 버튼 — 크고 떠 있게 */
+.tab-home {
+  flex: 0 0 72px;
+  align-self: flex-start;
+  width: 56px;
+  height: 56px;
+  margin: 0 8px;
+  transform: translateY(-14px);
+  border-radius: 50%;
+  background: linear-gradient(160deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(50, 70, 45, 0.35);
+}
+
+.tab-home i {
+  font-size: 20px;
+}
+
+.tab-home.active {
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(50, 70, 45, 0.45), 0 0 0 4px rgba(255, 255, 255, 0.35);
 }
 
 /* ── 카드 ───────────────────────────── */
@@ -82,18 +143,14 @@
   background: var(--color-primary-dark);
 }
 
-.btn-secondary {
-  background: var(--color-secondary);
-}
-
-.btn-secondary:hover {
-  background: var(--color-secondary-dark);
-}
-
 .btn-ghost {
   background: var(--color-surface);
   color: var(--color-text);
   box-shadow: var(--shadow);
+}
+
+.btn-danger {
+  background: var(--color-danger);
 }
 
 .btn-wide {
@@ -108,13 +165,14 @@
 /* ── 입력 ───────────────────────────── */
 .text-input {
   width: 100%;
-  border: 2px solid #e0e8e2;
+  border: 2px solid #dde3da;
   border-radius: var(--radius-sm);
   padding: 12px 14px;
   font-size: 15px;
   font-family: inherit;
   margin-bottom: 12px;
   outline: none;
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .text-input:focus {
@@ -138,7 +196,7 @@
 
 .stat-bar {
   height: 12px;
-  background: #edf2ee;
+  background: #e8ece5;
   border-radius: 999px;
   overflow: hidden;
 }
@@ -165,7 +223,7 @@
 /* ── 토스트 ─────────────────────────── */
 #toast-container {
   position: fixed;
-  bottom: 24px;
+  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -178,7 +236,7 @@
 }
 
 .toast {
-  background: rgba(47, 62, 52, 0.92);
+  background: rgba(45, 52, 40, 0.92);
   color: #fff;
   padding: 10px 18px;
   border-radius: 999px;
@@ -188,7 +246,7 @@
 }
 
 .toast-warn {
-  background: rgba(224, 120, 86, 0.95);
+  background: rgba(176, 104, 70, 0.95);
 }
 
 .toast.out {
@@ -201,7 +259,7 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ── 모달 (성장 연출) ───────────────── */
+/* ── 모달 ───────────────────────────── */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -238,6 +296,12 @@
   margin-bottom: 20px;
 }
 
+.modal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
 @keyframes celebrate-pop {
   0%   { transform: scale(0.3); }
   60%  { transform: scale(1.2); }
@@ -246,12 +310,8 @@
 
 /* ── 모바일 (390px 기준) ────────────── */
 @media (max-width: 390px) {
-  #app {
-    padding: 12px 12px 24px;
-  }
-
-  .app-title {
-    font-size: 19px;
+  .screen {
+    padding: 16px 12px;
   }
 
   .btn {

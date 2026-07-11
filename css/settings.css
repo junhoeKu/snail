@@ -1,0 +1,54 @@
+/* settings.css — 꾸미기/설정 화면 공용 */
+
+/* ── 배경 선택 (꾸미기) ─────────────── */
+.shop-backgrounds {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.bg-option {
+  border: 2px solid #e2e6de;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  padding: 14px 12px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.bg-option.selected {
+  border-color: var(--color-primary);
+  background: rgba(120, 145, 100, 0.12);
+}
+
+/* ── 설정 ───────────────────────────── */
+.settings-subtitle {
+  font-size: 15px;
+  margin: 20px 0 10px;
+}
+
+.rules-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rules-list li {
+  font-size: 13px;
+  color: var(--color-text-sub);
+  padding: 10px 12px;
+  background: rgba(120, 145, 100, 0.08);
+  border-radius: var(--radius-sm);
+  line-height: 1.5;
+}
+
+.settings-version {
+  margin-top: 14px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--color-text-sub);
+}
