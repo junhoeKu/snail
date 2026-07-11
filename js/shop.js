@@ -8,8 +8,57 @@ const ShopModule = (function () {
   function render() {
     const player = DB.Player.get();
     document.getElementById('shop-coins').textContent = player.coins;
+    _renderFoods(player);
     _renderEggSlot(player);
     DecoModule.render(); // 배경/장식 (상점에 통합)
+  }
+
+  /** 먹이 목록 (해금/보유/묶음 할인) */
+  function _renderFoods(player) {
+    const wrap = document.getElementById('shop-foods');
+    wrap.innerHTML = '';
+
+    Object.keys(GAME.FOOD_DEFS).forEach(function (id) {
+      const def = GAME.FOOD_DEFS[id];
+      const unlocked = GAME.foodUnlocked(player, id);
+      const owned = (player.foods && player.foods[id]) || 0;
+
+      const row = document.createElement('div');
+      row.className = 'shop-item' + (unlocked ? '' : ' locked');
+
+      const info = document.createElement('div');
+      info.className = 'shop-item-info';
+      const emoji = document.createElement('span');
+      emoji.className = 'shop-item-icon';
+      emoji.textContent = def.emoji;
+      const text = document.createElement('div');
+      const name = document.createElement('div');
+      name.className = 'shop-item-name';
+      name.textContent = def.label + (unlocked ? ' · 보유 ' + owned : '');
+      const desc = document.createElement('div');
+      desc.className = 'shop-item-desc';
+      desc.textContent = unlocked
+        ? '배고픔 -' + def.hunger + ' · EXP +' + def.exp + ' · 행복 +' + def.happiness
+        : '🔒 양육자 Lv.' + def.unlockLevel + ' 해금';
+      text.appendChild(name);
+      text.appendChild(desc);
+      info.appendChild(emoji);
+      info.appendChild(text);
+      row.appendChild(info);
+
+      const actions = document.createElement('div');
+      actions.className = 'shop-food-actions';
+      [1, GAME.CONFIG.FOOD_BUNDLE_COUNT].forEach(function (count) {
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-primary btn-sm';
+        btn.disabled = !unlocked;
+        btn.textContent = (count > 1 ? '×' + count + ' ' : '') + GAME.foodPrice(id, count) + '🪙';
+        btn.addEventListener('click', function () { _buyFood(id, count); });
+        actions.appendChild(btn);
+      });
+      row.appendChild(actions);
+      wrap.appendChild(row);
+    });
   }
 
   function _renderEggSlot(player) {
@@ -30,15 +79,18 @@ const ShopModule = (function () {
       slots + '/' + GAME.CONFIG.MAX_SNAILS + ')';
   }
 
-  function _buyFood(count) {
-    const result = GAME.buyFood(DB.Player.get(), count);
+  function _buyFood(foodId, count) {
+    const result = GAME.buyFood(DB.Player.get(), foodId, count);
+    const def = GAME.FOOD_DEFS[foodId];
 
     if (result.events.indexOf('food_bought') !== -1) {
       DB.Player.save(result.player);
       Sound.play('coin');
-      Toast.show('🥬 상추 ' + count + '개를 구매했어요!');
+      Toast.show(def.emoji + ' ' + def.label + ' ' + count + '개를 구매했어요!');
     } else if (result.events.indexOf('not_enough_coins') !== -1) {
       Toast.show('코인이 부족해요.', 'warn');
+    } else if (result.events.indexOf('food_locked') !== -1) {
+      Toast.show('아직 잠긴 먹이예요. 양육자 레벨을 올려보세요!', 'warn');
     }
 
     App.refreshHeader();
@@ -63,10 +115,6 @@ const ShopModule = (function () {
   }
 
   function bind() {
-    document.getElementById('btn-buy-food').addEventListener('click', function () { _buyFood(1); });
-    document.getElementById('btn-buy-food-bundle').addEventListener('click', function () {
-      _buyFood(GAME.CONFIG.FOOD_BUNDLE_COUNT);
-    });
     document.getElementById('btn-buy-egg').addEventListener('click', _buyEgg);
   }
 

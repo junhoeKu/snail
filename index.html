@@ -51,11 +51,13 @@
             <div class="chip chip-right">
               <i class="fa-solid fa-coins"></i> <span id="coin-count">0</span>
               &nbsp;·&nbsp;
-              <i class="fa-solid fa-leaf"></i> <span id="food-count">0</span>
+              <button id="wallet-food" class="wallet-food" title="먹이 선택">
+                <span id="wallet-food-emoji">🥬</span> <span id="food-count">0</span>
+              </button>
             </div>
             <div class="fab-group">
               <button id="btn-feed" class="fab" title="먹이주기">
-                <i class="fa-solid fa-leaf"></i><span>먹이</span>
+                <span id="fab-food-emoji" class="fab-emoji">🥬</span><span>먹이</span>
               </button>
             </div>
             <button id="mission-chip" class="chip chip-missions">
@@ -116,27 +118,7 @@
           <h2 class="screen-title"><i class="fa-solid fa-store"></i> 상점</h2>
           <p class="shop-coins">보유 코인: <strong id="shop-coins">0</strong> <i class="fa-solid fa-coins"></i></p>
 
-          <div class="shop-item">
-            <div class="shop-item-info">
-              <span class="shop-item-icon"><i class="fa-solid fa-leaf"></i></span>
-              <div>
-                <div class="shop-item-name">상추 ×1</div>
-                <div class="shop-item-desc">배고픔 -30 · 경험치 +10</div>
-              </div>
-            </div>
-            <button id="btn-buy-food" class="btn btn-primary btn-sm">10 <i class="fa-solid fa-coins"></i></button>
-          </div>
-
-          <div class="shop-item">
-            <div class="shop-item-info">
-              <span class="shop-item-icon"><i class="fa-solid fa-basket-shopping"></i></span>
-              <div>
-                <div class="shop-item-name">상추 ×10 묶음</div>
-                <div class="shop-item-desc">10% 할인 — 여럿을 키운다면 필수</div>
-              </div>
-            </div>
-            <button id="btn-buy-food-bundle" class="btn btn-primary btn-sm">90 <i class="fa-solid fa-coins"></i></button>
-          </div>
+          <div id="shop-foods"></div>
 
           <div class="shop-item">
             <div class="shop-item-info">
@@ -289,7 +271,35 @@
     </svg>
   </template>
 
-  <!-- 상추 (먹이) — HabitatModule이 복제해 사용 -->
+  <!-- 먹이 4종 — HabitatModule이 복제해 사용 -->
+  <template id="food-carrot">
+    <svg class="food-svg" viewBox="0 0 40 40" width="30" height="30" role="img" aria-label="당근">
+      <path d="M13 13 Q20 7 27 13 L21 35 Q20 38 19 35 Z" fill="#e0863c"/>
+      <path d="M15 12 Q12 5 8 3 M20 11 Q20 3 17 1 M25 12 Q28 5 32 3"
+            stroke="#5d8341" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <path d="M15 18 L24 18 M16 24 L22 24" stroke="#b96a2c" stroke-width="1.6" stroke-linecap="round"/>
+    </svg>
+  </template>
+  <template id="food-apple">
+    <svg class="food-svg" viewBox="0 0 40 40" width="30" height="30" role="img" aria-label="사과">
+      <circle cx="20" cy="24" r="13" fill="#c94f3d"/>
+      <ellipse cx="15" cy="19" rx="4" ry="6" fill="#e2796a" opacity="0.7"/>
+      <path d="M20 11 Q20 5 24 3" stroke="#6b4a2b" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <path d="M22 8 Q28 4 31 8 Q27 12 22 8 Z" fill="#7fa95c"/>
+    </svg>
+  </template>
+  <template id="food-salad">
+    <svg class="food-svg" viewBox="0 0 40 40" width="30" height="30" role="img" aria-label="특제 샐러드">
+      <circle cx="14" cy="18" r="5.5" fill="#7fa95c"/>
+      <circle cx="22" cy="15" r="6" fill="#96bd74"/>
+      <circle cx="29" cy="19" r="4.5" fill="#7fa95c"/>
+      <circle cx="19" cy="20" r="3" fill="#c94f3d"/>
+      <circle cx="26" cy="22" r="2.5" fill="#e0863c"/>
+      <path d="M6 22 Q20 19 34 22 L31 32 Q20 37 9 32 Z" fill="#e8dcc4"/>
+      <path d="M6 22 Q20 26 34 22" stroke="#d3c3a4" stroke-width="1.5" fill="none"/>
+    </svg>
+  </template>
+  <!-- 상추 -->
   <template id="food-template">
     <svg class="food-svg" viewBox="0 0 40 40" width="30" height="30" role="img" aria-label="상추">
       <path d="M20 36 Q8 34 6 22 Q5 12 13 8 Q20 4 27 8 Q35 12 34 22 Q32 34 20 36 Z" fill="#7fa95c"/>

@@ -330,17 +330,20 @@ const HabitatModule = (function () {
    * 서식지에 상추를 떨어뜨린다 — 터치/버튼 공용 단일 진입점.
    * 드롭 시점에는 사전 검증만 하고, 소모/효과 정산은 먹기 완료 시 GAME.feed()로 한다.
    */
-  function dropFood(x, y) {
+  function dropFood(x, y, foodId) {
     const snails = DB.Snails.get().filter(function (s) { return s.stage !== 'egg'; });
     if (snails.length === 0) return;
 
     const player = DB.Player.get();
+    const fid = foodId || player.selected_food || 'lettuce';
+
     if (_foods.length >= MOTION.FOOD_MAX) {
-      Toast.show('상추가 이미 잔뜩 있어요! 먼저 먹게 해주세요.', 'warn');
+      Toast.show('먹이가 이미 잔뜩 있어요! 먼저 먹게 해주세요.', 'warn');
       return;
     }
-    if (!player.admin && player.food < _foods.length + 1) {
-      // 이미 던져둔(아직 소모 전) 상추 수까지 감안한 재고 검증
+    // 이미 던져둔(아직 소모 전) 같은 먹이 수까지 감안한 재고 검증
+    const pendingSame = _foods.filter(function (f) { return f.foodId === fid; }).length;
+    if (!player.admin && ((player.foods && player.foods[fid]) || 0) < pendingSame + 1) {
       Toast.show(HomeModule.failMessage('no_food', player), 'warn');
       return;
     }
@@ -352,12 +355,13 @@ const HabitatModule = (function () {
     const p = _clampPoint(x, y, MOTION.EDGE_PADDING);
     const el = document.createElement('div');
     el.className = 'food-item';
-    el.appendChild(document.getElementById('food-template').content.cloneNode(true));
+    const templateId = fid === 'lettuce' ? 'food-template' : 'food-' + fid;
+    el.appendChild(document.getElementById(templateId).content.cloneNode(true));
     el.style.left = p.x + 'px';
     el.style.top = p.y + 'px';
     _foodLayer().appendChild(el);
 
-    _foods.push({ x: p.x, y: p.y, el: el, claimedBy: null });
+    _foods.push({ x: p.x, y: p.y, el: el, claimedBy: null, foodId: fid });
     _assignFoods();
   }
 
@@ -385,24 +389,27 @@ const HabitatModule = (function () {
 
   /** 먹기 완료 — 해당 개체에만 GAME.feed()로 정산 */
   function _finishEating(ent) {
+    let foodId = null;
     if (ent.food) {
+      foodId = ent.food.foodId;
       _removeFood(ent.food);
       ent.food = null;
     }
     const rec = DB.Snails.getById(ent.id);
     if (!rec) { _setState(ent, STATE.IDLE); return; }
 
-    const result = GAME.feed(rec, DB.Player.get());
+    const result = GAME.feed(rec, DB.Player.get(), foodId);
     HomeModule.handleResult(result);
     if (result.events.indexOf('fed') !== -1) {
-      _floatAt(ent.x, ent.y - _edge(ent), '+' + GAME.CONFIG.FEED_EXP + ' EXP');
+      _floatAt(ent.x, ent.y - _edge(ent), '+' + result.food.exp + ' EXP');
       Sound.play('eat');
       const rect = _habitat().getBoundingClientRect();
       FX.flyCoins(rect.left + ent.x, rect.top + ent.y, 2);
+      App.gainKeeperXp('feed');
     }
     ent.hungry = result.snail.hunger > 0 || _adminOn;
     _setState(ent, STATE.IDLE);
-    _assignFoods(); // 남은 상추 재배정
+    _assignFoods(); // 남은 먹이 재배정
   }
 
   // ── 장식 ──────────────────────────────────────────────
