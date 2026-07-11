@@ -104,6 +104,45 @@ body[data-background="garden"] .snail-habitat {
   50%      { transform: translateX(4px); }
 }
 
+/* ── 먹이 ───────────────────────────── */
+.food-item {
+  position: absolute;
+  font-size: 26px;
+  line-height: 1;
+  transform: translate(-50%, -50%);
+  animation: food-drop 0.5s cubic-bezier(0.3, 1.4, 0.6, 1);
+}
+
+/* 먹히는 동안 점점 작아지고 흐려짐 (EAT_DURATION과 맞춤) */
+.food-item.eaten {
+  transition: transform 1.8s ease, opacity 1.8s ease;
+  transform: translate(-50%, -50%) scale(0.2);
+  opacity: 0.1;
+}
+
+@keyframes food-drop {
+  0%   { transform: translate(-50%, -300%); opacity: 0; }
+  55%  { transform: translate(-50%, -50%); opacity: 1; }
+  75%  { transform: translate(-50%, -85%); }
+  100% { transform: translate(-50%, -50%); }
+}
+
+/* ── 플로팅 텍스트 (+EXP) ───────────── */
+.float-text {
+  position: absolute;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--color-exp);
+  pointer-events: none;
+  animation: float-up 1.1s ease forwards;
+}
+
+@keyframes float-up {
+  0%   { transform: translate(-50%, 0); opacity: 0; }
+  15%  { opacity: 1; }
+  100% { transform: translate(-50%, -28px); opacity: 0; }
+}
+
 /* 성장 단계별 표현: 어린이는 껍질(크기) 커짐, 성체는 색상 변화 */
 .snail-sprite.stage-baby {
   font-size: 56px;
