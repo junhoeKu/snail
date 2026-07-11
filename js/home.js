@@ -8,11 +8,71 @@ const HomeModule = (function () {
   /** 이벤트 → 사용자 메시지 (실패) */
   function _failMessage(event, player) {
     switch (event) {
-      case 'no_food': return '상추가 없어요. 상점에서 구매하세요!';
+      case 'no_food': return '선택한 먹이가 없어요. 상점에서 구매하세요!';
       case 'not_hungry': return '지금은 다들 배고프지 않아요.';
       case 'name_required': return '이름을 입력해주세요.';
       default: return null;
     }
+  }
+
+  /** 먹이 선택 시트 (지갑 먹이 칩 클릭) */
+  function _showFoodSheet() {
+    const player = DB.Player.get();
+    const root = document.getElementById('modal-root');
+    root.innerHTML = '';
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const box = document.createElement('div');
+    box.className = 'modal-box';
+
+    const title = document.createElement('h3');
+    title.textContent = '먹이 선택';
+    box.appendChild(title);
+
+    const list = document.createElement('div');
+    list.className = 'food-sheet';
+    Object.keys(GAME.FOOD_DEFS).forEach(function (id) {
+      const def = GAME.FOOD_DEFS[id];
+      const unlocked = GAME.foodUnlocked(player, id);
+      const owned = (player.foods && player.foods[id]) || 0;
+
+      const row = document.createElement('button');
+      row.className = 'food-sheet-row' +
+        (player.selected_food === id ? ' active' : '') + (unlocked ? '' : ' locked');
+      row.disabled = !unlocked;
+
+      const head = document.createElement('div');
+      head.className = 'food-sheet-name';
+      head.textContent = def.emoji + ' ' + def.label + (unlocked ? '  ×' + owned : '');
+      const desc = document.createElement('div');
+      desc.className = 'food-sheet-desc';
+      desc.textContent = unlocked
+        ? '배고픔 -' + def.hunger + ' · EXP +' + def.exp + ' · 행복 +' + def.happiness
+        : '🔒 양육자 Lv.' + def.unlockLevel + ' 해금';
+      row.appendChild(head);
+      row.appendChild(desc);
+
+      row.addEventListener('click', function () {
+        const p = DB.Player.get();
+        p.selected_food = id;
+        DB.Player.save(p);
+        App.refreshHeader();
+        overlay.remove();
+        Toast.show(def.emoji + ' ' + def.label + ' 선택!');
+      });
+      list.appendChild(row);
+    });
+    box.appendChild(list);
+
+    const close = document.createElement('button');
+    close.className = 'btn btn-ghost btn-wide';
+    close.textContent = '닫기';
+    close.addEventListener('click', function () { overlay.remove(); });
+    box.appendChild(close);
+
+    overlay.appendChild(box);
+    root.appendChild(overlay);
   }
 
   function render() {
@@ -93,12 +153,14 @@ const HomeModule = (function () {
         FX.flyCoins(chip.left + chip.width / 2, chip.top, 2);
         Toast.show('✅ 미션 완료: ' + GAME.MISSION_DEFS[kind].label +
           ' (+' + GAME.CONFIG.MISSION_REWARD_COINS + ' 코인)');
+        App.gainKeeperXp('mission');
       }
       if (result.events.indexOf('mission_all_done') !== -1) {
         Toast.show('🎉 오늘의 돌봄 완주! +' + GAME.CONFIG.MISSION_BONUS_COINS +
           ' 코인, 상추 +' + GAME.CONFIG.MISSION_BONUS_FOOD);
         DB.Journal.add('mission', '오늘의 돌봄을 모두 완료했어요.');
         DecoModule.claimUnlocks();
+        App.gainKeeperXp('mission_all');
       }
     });
 
@@ -140,7 +202,7 @@ const HomeModule = (function () {
 
       if (ev === 'fed') {
         Toast.show('냠냠! ' + (snail ? snail.name : '') + ' 맛있게 먹었어요 (+' +
-          GAME.CONFIG.FEED_EXP + ' EXP)');
+          (result.food ? result.food.exp : '') + ' EXP)');
       }
 
       if (ev === 'levelup' && snail) {
@@ -182,6 +244,7 @@ const HomeModule = (function () {
     const rec = DB.Snails.getById(snailId);
     if (!rec) return;
     const generation = DB.Player.get().generation || 1;
+    const dexBefore = GAME.discoveredVariants(DB.Album.get(), DB.Snails.get()).length;
     const result = GAME.hatch(rec, name, undefined, generation);
 
     if (result.events.indexOf('hatched') === -1) {
@@ -191,6 +254,11 @@ const HomeModule = (function () {
     }
 
     DB.Snails.saveOne(result.snail);
+    App.gainKeeperXp('hatch');
+    if (GAME.discoveredVariants(DB.Album.get(), DB.Snails.get()).length > dexBefore) {
+      Toast.show('📖 도감에 새 변이가 등록됐어요!');
+      App.gainKeeperXp('dex_new');
+    }
 
     // 시간 감쇠 기준 갱신 (첫 개체 부화 시)
     const player = DB.Player.get();
@@ -258,6 +326,7 @@ const HomeModule = (function () {
       App.navigate('stats');
     });
     document.getElementById('mission-chip').addEventListener('click', _showMissionSheet);
+    document.getElementById('wallet-food').addEventListener('click', _showFoodSheet);
   }
 
   return {

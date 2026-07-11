@@ -16,8 +16,9 @@ const ExploreModule = (function () {
   let _currentMap = null;
 
   function _staminaText() {
-    const left = GAME.exploreStamina(DB.Player.get(), DB.today());
-    return '오늘 남은 뒤지기: ' + left + '/' + GAME.CONFIG.EXPLORE_SEARCHES_PER_DAY;
+    const player = DB.Player.get();
+    const left = GAME.exploreStamina(player, DB.today());
+    return '오늘 남은 뒤지기: ' + left + '/' + GAME.exploreMaxSearches(player);
   }
 
   /** 맵 선택 화면 */
@@ -149,6 +150,7 @@ const ExploreModule = (function () {
     }
 
     App.refreshHeader();
+    App.gainKeeperXp('explore');
     HomeModule.recordMissions(['explored']);
     document.getElementById('explore-map-stamina').textContent = _staminaText();
     document.getElementById('explore-stamina').textContent = _staminaText();

@@ -10,10 +10,11 @@ const SettingsModule = (function () {
     const c = GAME.CONFIG;
     const rules = [
       (c.DECAY_INTERVAL_MIN / 60) + '시간마다 배고픔 +' + c.DECAY_HUNGER + ', 행복 -' + c.DECAY_HAPPINESS + ' (미접속 시간 포함)',
-      '먹이 주기: 배고픔 -' + c.FEED_HUNGER + ', 경험치 +' + c.FEED_EXP + ', 행복 +' + c.FEED_HAPPINESS + ', 코인 +' + c.FEED_COINS,
+      '먹이 주기: 코인 +' + c.FEED_COINS + ' · 효과는 먹이마다 달라요 (상점 참고)',
+      '양육자 레벨: 돌봄 행동으로 XP — 새 먹이와 탐험 확장이 해금돼요',
       '쓰다듬기: 행복 +' + c.PET_HAPPINESS + ' (달팽이를 직접 터치, 언제든 가능)',
       '접속 보상: 하루 1회 코인 +' + c.DAILY_COINS,
-      '상추 가격: ' + c.FOOD_PRICE + '코인 · 레벨업 필요 경험치: 레벨 × ' + c.EXP_PER_LEVEL
+      '달팽이 레벨업 필요 경험치: 레벨 × ' + c.EXP_PER_LEVEL
     ];
 
     const list = document.getElementById('rules-list');

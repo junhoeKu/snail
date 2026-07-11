@@ -33,11 +33,43 @@ const App = (function () {
     }
   }
 
-  /** 지갑(코인/상추) 표시 갱신 (값은 즉시, 연출은 FX가 덧입힘) */
+  /** 지갑(코인/선택 먹이) 표시 갱신 (값은 즉시, 연출은 FX가 덧입힘) */
   function refreshHeader() {
     const player = DB.Player.get();
     FX.bumpNumber(document.getElementById('coin-count'), player.coins);
-    FX.bumpNumber(document.getElementById('food-count'), player.food);
+
+    const def = GAME.FOOD_DEFS[player.selected_food] || GAME.FOOD_DEFS.lettuce;
+    document.getElementById('wallet-food-emoji').textContent = def.emoji;
+    document.getElementById('fab-food-emoji').textContent = def.emoji;
+    FX.bumpNumber(document.getElementById('food-count'), (player.foods && player.foods[def.id]) || 0);
+  }
+
+  /** 양육자 XP 지급 + 레벨업/해금 연출 — 모든 모듈이 이 경로를 쓴다 */
+  function gainKeeperXp(action) {
+    const result = GAME.gainKeeperXp(DB.Player.get(), action);
+    DB.Player.save(result.player);
+    if (result.events.indexOf('keeper_levelup') === -1) return;
+
+    Sound.play('fanfare');
+    FX.confetti(12);
+    Toast.show('🧑‍🌾 양육자 레벨 업! Lv.' + result.level + ' (+' + result.coins + ' 코인)');
+    DB.Journal.add('keeper', '양육자 레벨 ' + result.level + '이 되었어요!');
+    _announceUnlocks(result.level);
+    refreshHeader();
+  }
+
+  function _announceUnlocks(level) {
+    Object.keys(GAME.FOOD_DEFS).forEach(function (id) {
+      const def = GAME.FOOD_DEFS[id];
+      if (def.unlockLevel === level) {
+        Toast.show('🔓 새 먹이 해금: ' + def.emoji + ' ' + def.label + '!');
+        DB.Journal.add('unlock', def.label + '을(를) 상점에서 살 수 있게 되었어요.');
+      }
+    });
+    if (GAME.CONFIG.KEEPER_STAMINA_LEVELS.indexOf(level) !== -1) {
+      Toast.show('🔓 탐험 스태미나 확장! (하루 ' + GAME.exploreMaxSearches(DB.Player.get()) + '회)');
+      DB.Journal.add('unlock', '탐험을 더 오래 할 수 있게 되었어요.');
+    }
   }
 
   /**
@@ -148,7 +180,9 @@ const App = (function () {
     player.admin = enable;
     if (enable) {
       player.coins = GAME.CONFIG.ADMIN_COINS;
-      player.food = GAME.CONFIG.ADMIN_FOOD;
+      Object.keys(GAME.FOOD_DEFS).forEach(function (id) {
+        player.foods[id] = GAME.CONFIG.ADMIN_FOOD;
+      });
     }
     DB.Player.save(player);
     Toast.show(enable
@@ -181,6 +215,7 @@ const App = (function () {
       Toast.show('🥬 ' + result.streak + '일 연속 출석! 상추 +' + result.food);
       DB.Journal.add('streak', result.streak + '일 연속으로 함께했어요.');
     }
+    gainKeeperXp('daily');
   }
 
   function _bindNav() {
@@ -235,6 +270,7 @@ const App = (function () {
   return {
     navigate: navigate,
     refreshHeader: refreshHeader,
+    gainKeeperXp: gainKeeperXp,
     applyBackground: applyBackground
   };
 })();

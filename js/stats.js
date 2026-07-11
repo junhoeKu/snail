@@ -145,6 +145,7 @@ const StatsModule = (function () {
     _selectedId = null;
     HabitatModule.sync();
     App.refreshHeader();
+    App.gainKeeperXp('graduate');
     DecoModule.claimUnlocks(); // 이끼 바위(세대) 해금 확인
     render();
     Sound.play('fanfare');

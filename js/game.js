@@ -14,17 +14,27 @@ const GAME = (function () {
     DECAY_HUNGER: 5,
     DECAY_HAPPINESS: 5,
 
-    // 먹이 주기
-    FEED_HUNGER: 30,
-    FEED_EXP: 10,
-    FEED_HAPPINESS: 5,
+    // 먹이 주기 (종류별 효과는 FOOD_DEFS)
     FEED_COINS: 2,
+    FOOD_BUNDLE_DISCOUNT: 0.9, // ×10 묶음 10% 할인
+
+    // 양육자 레벨
+    KEEPER_XP: {
+      feed: 2,
+      explore: 1,
+      daily: 5,
+      mission: 5,
+      mission_all: 10,
+      hatch: 15,
+      graduate: 30,
+      dex_new: 25
+    },
+    KEEPER_LEVEL_COIN_MULT: 30, // 레벨업 보상 = 30 × 새 레벨
+    KEEPER_STAMINA_LEVELS: [5, 8], // 해당 레벨마다 탐험 스태미나 +2
 
     // 접속 보상 / 상점
     DAILY_COINS: 20,
-    FOOD_PRICE: 10,
     FOOD_BUNDLE_COUNT: 10,
-    FOOD_BUNDLE_PRICE: 90,   // 10% 할인 묶음
     MAX_SNAILS: 3,
     EGG_SLOT_PRICES: [0, 500, 1500], // [현재 슬롯 수] → 다음 보금자리 가격
 
@@ -87,6 +97,57 @@ const GAME = (function () {
     STAT_MIN: 0,
     STAT_MAX: 100
   };
+
+  /** 먹이 4종 — 양육자 레벨로 해금 (7차_MVP_구현계획.md §6) */
+  const FOOD_DEFS = {
+    lettuce: { id: 'lettuce', label: '상추', emoji: '🥬', price: 10, hunger: 30, exp: 10, happiness: 5, unlockLevel: 1 },
+    carrot: { id: 'carrot', label: '당근', emoji: '🥕', price: 18, hunger: 45, exp: 14, happiness: 5, unlockLevel: 2 },
+    apple: { id: 'apple', label: '사과', emoji: '🍎', price: 30, hunger: 35, exp: 16, happiness: 12, unlockLevel: 4 },
+    salad: { id: 'salad', label: '특제 샐러드', emoji: '🥗', price: 60, hunger: 100, exp: 30, happiness: 15, unlockLevel: 6 }
+  };
+
+  // ── 양육자 레벨 ────────────────────────────────────────
+
+  function keeperLevel(player) {
+    return (player.keeper && player.keeper.level) || 1;
+  }
+
+  /** 다음 레벨까지 필요한 양육자 XP */
+  function keeperXpToNext(level) {
+    return 50 + (level - 1) * 25;
+  }
+
+  /**
+   * 양육자 XP 획득 (+레벨업 시 코인 보상)
+   * @param {string} action KEEPER_XP 테이블의 키
+   * @returns {{player: object, events: string[], coins: number, level: number}}
+   */
+  function gainKeeperXp(player, action) {
+    const p = _clone(player);
+    const events = [];
+    if (!p.keeper) p.keeper = { level: 1, xp: 0 };
+
+    const amount = CONFIG.KEEPER_XP[action] || 0;
+    let coins = 0;
+    if (amount > 0) {
+      p.keeper.xp += amount;
+      while (p.keeper.xp >= keeperXpToNext(p.keeper.level)) {
+        p.keeper.xp -= keeperXpToNext(p.keeper.level);
+        p.keeper.level += 1;
+        coins += CONFIG.KEEPER_LEVEL_COIN_MULT * p.keeper.level;
+        events.push('keeper_levelup');
+      }
+      p.coins += coins;
+    }
+    return { player: p, events: events, coins: coins, level: p.keeper.level };
+  }
+
+  /** 먹이 해금 여부 (관리자는 전부 해금) */
+  function foodUnlocked(player, foodId) {
+    const def = FOOD_DEFS[foodId];
+    if (!def) return false;
+    return player.admin === true || keeperLevel(player) >= def.unlockLevel;
+  }
 
   /** 데일리 미션 정의 (UI 라벨/목표 공용) */
   const MISSION_DEFS = {
@@ -200,6 +261,12 @@ const GAME = (function () {
 
   function _clamp(value) {
     return Math.max(CONFIG.STAT_MIN, Math.min(CONFIG.STAT_MAX, value));
+  }
+
+  /** 보상/발견 지급용 상추 (기본 먹이) */
+  function _grantLettuce(player, amount) {
+    if (!player.foods) player.foods = { lettuce: 0 };
+    player.foods.lettuce = (player.foods.lettuce || 0) + amount;
   }
 
   function _clone(obj) {
@@ -388,9 +455,19 @@ const GAME = (function () {
     return { date: todayKey, searches: 0 };
   }
 
+  /** 하루 최대 뒤지기 횟수 (양육자 레벨 보너스 포함) */
+  function exploreMaxSearches(player) {
+    const lv = keeperLevel(player);
+    let max = CONFIG.EXPLORE_SEARCHES_PER_DAY;
+    CONFIG.KEEPER_STAMINA_LEVELS.forEach(function (gate) {
+      if (lv >= gate) max += 2;
+    });
+    return max;
+  }
+
   /** 오늘 남은 뒤지기 횟수 */
   function exploreStamina(player, todayKey) {
-    return Math.max(0, CONFIG.EXPLORE_SEARCHES_PER_DAY - _exploreFor(player, todayKey).searches);
+    return Math.max(0, exploreMaxSearches(player) - _exploreFor(player, todayKey).searches);
   }
 
   /** 맵 입장 가능 여부 (연못: 2세대 도달 또는 코인 해금) */
@@ -452,7 +529,7 @@ const GAME = (function () {
       return { player: p, result: null, events: events };
     }
     const stamina = _exploreFor(p, todayKey);
-    if (stamina.searches >= CONFIG.EXPLORE_SEARCHES_PER_DAY) {
+    if (stamina.searches >= exploreMaxSearches(p)) {
       events.push('no_stamina');
       return { player: p, result: null, events: events };
     }
@@ -469,7 +546,7 @@ const GAME = (function () {
       result = { type: 'coins', amount: amount };
     } else if (roll < 0.80) {
       const amount = 1 + Math.floor(random() * 2);
-      p.food += amount;
+      _grantLettuce(p, amount);
       result = { type: 'food', amount: amount };
     } else if (roll < 0.95) {
       result = { type: 'none' };
@@ -571,36 +648,45 @@ const GAME = (function () {
    * 먹이 주기: 상추 1 소모 → 배고픔 감소 + 경험치/행복/코인 증가
    * @returns {{snail: object, player: object, events: string[]}}
    */
-  function feed(snail, player) {
+  /**
+   * 먹이 주기 — 종류별 효과 (FOOD_DEFS)
+   * @param {string} [foodId] 생략 시 player.selected_food
+   * @returns {{snail, player, food(사용한 정의), events}}
+   */
+  function feed(snail, player, foodId) {
     let s = _clone(snail);
     const p = _clone(player);
     let events = [];
-    const admin = p.admin === true; // 관리자: 배고픔/재고 제약 없이 무한 성장 실험
+    const admin = p.admin === true; // 관리자: 배고픔/재고/해금 제약 없음
+
+    const fid = foodId || p.selected_food || 'lettuce';
+    const def = FOOD_DEFS[fid] || FOOD_DEFS.lettuce;
+    if (!p.foods) p.foods = { lettuce: 0 };
 
     if (s.stage === 'egg') {
       events.push('not_hatched');
-      return { snail: s, player: p, events: events };
+      return { snail: s, player: p, food: def, events: events };
     }
-    if (!admin && p.food < 1) {
+    if (!admin && (p.foods[def.id] || 0) < 1) {
       events.push('no_food');
-      return { snail: s, player: p, events: events };
+      return { snail: s, player: p, food: def, events: events };
     }
     if (!admin && s.hunger <= 0) {
       events.push('not_hungry');
-      return { snail: s, player: p, events: events };
+      return { snail: s, player: p, food: def, events: events };
     }
 
-    if (p.food > 0) p.food -= 1;
+    if ((p.foods[def.id] || 0) > 0) p.foods[def.id] -= 1;
     p.coins += CONFIG.FEED_COINS;
-    s.hunger = _clamp(s.hunger - CONFIG.FEED_HUNGER);
-    s.happiness = _clamp(s.happiness + CONFIG.FEED_HAPPINESS);
+    s.hunger = _clamp(s.hunger - def.hunger);
+    s.happiness = _clamp(s.happiness + def.happiness);
     events.push('fed');
 
-    const grown = gainExp(s, CONFIG.FEED_EXP * (admin ? CONFIG.ADMIN_EXP_MULT : 1));
+    const grown = gainExp(s, def.exp * (admin ? CONFIG.ADMIN_EXP_MULT : 1));
     s = grown.snail;
     events = events.concat(grown.events);
 
-    return { snail: s, player: p, events: events };
+    return { snail: s, player: p, food: def, events: events };
   }
 
   /** YYYY-MM-DD의 하루 전 날짜 키 (정오 기준 계산으로 DST 이슈 회피) */
@@ -635,7 +721,7 @@ const GAME = (function () {
     const food = (count % 7 === 0) ? CONFIG.STREAK_WEEKLY_FOOD : 0;
 
     p.coins += coins;
-    p.food += food;
+    if (food > 0) _grantLettuce(p, food);
     p.last_daily_reward = todayKey;
     events.push('daily_claimed');
     if (food > 0) events.push('streak_weekly');
@@ -686,7 +772,7 @@ const GAME = (function () {
     }
 
     p.coins += coins;
-    p.food += food;
+    if (food > 0) _grantLettuce(p, food);
     p.missions = m;
     return { player: p, events: events, coins: coins, food: food };
   }
@@ -802,7 +888,7 @@ const GAME = (function () {
     for (let i = 0; i < chances && report.finds.length < CONFIG.FIND_MAX; i++) {
       if (random() >= CONFIG.FIND_CHANCE) continue;
       if (random() < CONFIG.FIND_FOOD_CHANCE) {
-        p.food += 1;
+        _grantLettuce(p, 1);
         report.finds.push({ type: 'food', amount: 1 });
       } else {
         const amount = CONFIG.FIND_COIN_MIN +
@@ -816,26 +902,44 @@ const GAME = (function () {
     return { snails: updated, player: p, report: report, events: events };
   }
 
+  /** 먹이 가격 (묶음은 10% 할인) */
+  function foodPrice(foodId, count) {
+    const def = FOOD_DEFS[foodId];
+    const n = count || 1;
+    if (n === CONFIG.FOOD_BUNDLE_COUNT) {
+      return Math.round(def.price * n * CONFIG.FOOD_BUNDLE_DISCOUNT);
+    }
+    return def.price * n;
+  }
+
   /**
-   * 상추 구매 (묶음 지원 — FOOD_BUNDLE_COUNT개는 할인가)
-   * @param {number} [count] 기본 1
+   * 먹이 구매 (종류/묶음 지원)
    * @returns {{player: object, events: string[]}}
    */
-  function buyFood(player, count) {
+  function buyFood(player, foodId, count) {
     const p = _clone(player);
     const events = [];
+    const fid = foodId || 'lettuce';
+    const def = FOOD_DEFS[fid];
     const n = count || 1;
-    const price = (n === CONFIG.FOOD_BUNDLE_COUNT)
-      ? CONFIG.FOOD_BUNDLE_PRICE
-      : CONFIG.FOOD_PRICE * n;
 
+    if (!def) {
+      events.push('invalid');
+      return { player: p, events: events };
+    }
+    if (!foodUnlocked(p, fid)) {
+      events.push('food_locked');
+      return { player: p, events: events };
+    }
+    const price = foodPrice(fid, n);
     if (p.coins < price) {
       events.push('not_enough_coins');
       return { player: p, events: events };
     }
 
     p.coins -= price;
-    p.food += n;
+    if (!p.foods) p.foods = {};
+    p.foods[fid] = (p.foods[fid] || 0) + n;
     events.push('food_bought');
     return { player: p, events: events };
   }
@@ -848,6 +952,13 @@ const GAME = (function () {
     VARIANTS: VARIANTS,
     DECORATIONS: DECORATIONS,
     MISSION_DEFS: MISSION_DEFS,
+    FOOD_DEFS: FOOD_DEFS,
+    keeperLevel: keeperLevel,
+    keeperXpToNext: keeperXpToNext,
+    gainKeeperXp: gainKeeperXp,
+    foodUnlocked: foodUnlocked,
+    foodPrice: foodPrice,
+    exploreMaxSearches: exploreMaxSearches,
     EXPLORE_MAPS: EXPLORE_MAPS,
     exploreStamina: exploreStamina,
     mapAvailable: mapAvailable,
