@@ -97,6 +97,7 @@ const App = (function () {
     applyBackground();
     refreshHeader();
     navigate('home');
+    HabitatModule.init();
     _startTick();
   }
 

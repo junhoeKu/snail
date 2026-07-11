@@ -8,7 +8,7 @@
 const DB = (function () {
   'use strict';
 
-  const SCHEMA_VERSION = 1;
+  const SCHEMA_VERSION = 2;
 
   const KEYS = {
     PLAYER: 'sn_player',
@@ -76,6 +76,7 @@ const DB = (function () {
       happiness: 100,
       stage: 'egg',
       color: 'default',
+      pos: { rx: 0.5, ry: 0.5 }, // 서식지 내 위치 (0~1 비율 좌표)
       created_at: now()
     };
   }
@@ -87,7 +88,13 @@ const DB = (function () {
   function _getOrInit(key, defaultFactory) {
     const stored = _read(key);
     const merged = Object.assign(defaultFactory(), stored || {});
-    if (!stored) _write(key, merged);
+    if (!stored) {
+      _write(key, merged);
+    } else if (stored.schema_version !== SCHEMA_VERSION) {
+      // 구버전 레코드: 기본값 병합으로 누락 필드를 채우고 버전을 올려 저장
+      merged.schema_version = SCHEMA_VERSION;
+      _write(key, merged);
+    }
     return merged;
   }
 

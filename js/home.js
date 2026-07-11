@@ -139,6 +139,7 @@ const HomeModule = (function () {
     DB.Player.save(player);
 
     render();
+    HabitatModule.onHatched();
     Toast.celebrate({
       emoji: '🐌',
       title: '부화 성공!',
