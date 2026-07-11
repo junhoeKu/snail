@@ -28,9 +28,60 @@
   text-align: center;
 }
 
+/* ── 서식지 ─────────────────────────── */
+.snail-habitat {
+  position: relative;
+  height: 300px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: linear-gradient(180deg, #eaf7ed 0%, #d8eedd 65%, #c3e5cc 100%);
+  cursor: pointer;
+  touch-action: manipulation;
+  margin-bottom: 14px;
+}
+
+body[data-background="garden"] .snail-habitat {
+  background: linear-gradient(180deg, #fdf0f3 0%, #fbe7da 65%, #f6dcc6 100%);
+}
+
+/* 최소 장식: 바닥 풀잎 */
+.snail-habitat::after {
+  content: '🌱 \00a0\00a0 🌿 \00a0\00a0\00a0\00a0 🌱 \00a0\00a0\00a0 🌿';
+  position: absolute;
+  bottom: 6px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 13px;
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/*
+ * 3계층 분리 (2차_MVP_구현계획.md §3)
+ * entity: 좌표 이동(translate3d) · motion: 들썩임/먹기 · sprite: 크기/좌우 반전
+ */
+.snail-entity {
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform;
+  pointer-events: none;
+}
+
+#food-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
 .snail-sprite {
-  display: inline-block;
+  display: block;
   line-height: 1;
+  transform: scaleX(var(--flip, 1));
+}
+
+.snail-entity .snail-motion {
   animation: snail-bob 3s ease-in-out infinite;
 }
 
@@ -58,9 +109,9 @@
 }
 
 @keyframes sprite-pop {
-  0%   { transform: scale(1); }
-  40%  { transform: scale(1.25); }
-  100% { transform: scale(1); }
+  0%   { transform: scaleX(var(--flip, 1)) scale(1); }
+  40%  { transform: scaleX(var(--flip, 1)) scale(1.25); }
+  100% { transform: scaleX(var(--flip, 1)) scale(1); }
 }
 
 .snail-name {
