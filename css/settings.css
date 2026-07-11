@@ -122,6 +122,14 @@
   line-height: 1.5;
 }
 
+.backup-input {
+  min-height: 64px;
+  resize: vertical;
+  font-size: 12px;
+  margin: 10px 0;
+  word-break: break-all;
+}
+
 .settings-version {
   margin-top: 14px;
   text-align: center;

@@ -190,6 +190,17 @@
           <h3 class="settings-subtitle">소리</h3>
           <button id="btn-sound-toggle" class="btn btn-ghost btn-wide"></button>
 
+          <h3 class="settings-subtitle">백업 &amp; 복구</h3>
+          <p class="screen-desc">기기를 바꾸거나 데이터를 지키고 싶을 때 사용하세요.</p>
+          <button id="btn-backup-export" class="btn btn-ghost btn-wide">
+            <i class="fa-solid fa-copy"></i> 백업 코드 복사
+          </button>
+          <textarea id="backup-input" class="text-input backup-input"
+            placeholder="백업 코드를 붙여넣고 아래 버튼을 누르세요"></textarea>
+          <button id="btn-backup-import" class="btn btn-ghost btn-wide">
+            <i class="fa-solid fa-file-import"></i> 백업 코드로 복구
+          </button>
+
           <h3 class="settings-subtitle">데이터</h3>
           <button id="btn-reset" class="btn btn-danger btn-wide">데이터 초기화</button>
           <p class="settings-version">Snail v0.6.0 · Vanilla JS + LocalStorage</p>
