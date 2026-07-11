@@ -1,0 +1,16 @@
+{
+  "name": "Snail — 달팽이 키우기",
+  "short_name": "Snail",
+  "description": "달팽이를 부화시켜 먹이 주고, 탐험하며 수집하는 데일리 케어 게임",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#7c9866",
+  "theme_color": "#5a744c",
+  "icons": [
+    { "src": "assets/icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

@@ -219,7 +219,18 @@ const App = (function () {
     _startTick();
   }
 
-  document.addEventListener('DOMContentLoaded', init);
+  /** PWA 서비스 워커 등록 (지원 환경에서만 — 실패해도 게임은 정상 동작) */
+  function _registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.register('sw.js').catch(function () {
+      /* file:// 등 미지원 환경 무시 */
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    init();
+    _registerServiceWorker();
+  });
 
   return {
     navigate: navigate,
