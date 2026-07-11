@@ -45,7 +45,8 @@ const DecoModule = (function () {
       action.className = 'deco-action';
 
       if (owned.indexOf(id) !== -1) {
-        status.textContent = '보유 중 — 놓을 슬롯을 고르세요';
+        const placed = slots.indexOf(id) !== -1;
+        status.textContent = '✨ ' + def.fxDesc + (placed ? ' (발동 중)' : ' — 슬롯에 놓으면 발동');
         for (let i = 0; i < 3; i++) {
           const slotBtn = document.createElement('button');
           slotBtn.className = 'slot-btn' + (slots[i] === id ? ' active' : '');
@@ -85,11 +86,15 @@ const DecoModule = (function () {
 
   function _toggleSlot(id, slotIndex) {
     const player = DB.Player.get();
-    const result = (player.decorations.slots[slotIndex] === id)
+    const removing = player.decorations.slots[slotIndex] === id;
+    const result = removing
       ? GAME.removeDecoration(player, slotIndex)
       : GAME.placeDecoration(player, id, slotIndex);
     DB.Player.save(result.player);
     HabitatModule.renderDecorations();
+    Toast.show(removing
+      ? GAME.DECORATIONS[id].label + ' 효과 꺼짐'
+      : '✨ ' + GAME.DECORATIONS[id].label + ': ' + GAME.DECORATIONS[id].fxDesc + ' 발동!');
     render();
   }
 
