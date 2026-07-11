@@ -1,0 +1,110 @@
+/* explore.css — 탐험 채집 화면 */
+
+.explore-maps {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.explore-map-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 2px solid #e2e6de;
+  border-radius: var(--radius-sm);
+}
+
+.explore-map-card.locked {
+  opacity: 0.75;
+}
+
+.explore-map-name {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.explore-map-desc {
+  font-size: 12px;
+  color: var(--color-text-sub);
+  margin-top: 3px;
+}
+
+.explore-exit {
+  margin-bottom: 10px;
+}
+
+/* ── 맵 필드 ────────────────────────── */
+.explore-field {
+  position: relative;
+  height: 60vh;
+  min-height: 320px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.explore-field.map-moss {
+  background:
+    radial-gradient(120% 60% at 50% 115%, rgba(18, 26, 12, 0.35), transparent 62%),
+    linear-gradient(180deg, #a9bd93 0%, #7c9866 55%, #5a744c 100%);
+}
+
+.explore-field.map-field {
+  background:
+    radial-gradient(120% 60% at 50% 115%, rgba(62, 42, 16, 0.3), transparent 62%),
+    linear-gradient(180deg, #e8d8b4 0%, #cfb184 55%, #a98c60 100%);
+}
+
+.explore-field.map-pond {
+  background:
+    radial-gradient(120% 60% at 50% 115%, rgba(14, 30, 36, 0.35), transparent 62%),
+    linear-gradient(180deg, #b5cfc9 0%, #85aca8 55%, #5d8683 100%);
+}
+
+.explore-spot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 58px;
+  height: 58px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 26px;
+  cursor: pointer;
+  transition: transform 0.1s ease, background 0.2s ease;
+}
+
+.explore-spot:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.explore-spot:active {
+  transform: translate(-50%, -50%) scale(0.9);
+}
+
+.explore-spot.searched {
+  background: transparent;
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+  cursor: default;
+  animation: spot-pop 0.4s ease;
+}
+
+@keyframes spot-pop {
+  0%   { transform: translate(-50%, -50%) scale(0.6); }
+  60%  { transform: translate(-50%, -50%) scale(1.2); }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+.explore-map-stamina {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-sub);
+}

@@ -50,6 +50,13 @@ const GAME = (function () {
     DECO_MISSIONS_REQUIRED: 7, // 들꽃: 미션 완주 누적
     DECO_GENERATION_REQUIRED: 2, // 이끼 바위: 세대
 
+    // 탐험 채집
+    EXPLORE_SEARCHES_PER_DAY: 10, // 하루 뒤지기 횟수 (맵 공용)
+    EXPLORE_COIN_MIN: 3,
+    EXPLORE_COIN_MAX: 12,
+    EXPLORE_MAP_PRICE: 1000,      // 이슬 연못 코인 해금가
+    WILD_EGG_FALLBACK_COINS: 30,  // 보금자리 가득 시 야생 알 → 코인 전환
+
     // 관리자 모드 (?admin=1 — 졸업 등 실험용)
     ADMIN_COINS: 999999,
     ADMIN_FOOD: 999,
@@ -84,7 +91,15 @@ const GAME = (function () {
   /** 데일리 미션 정의 (UI 라벨/목표 공용) */
   const MISSION_DEFS = {
     feed: { id: 'feed', label: '밥 챙겨주기', goal: 2 },
-    pet: { id: 'pet', label: '쓰다듬어주기', goal: 1 }
+    pet: { id: 'pet', label: '쓰다듬어주기', goal: 1 },
+    explore: { id: 'explore', label: '탐험 다녀오기', goal: 1 }
+  };
+
+  /** 탐험 맵 — 맵마다 특산 변이가 다르다 (수집 전략) */
+  const EXPLORE_MAPS = {
+    moss: { id: 'moss', label: '이끼 숲', emoji: '🌿', variantBoost: 'olive', locked: false },
+    field: { id: 'field', label: '햇살 들판', emoji: '🌤️', variantBoost: 'russet', locked: false },
+    pond: { id: 'pond', label: '이슬 연못', emoji: '💧', variantBoost: 'gray', goldenMult: 2, locked: true }
   };
 
   const STAGES = {
@@ -363,6 +378,115 @@ const GAME = (function () {
       if (s && s.stage !== 'egg' && s.color) found[s.color] = true;
     });
     return Object.keys(VARIANTS).filter(function (key) { return found[key]; });
+  }
+
+  // ── 탐험 ──────────────────────────────────────────────
+
+  function _exploreFor(player, todayKey) {
+    const e = player.explore;
+    if (e && e.date === todayKey) return _clone(e);
+    return { date: todayKey, searches: 0 };
+  }
+
+  /** 오늘 남은 뒤지기 횟수 */
+  function exploreStamina(player, todayKey) {
+    return Math.max(0, CONFIG.EXPLORE_SEARCHES_PER_DAY - _exploreFor(player, todayKey).searches);
+  }
+
+  /** 맵 입장 가능 여부 (연못: 2세대 도달 또는 코인 해금) */
+  function mapAvailable(player, mapId) {
+    const map = EXPLORE_MAPS[mapId];
+    if (!map) return false;
+    if (!map.locked) return true;
+    return (player.generation || 1) >= CONFIG.DECO_GENERATION_REQUIRED ||
+      (player.unlocked_maps || []).indexOf(mapId) !== -1;
+  }
+
+  /** 잠긴 맵 코인 해금 */
+  function buyMapUnlock(player, mapId) {
+    const p = _clone(player);
+    const events = [];
+    if (!EXPLORE_MAPS[mapId] || mapAvailable(p, mapId)) {
+      events.push('invalid');
+      return { player: p, events: events };
+    }
+    if (p.coins < CONFIG.EXPLORE_MAP_PRICE) {
+      events.push('not_enough_coins');
+      return { player: p, events: events };
+    }
+    p.coins -= CONFIG.EXPLORE_MAP_PRICE;
+    p.unlocked_maps = (p.unlocked_maps || []).concat([mapId]);
+    events.push('map_unlocked');
+    return { player: p, events: events };
+  }
+
+  /** 야생 알 변이: 맵 특산 강화(+10%p) + 연못 황금 2배 (전부 brown에서 이동) */
+  function wildEggVariant(mapId, generation, rng) {
+    const map = EXPLORE_MAPS[mapId];
+    const table = variantTableFor(generation);
+
+    const shift = Math.min(0.10, table.brown.chance - 0.05);
+    table.brown.chance -= shift;
+    table[map.variantBoost].chance += shift;
+
+    if (map.goldenMult) {
+      const extra = Math.min(table.golden.chance * (map.goldenMult - 1), table.brown.chance - 0.05);
+      table.brown.chance -= extra;
+      table.golden.chance += extra;
+    }
+    return _pickWeighted(table, (rng || Math.random)());
+  }
+
+  /**
+   * 뒤지기 1회: 스태미나 차감 + 결과 판정 (코인 55% / 상추 25% / 꽝 15% / 야생 알 5%).
+   * 야생 알의 슬롯 검사·수용은 호출부 책임 (가득이면 convertWildEgg).
+   * @returns {{player: object, result: object|null, events: string[]}}
+   */
+  function explore(player, mapId, todayKey, rng) {
+    const p = _clone(player);
+    const events = [];
+    const random = rng || Math.random;
+
+    if (!mapAvailable(p, mapId)) {
+      events.push('map_locked');
+      return { player: p, result: null, events: events };
+    }
+    const stamina = _exploreFor(p, todayKey);
+    if (stamina.searches >= CONFIG.EXPLORE_SEARCHES_PER_DAY) {
+      events.push('no_stamina');
+      return { player: p, result: null, events: events };
+    }
+
+    stamina.searches += 1;
+    p.explore = stamina;
+
+    const roll = random();
+    let result;
+    if (roll < 0.55) {
+      const amount = CONFIG.EXPLORE_COIN_MIN +
+        Math.floor(random() * (CONFIG.EXPLORE_COIN_MAX - CONFIG.EXPLORE_COIN_MIN + 1));
+      p.coins += amount;
+      result = { type: 'coins', amount: amount };
+    } else if (roll < 0.80) {
+      const amount = 1 + Math.floor(random() * 2);
+      p.food += amount;
+      result = { type: 'food', amount: amount };
+    } else if (roll < 0.95) {
+      result = { type: 'none' };
+    } else {
+      result = { type: 'egg', variant: wildEggVariant(mapId, p.generation || 1, random) };
+      events.push('wild_egg');
+    }
+
+    events.push('explored');
+    return { player: p, result: result, events: events };
+  }
+
+  /** 보금자리 가득 시 야생 알 → 코인 전환 */
+  function convertWildEgg(player) {
+    const p = _clone(player);
+    p.coins += CONFIG.WILD_EGG_FALLBACK_COINS;
+    return { player: p, events: ['wild_egg_converted'] };
   }
 
   /** 새 알 레코드 (id는 DB.Snails.add가 부여) */
@@ -724,6 +848,14 @@ const GAME = (function () {
     VARIANTS: VARIANTS,
     DECORATIONS: DECORATIONS,
     MISSION_DEFS: MISSION_DEFS,
+    EXPLORE_MAPS: EXPLORE_MAPS,
+    exploreStamina: exploreStamina,
+    mapAvailable: mapAvailable,
+    buyMapUnlock: buyMapUnlock,
+    wildEggVariant: wildEggVariant,
+    explore: explore,
+    convertWildEgg: convertWildEgg,
+    newEgg: _newEgg,
     decorationUnlockMet: decorationUnlockMet,
     buyDecoration: buyDecoration,
     claimDecorationUnlocks: claimDecorationUnlocks,
