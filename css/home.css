@@ -111,13 +111,16 @@
   50%      { transform: translateX(4px); }
 }
 
-/* 성장 단계별 크기 (SVG/이모지 공용) */
-.snail-sprite.stage-baby { font-size: 56px; }
-.snail-sprite.stage-junior { font-size: 84px; }
-.snail-sprite.stage-adult {
-  font-size: 104px;
-  filter: hue-rotate(120deg) saturate(1.4);
+/* 성장 단계별 크기 — 색 변화는 theme.css의 --shell-* 변수 오버라이드 */
+.snail-sprite svg {
+  display: block;
+  height: auto;
+  filter: drop-shadow(0 2px 2px rgba(20, 18, 10, 0.2));
 }
+
+.snail-sprite.stage-baby svg { width: 62px; }
+.snail-sprite.stage-junior svg { width: 92px; }
+.snail-sprite.stage-adult svg { width: 114px; }
 
 .snail-sprite.pop {
   animation: sprite-pop 0.5s ease;
@@ -224,10 +227,14 @@
 /* ── 먹이 ───────────────────────────── */
 .food-item {
   position: absolute;
-  font-size: 26px;
   line-height: 1;
   transform: translate(-50%, -50%);
   animation: food-drop 0.5s cubic-bezier(0.3, 1.4, 0.6, 1);
+}
+
+.food-item svg {
+  display: block;
+  filter: drop-shadow(0 2px 2px rgba(20, 18, 10, 0.25));
 }
 
 /* 먹히는 동안 점점 작아지고 흐려짐 (EAT_DURATION과 맞춤) */
