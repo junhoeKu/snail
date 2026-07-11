@@ -137,13 +137,17 @@
   flex-shrink: 0;
 }
 
-.dex-swatch.variant-brown { background: radial-gradient(circle at 35% 30%, #d8b98d, #a97e4f 60%, #6f4e2c); }
-.dex-swatch.variant-gray { background: radial-gradient(circle at 35% 30%, #cfc9bd, #948d7f 60%, #5f594e); }
-.dex-swatch.variant-russet { background: radial-gradient(circle at 35% 30%, #dda27a, #ab6a42 60%, #713f20); }
-.dex-swatch.variant-olive { background: radial-gradient(circle at 35% 30%, #c9cb90, #8f9354 60%, #5c6032); }
-.dex-swatch.variant-golden {
-  background: radial-gradient(circle at 35% 30%, #f2d787, #d2a437 60%, #8f6a15);
-  box-shadow: inset 0 -3px 4px rgba(0, 0, 0, 0.15), 0 0 6px rgba(242, 215, 135, 0.7);
+.dex-img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 2px rgba(20, 18, 10, 0.25));
+}
+
+.album-img {
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
 }
 
 /* ── 앨범 ───────────────────────────── */

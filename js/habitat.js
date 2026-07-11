@@ -161,14 +161,16 @@ const HabitatModule = (function () {
     return ent;
   }
 
-  /** 변이/단계/컨디션 반영 */
+  /** 변이/단계/컨디션 반영 (일러스트 스프라이트 교체) */
   function _applyLook(ent, rec) {
     const condition = GAME.conditionOf(rec);
     ent.spriteEl.className = 'snail-sprite stage-' + rec.stage +
       ' variant-' + (rec.color || 'brown') +
       (condition.id !== 'normal' ? ' cond-' + condition.id : '');
-    const shell = ent.spriteEl.querySelector('.shell-base');
-    if (shell) shell.setAttribute('fill', 'url(#shell-grad-' + (rec.color || 'brown') + ')');
+
+    const img = ent.spriteEl.querySelector('.snail-img');
+    const src = 'assets/characters/snail_' + (rec.color || 'brown') + '_' + rec.stage + '.png';
+    if (img && img.getAttribute('src') !== src) img.setAttribute('src', src);
   }
 
   function _addEggEl(rec, index) {

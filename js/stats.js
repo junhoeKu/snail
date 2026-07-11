@@ -172,13 +172,20 @@ const StatsModule = (function () {
       const cell = document.createElement('div');
       cell.className = 'dex-cell' + (found ? ' found' : '');
 
-      const swatch = document.createElement('div');
-      swatch.className = 'dex-swatch' + (found ? ' variant-' + key : '');
+      if (found) {
+        const img = document.createElement('img');
+        img.className = 'dex-img';
+        img.src = 'assets/characters/snail_' + key + '_baby.png';
+        img.alt = GAME.VARIANTS[key].label;
+        cell.appendChild(img);
+      } else {
+        const swatch = document.createElement('div');
+        swatch.className = 'dex-swatch'; // 미발견 실루엣
+        cell.appendChild(swatch);
+      }
 
       const label = document.createElement('span');
       label.textContent = found ? GAME.VARIANTS[key].label : '???';
-
-      cell.appendChild(swatch);
       cell.appendChild(label);
       grid.appendChild(cell);
     });
@@ -211,8 +218,10 @@ const StatsModule = (function () {
       const li = document.createElement('li');
       li.className = 'album-card';
 
-      const swatch = document.createElement('div');
-      swatch.className = 'dex-swatch variant-' + (record.color || 'brown');
+      const swatch = document.createElement('img');
+      swatch.className = 'dex-img album-img';
+      swatch.src = 'assets/characters/snail_' + (record.color || 'brown') + '_adult.png';
+      swatch.alt = record.name;
 
       const info = document.createElement('div');
       const title = document.createElement('div');

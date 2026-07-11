@@ -15,9 +15,6 @@
   --color-hunger: #c98f4a;
   --color-happiness: #6a8f5c;
 
-  --ground-accent-1: rgba(58, 76, 45, 0.35);
-  --ground-accent-2: rgba(92, 76, 52, 0.3);
-
   --radius: 16px;
   --radius-sm: 10px;
   --shadow: 0 4px 16px rgba(47, 55, 42, 0.12);
@@ -41,59 +38,26 @@ body {
 }
 
 /*
- * 배경 2종 (실사풍) — 비네트 + feTurbulence 노이즈 텍스처 + 자연 톤 그라데이션
+ * 배경 2종 — 일러스트 (docs/art 원본 → assets/backgrounds) + 하단 비네트
  */
 body[data-background="default"] {
-  /* 이끼 숲 바닥 */
-  background:
-    radial-gradient(120% 60% at 50% 115%, rgba(18, 26, 12, 0.38), transparent 62%),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0.07'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E"),
-    linear-gradient(180deg, #b9c8a3 0%, #93a97d 40%, #74905f 70%, #5a744c 100%);
+  /* 이끼 숲 */
+  background-color: #74905f;
+  background-image:
+    radial-gradient(120% 60% at 50% 115%, rgba(18, 26, 12, 0.32), transparent 62%),
+    url("../assets/backgrounds/bg_moss.jpg");
+  background-size: 100% 100%, cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 body[data-background="garden"] {
   /* 햇살 정원 */
-  background:
-    radial-gradient(120% 60% at 50% 115%, rgba(62, 42, 16, 0.3), transparent 62%),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0.07'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E"),
-    linear-gradient(180deg, #ecdcbb 0%, #d9bf95 40%, #bd9c70 70%, #9c7c52 100%);
-}
-
-/* 달팽이 SVG 색 (성장 단계별 오버라이드) */
-.snail-sprite {
-  --shell-light: #d8b98d;
-  --shell-mid: #a97e4f;
-  --shell-dark: #6f4e2c;
-  --shell-line: #55381c;
-  --body-light: #cfc0a4;
-  --body-dark: #857053;
-}
-
-/* 껍질 변이 5종 (부화 시 결정 — snail.color) */
-.snail-sprite.variant-gray {
-  --shell-light: #cfc9bd;
-  --shell-mid: #948d7f;
-  --shell-dark: #5f594e;
-  --shell-line: #464038;
-}
-
-.snail-sprite.variant-russet {
-  --shell-light: #dda27a;
-  --shell-mid: #ab6a42;
-  --shell-dark: #713f20;
-  --shell-line: #572f16;
-}
-
-.snail-sprite.variant-olive {
-  --shell-light: #c9cb90;
-  --shell-mid: #8f9354;
-  --shell-dark: #5c6032;
-  --shell-line: #464a25;
-}
-
-.snail-sprite.variant-golden {
-  --shell-light: #f2d787;
-  --shell-mid: #d2a437;
-  --shell-dark: #8f6a15;
-  --shell-line: #6f5210;
+  background-color: #a98c60;
+  background-image:
+    radial-gradient(120% 60% at 50% 115%, rgba(62, 42, 16, 0.28), transparent 62%),
+    url("../assets/backgrounds/bg_garden.jpg");
+  background-size: 100% 100%, cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
