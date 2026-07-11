@@ -1,47 +1,24 @@
-/* stats.css — 스탯 화면 */
+/* stats.css — 유저 탭 (양육자/도감/앨범/일지) */
 
-/* ── 개체 선택 ──────────────────────── */
-.snail-select {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
+/* ── 양육자 카드 ────────────────────── */
+.keeper-box {
+  padding: 14px;
+  border-radius: var(--radius-sm);
+  background: rgba(120, 145, 100, 0.1);
 }
 
-.snail-select-btn {
-  padding: 7px 14px;
-  border-radius: 999px;
-  border: 2px solid #e2e6de;
-  background: var(--color-surface);
-  font-family: inherit;
-  font-size: 12px;
+.keeper-title {
+  font-size: 16px;
   font-weight: 800;
-  color: var(--color-text-sub);
-  cursor: pointer;
-}
-
-.snail-select-btn.active {
-  border-color: var(--color-primary);
-  background: rgba(120, 145, 100, 0.14);
-  color: var(--color-text);
-}
-
-.stats-identity {
-  color: var(--color-text-sub);
-  font-size: 15px;
   margin-bottom: 8px;
 }
 
-.stats-identity strong {
-  color: var(--color-text);
-  font-size: 17px;
-}
-
-.stats-traits {
-  font-size: 13px;
+.keeper-xp {
+  margin-top: 6px;
+  font-size: 12px;
   font-weight: 700;
-  color: var(--color-primary-dark);
-  margin-bottom: 8px;
+  color: var(--color-text-sub);
+  text-align: right;
 }
 
 .stats-next {

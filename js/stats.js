@@ -1,107 +1,53 @@
 /**
- * StatsModule — 스탯 화면 (경험치/배고픔/행복 + 성장 단계 안내)
+ * StatsModule — 유저 탭 (양육자 레벨 / 도감 / 앨범 / 성장 일지)
  * 전역 네임스페이스: StatsModule
+ * 개체(달팽이) 상세는 홈의 개체 팝업(HomeModule)이 담당한다.
  */
 const StatsModule = (function () {
   'use strict';
 
-  let _selectedId = null;
-
-  /** 선택된 달팽이 (없거나 사라졌으면 첫 부화 개체 → 첫 레코드 순으로 폴백) */
-  function _selected(snails) {
-    let rec = snails.find(function (s) { return s.id === _selectedId; });
-    if (!rec) rec = snails.find(function (s) { return s.stage !== 'egg'; }) || snails[0];
-    _selectedId = rec ? rec.id : null;
-    return rec;
-  }
-
-  function _renderSelect(snails, selected) {
-    const wrap = document.getElementById('snail-select');
-    wrap.innerHTML = '';
-    if (snails.length <= 1) return; // 1마리면 선택기 불필요
-
-    snails.forEach(function (s) {
-      const btn = document.createElement('button');
-      btn.className = 'snail-select-btn' + (selected && s.id === selected.id ? ' active' : '');
-      btn.textContent = s.stage === 'egg' ? '🥚 알' : s.name;
-      btn.addEventListener('click', function () {
-        _selectedId = s.id;
-        render();
-      });
-      wrap.appendChild(btn);
-    });
-  }
-
-  function _setBar(id, percent) {
-    document.getElementById(id).style.width = Math.max(0, Math.min(100, percent)) + '%';
-  }
-
-  /** 다음 성장 단계 안내 문구 */
-  function _nextStageText(snail) {
-    if (snail.stage === 'baby') {
-      return 'Lv.' + GAME.STAGES.junior.minLevel + '이 되면 껍질이 커져요!';
-    }
-    if (snail.stage === 'junior') {
-      return 'Lv.' + GAME.STAGES.adult.minLevel + '이 되면 색이 변해요!';
-    }
-    return '최종 단계까지 자랐어요. 계속 아껴주세요!';
-  }
-
   function render() {
-    const snails = DB.Snails.get();
-    const snail = _selected(snails);
-    _renderSelect(snails, snail);
-
-    if (!snail || snail.stage === 'egg') {
-      document.getElementById('stats-name').textContent = '???';
-      document.getElementById('stats-level').textContent = '-';
-      document.getElementById('stats-stage').textContent = '알';
-      document.getElementById('stats-traits').textContent = '';
-      document.getElementById('exp-text').textContent = '- / -';
-      document.getElementById('hunger-text').textContent = '-';
-      document.getElementById('happiness-text').textContent = '-';
-      _setBar('bar-exp', 0);
-      _setBar('bar-hunger', 0);
-      _setBar('bar-happiness', 0);
-      document.getElementById('stats-next').textContent = '서식지에서 알을 터치해 이름을 지어주면 부화해요.';
-      _renderDex();
-      _renderAlbum();
-      _renderJournal();
-      return;
-    }
-
-    document.getElementById('stats-name').textContent = snail.name;
-    document.getElementById('stats-level').textContent = snail.level;
-    document.getElementById('stats-stage').textContent = GAME.STAGES[snail.stage].label;
-
-    const personality = GAME.PERSONALITIES[snail.personality];
-    const variant = GAME.VARIANTS[snail.color || 'brown'];
-    document.getElementById('stats-traits').textContent =
-      '성격: ' + (personality ? personality.label : '?') +
-      ' · 껍질: ' + (variant ? variant.label : '갈색') +
-      (variant && variant.id === 'golden' ? ' ✨' : '');
-
-    const expNeeded = GAME.expToNext(snail.level);
-    document.getElementById('exp-text').textContent = snail.exp + ' / ' + expNeeded;
-    _setBar('bar-exp', (snail.exp / expNeeded) * 100);
-
-    document.getElementById('hunger-text').textContent = snail.hunger + '%';
-    _setBar('bar-hunger', snail.hunger);
-
-    document.getElementById('happiness-text').textContent = snail.happiness + '%';
-    _setBar('bar-happiness', snail.happiness);
-
-    document.getElementById('stats-next').textContent = _nextStageText(snail);
+    _renderKeeper();
     _renderDex();
     _renderAlbum();
     _renderJournal();
   }
 
-  function bind() {
-    // (개체 관련 버튼은 홈 팝업으로 이관됨)
+  // ── 양육자 카드 ────────────────────────────────────────
+
+  /** 다음 해금 안내 (먹이/스태미나 중 가장 가까운 것) */
+  function _nextUnlockText(level) {
+    let next = null;
+    Object.keys(GAME.FOOD_DEFS).forEach(function (id) {
+      const def = GAME.FOOD_DEFS[id];
+      if (def.unlockLevel > level && (!next || def.unlockLevel < next.level)) {
+        next = { level: def.unlockLevel, label: def.emoji + ' ' + def.label };
+      }
+    });
+    GAME.CONFIG.KEEPER_STAMINA_LEVELS.forEach(function (gate) {
+      if (gate > level && (!next || gate < next.level)) {
+        next = { level: gate, label: '🧭 탐험 스태미나 +2' };
+      }
+    });
+    return next
+      ? '다음 해금: Lv.' + next.level + ' — ' + next.label
+      : '모든 해금을 달성했어요! 🏅';
   }
 
-  /** 도감 — 변이 5종 그리드 (발견: 색상+이름 / 미발견: 실루엣+???) */
+  function _renderKeeper() {
+    const player = DB.Player.get();
+    const keeper = player.keeper || { level: 1, xp: 0 };
+    const needed = GAME.keeperXpToNext(keeper.level);
+
+    document.getElementById('keeper-level').textContent = keeper.level;
+    document.getElementById('bar-keeper').style.width =
+      Math.min(100, (keeper.xp / needed) * 100) + '%';
+    document.getElementById('keeper-xp-text').textContent = keeper.xp + ' / ' + needed + ' XP';
+    document.getElementById('keeper-next').textContent = _nextUnlockText(keeper.level);
+  }
+
+  // ── 도감 ──────────────────────────────────────────────
+
   function _renderDex() {
     const discovered = GAME.discoveredVariants(DB.Album.get(), DB.Snails.get());
     const grid = document.getElementById('dex-grid');
@@ -135,7 +81,8 @@ const StatsModule = (function () {
       discovered.length + '/' + total + (discovered.length === total ? ' · 달팽이 박사 🏅' : '');
   }
 
-  /** 앨범 — 여행 보낸 역대 달팽이 카드 */
+  // ── 앨범 ──────────────────────────────────────────────
+
   function _renderAlbum() {
     const list = document.getElementById('album-list');
     list.innerHTML = '';
@@ -158,10 +105,10 @@ const StatsModule = (function () {
       const li = document.createElement('li');
       li.className = 'album-card';
 
-      const swatch = document.createElement('img');
-      swatch.className = 'dex-img album-img';
-      swatch.src = 'assets/characters/snail_' + (record.color || 'brown') + '_adult.png';
-      swatch.alt = record.name;
+      const img = document.createElement('img');
+      img.className = 'dex-img album-img';
+      img.src = 'assets/characters/snail_' + (record.color || 'brown') + '_adult.png';
+      img.alt = record.name;
 
       const info = document.createElement('div');
       const title = document.createElement('div');
@@ -175,11 +122,13 @@ const StatsModule = (function () {
       info.appendChild(title);
       info.appendChild(desc);
 
-      li.appendChild(swatch);
+      li.appendChild(img);
       li.appendChild(info);
       list.appendChild(li);
     });
   }
+
+  // ── 성장 일지 ─────────────────────────────────────────
 
   function _journalTime(ts) {
     const d = new Date(ts);
@@ -187,7 +136,6 @@ const StatsModule = (function () {
       String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
   }
 
-  /** 성장 일지 타임라인 (최근 순) */
   function _renderJournal() {
     const list = document.getElementById('journal-list');
     list.innerHTML = '';
@@ -212,6 +160,10 @@ const StatsModule = (function () {
       li.appendChild(text);
       list.appendChild(li);
     });
+  }
+
+  function bind() {
+    // 유저 탭은 표시 전용 (개체 버튼은 홈 팝업)
   }
 
   return { render: render, bind: bind };
