@@ -202,6 +202,7 @@ const App = (function () {
     StatsModule.bind();
     ShopModule.bind();
     DecoModule.bind();
+    ExploreModule.bind();
     SettingsModule.bind();
     SettingsModule.render();
 

@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="css/home.css">
   <link rel="stylesheet" href="css/stats.css">
   <link rel="stylesheet" href="css/shop.css">
+  <link rel="stylesheet" href="css/explore.css">
   <link rel="stylesheet" href="css/settings.css">
 </head>
 <body data-background="default">
@@ -155,11 +156,22 @@
         </div>
       </section>
 
-      <!-- 탐험 (6차 5단계에서 구현) -->
+      <!-- 탐험 -->
       <section id="screen-explore" class="screen">
-        <div class="card">
-          <h2 class="screen-title"><i class="fa-solid fa-compass"></i> 탐험</h2>
-          <p class="screen-desc">곧 열려요! 수풀을 뒤져 코인과 야생 알을 찾게 될 거예요.</p>
+        <div id="explore-select">
+          <div class="card">
+            <h2 class="screen-title"><i class="fa-solid fa-compass"></i> 탐험</h2>
+            <p class="screen-desc">수풀을 뒤져 코인·상추·야생 알을 찾아보세요.<br>
+              <strong id="explore-stamina"></strong></p>
+            <ul id="explore-maps" class="explore-maps"></ul>
+          </div>
+        </div>
+        <div id="explore-map" class="hidden">
+          <button id="btn-explore-exit" class="btn btn-ghost btn-sm explore-exit">
+            <i class="fa-solid fa-arrow-left"></i> 나가기
+          </button>
+          <div id="explore-field" class="explore-field"></div>
+          <p id="explore-map-stamina" class="explore-map-stamina"></p>
         </div>
       </section>
 
@@ -327,6 +339,7 @@
   <script src="js/home.js"></script>
   <script src="js/shop.js"></script>
   <script src="js/deco.js"></script>
+  <script src="js/explore.js"></script>
   <script src="js/settings.js"></script>
   <script src="js/habitat.js"></script>
   <script src="js/app.js"></script>
