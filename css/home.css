@@ -44,6 +44,36 @@
   background: transparent;
 }
 
+/* 날씨 오버레이 (body[data-weather] 기준) */
+.snail-habitat::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+
+body[data-weather="rain"] .snail-habitat::before {
+  opacity: 0.45;
+  background: repeating-linear-gradient(75deg, transparent 0 10px, rgba(235, 242, 255, 0.55) 10px 11px);
+  animation: rain-fall 0.5s linear infinite;
+}
+
+body[data-weather="fog"] .snail-habitat::before {
+  opacity: 1;
+  background: linear-gradient(180deg,
+    rgba(255, 255, 255, 0.34),
+    rgba(255, 255, 255, 0.12) 55%,
+    rgba(255, 255, 255, 0.28));
+}
+
+@keyframes rain-fall {
+  from { background-position: 0 0; }
+  to   { background-position: -15px 56px; }
+}
+
 /* 바닥 실루엣 (흐릿한 풀/돌 — CSS만) */
 .snail-habitat::after {
   content: '';
@@ -94,6 +124,29 @@
 
 .snail-entity.state-eating .snail-motion {
   animation: snail-eat 0.45s ease-in-out infinite;
+}
+
+.snail-entity.state-napping .snail-motion {
+  animation: snail-nap 3.2s ease-in-out infinite;
+}
+
+@keyframes snail-nap {
+  0%, 100% { transform: scaleY(1); }
+  50%      { transform: scaleY(0.94) translateY(2px); }
+}
+
+/* 컨디션 표정 — 배고프면 더듬이가 처지고, 행복하면 쫑긋 */
+.snail-face {
+  transition: transform 0.6s ease;
+  transform-origin: 36px 42px;
+}
+
+.snail-sprite.cond-hungry .snail-face {
+  transform: translate(1px, 5px) rotate(-11deg);
+}
+
+.snail-sprite.cond-happy .snail-face {
+  transform: translateY(-1.5px) rotate(3deg);
 }
 
 @keyframes snail-bob {
