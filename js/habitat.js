@@ -18,7 +18,8 @@ const HabitatModule = (function () {
     EAT_DISTANCE: 30,     // px
     ARRIVE_DISTANCE: 2,   // px
     EDGE_PADDING: 8,      // px (스프라이트 절반 크기에 더하는 여백)
-    FLIP_RIGHT: -1,       // 🐌 이모지는 왼쪽을 보므로 오른쪽 이동 시 반전
+    PET_RADIUS_MIN: 34,   // px (쓰다듬기 터치 판정 최소 반경)
+    FLIP_RIGHT: -1,       // 스프라이트가 왼쪽을 보므로 오른쪽 이동 시 반전
     FLIP_LEFT: 1
   };
 
@@ -259,7 +260,7 @@ const HabitatModule = (function () {
     _setState(STATE.IDLE);
   }
 
-  /** 달팽이 머리 위 플로팅 텍스트 (+EXP) */
+  /** 달팽이 머리 위 플로팅 텍스트/이펙트 (+EXP, 💗, 💤 등) */
   function _floatText(text) {
     const el = document.createElement('div');
     el.className = 'float-text';
@@ -309,10 +310,20 @@ const HabitatModule = (function () {
       else resume();
     });
 
-    // 서식지 터치/클릭 → 해당 위치에 먹이 드롭 (모바일 pointerdown 지원)
+    // 서식지 터치/클릭 (모바일 pointerdown 지원):
+    // 달팽이 근처면 쓰다듬기, 빈 곳이면 해당 위치에 먹이 드롭
     _habitat().addEventListener('pointerdown', function (e) {
       const rect = _habitat().getBoundingClientRect();
-      dropFood(e.clientX - rect.left, e.clientY - rect.top);
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      const petRadius = Math.max(_edge(), MOTION.PET_RADIUS_MIN);
+      if (DB.Snail.get().stage !== 'egg' &&
+          Math.hypot(x - _pos.x, y - _pos.y) <= petRadius) {
+        HomeModule.handlePet();
+        return;
+      }
+      dropFood(x, y);
     });
 
     if (DB.Snail.get().stage !== 'egg') {
@@ -337,6 +348,7 @@ const HabitatModule = (function () {
     resume: resume,
     dropFood: dropFood,
     dropFoodRandom: dropFoodRandom,
+    effect: _floatText,
     /** QA/디버그용 현재 상태 */
     debugState: function () {
       return { state: _state, x: _pos.x, y: _pos.y, running: _running };

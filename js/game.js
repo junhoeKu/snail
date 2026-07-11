@@ -39,6 +39,10 @@ const GAME = (function () {
     MISSION_BONUS_COINS: 20,   // 3개 완주 보너스 코인
     MISSION_BONUS_FOOD: 1,     // 3개 완주 보너스 상추
 
+    // 쓰다듬기
+    PET_HAPPINESS: 5,
+    PET_COOLDOWN_MIN: 30,
+
     // 성장
     EXP_PER_LEVEL: 20,
 
@@ -338,6 +342,32 @@ const GAME = (function () {
   }
 
   /**
+   * 쓰다듬기: 행복 상승 (쿨다운 30분)
+   * @returns {{snail: object, player: object, events: string[]}}
+   */
+  function pet(snail, player, nowISO) {
+    const s = _clone(snail);
+    const p = _clone(player);
+    const events = [];
+
+    if (s.stage === 'egg') {
+      events.push('not_hatched');
+      return { snail: s, player: p, events: events };
+    }
+
+    const cooldownMs = CONFIG.PET_COOLDOWN_MIN * 60 * 1000;
+    if (p.last_pet && new Date(nowISO) - new Date(p.last_pet) < cooldownMs) {
+      events.push('pet_cooldown');
+      return { snail: s, player: p, events: events };
+    }
+
+    s.happiness = _clamp(s.happiness + CONFIG.PET_HAPPINESS);
+    p.last_pet = nowISO;
+    events.push('petted');
+    return { snail: s, player: p, events: events };
+  }
+
+  /**
    * 부재 정산 통합: 시간 감쇠 + 부재 중 발견(긍정적 오프라인 진행).
    * 복귀 리포트에 쓸 요약(report)을 함께 반환한다.
    * @param {Function} [rng] 난수 함수 주입 (기본 Math.random — 테스트에서 시드 고정용)
@@ -419,6 +449,7 @@ const GAME = (function () {
     hatch: hatch,
     feed: feed,
     walk: walk,
+    pet: pet,
     applyTimeDecay: applyTimeDecay,
     summarizeAway: summarizeAway,
     buyFood: buyFood
