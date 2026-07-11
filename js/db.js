@@ -8,7 +8,7 @@
 const DB = (function () {
   'use strict';
 
-  const SCHEMA_VERSION = 5;
+  const SCHEMA_VERSION = 6;
 
   const KEYS = {
     PLAYER: 'sn_player',
@@ -63,7 +63,9 @@ const DB = (function () {
     return {
       schema_version: SCHEMA_VERSION,
       coins: 30,
-      food: 3,
+      foods: { lettuce: 3, carrot: 0, apple: 0, salad: 0 }, // 먹이 인벤토리
+      selected_food: 'lettuce',
+      keeper: { level: 1, xp: 0 }, // 양육자 레벨 (영속 성장축)
       last_seen: now(),
       last_daily_reward: null,
       background: 'default',
@@ -120,7 +122,14 @@ const DB = (function () {
 
   const Player = {
     get: function () {
-      return _getOrInit(KEYS.PLAYER, _defaultPlayer);
+      const player = _getOrInit(KEYS.PLAYER, _defaultPlayer);
+      // v5 → v6: food(숫자) → foods.lettuce 인벤토리 이전
+      if (typeof player.food === 'number') {
+        player.foods.lettuce = player.food;
+        delete player.food;
+        _write(KEYS.PLAYER, player);
+      }
+      return player;
     },
     save: function (player) {
       return _write(KEYS.PLAYER, player);
