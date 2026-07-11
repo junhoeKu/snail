@@ -37,6 +37,8 @@ const StatsModule = (function () {
       document.getElementById('stats-next').textContent = '알을 부화시키면 스탯이 표시돼요.';
       document.getElementById('btn-graduate').classList.add('hidden');
       document.getElementById('graduate-hint').classList.add('hidden');
+      _renderDex();
+      _renderAlbum();
       _renderJournal();
       return;
     }
@@ -64,6 +66,8 @@ const StatsModule = (function () {
 
     document.getElementById('stats-next').textContent = _nextStageText(snail);
     _renderGraduate(snail);
+    _renderDex();
+    _renderAlbum();
     _renderJournal();
   }
 
@@ -119,6 +123,77 @@ const StatsModule = (function () {
 
   function bind() {
     document.getElementById('btn-graduate').addEventListener('click', _graduate);
+  }
+
+  /** 도감 — 변이 5종 그리드 (발견: 색상+이름 / 미발견: 실루엣+???) */
+  function _renderDex() {
+    const discovered = GAME.discoveredVariants(DB.Album.get(), DB.Snail.get());
+    const grid = document.getElementById('dex-grid');
+    grid.innerHTML = '';
+
+    Object.keys(GAME.VARIANTS).forEach(function (key) {
+      const found = discovered.indexOf(key) !== -1;
+      const cell = document.createElement('div');
+      cell.className = 'dex-cell' + (found ? ' found' : '');
+
+      const swatch = document.createElement('div');
+      swatch.className = 'dex-swatch' + (found ? ' variant-' + key : '');
+
+      const label = document.createElement('span');
+      label.textContent = found ? GAME.VARIANTS[key].label : '???';
+
+      cell.appendChild(swatch);
+      cell.appendChild(label);
+      grid.appendChild(cell);
+    });
+
+    const total = Object.keys(GAME.VARIANTS).length;
+    document.getElementById('dex-count').textContent =
+      discovered.length + '/' + total + (discovered.length === total ? ' · 달팽이 박사 🏅' : '');
+  }
+
+  /** 앨범 — 여행 보낸 역대 달팽이 카드 */
+  function _renderAlbum() {
+    const list = document.getElementById('album-list');
+    list.innerHTML = '';
+
+    const records = DB.Album.get().slice().reverse();
+    if (records.length === 0) {
+      const li = document.createElement('li');
+      li.className = 'album-empty';
+      li.textContent = '아직 여행을 떠난 달팽이가 없어요.';
+      list.appendChild(li);
+      return;
+    }
+
+    records.forEach(function (record) {
+      const days = Math.max(1, Math.ceil(
+        (new Date(record.graduated_at) - new Date(record.hatched_at)) / 86400000));
+      const personality = GAME.PERSONALITIES[record.personality];
+      const variant = GAME.VARIANTS[record.color];
+
+      const li = document.createElement('li');
+      li.className = 'album-card';
+
+      const swatch = document.createElement('div');
+      swatch.className = 'dex-swatch variant-' + (record.color || 'brown');
+
+      const info = document.createElement('div');
+      const title = document.createElement('div');
+      title.className = 'album-name';
+      title.textContent = record.name + ' · ' + record.generation + '세대';
+      const desc = document.createElement('div');
+      desc.className = 'album-desc';
+      desc.textContent = (variant ? variant.label : '갈색') + ' 껍질 · ' +
+        (personality ? personality.label : '?') + ' · Lv.' + record.level +
+        ' · ' + days + '일 동안 함께함';
+      info.appendChild(title);
+      info.appendChild(desc);
+
+      li.appendChild(swatch);
+      li.appendChild(info);
+      list.appendChild(li);
+    });
   }
 
   function _journalTime(ts) {

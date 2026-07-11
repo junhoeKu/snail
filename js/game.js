@@ -245,6 +245,19 @@ const GAME = (function () {
     return { snail: s, events: events };
   }
 
+  /**
+   * 도감 발견 목록 — 별도 저장 없이 앨범 + 현재 달팽이에서 파생한다
+   * @returns {string[]} 발견한 변이 id 목록
+   */
+  function discoveredVariants(album, snail) {
+    const found = {};
+    (album || []).forEach(function (record) {
+      if (record.color) found[record.color] = true;
+    });
+    if (snail && snail.stage !== 'egg' && snail.color) found[snail.color] = true;
+    return Object.keys(VARIANTS).filter(function (key) { return found[key]; });
+  }
+
   /** 여행 보내기 가능 여부 (성체 && Lv12+) */
   function canGraduate(snail) {
     return snail.stage === 'adult' && snail.level >= CONFIG.GRADUATE_MIN_LEVEL;
@@ -594,6 +607,7 @@ const GAME = (function () {
     rollPersonality: rollPersonality,
     rollVariant: rollVariant,
     variantTableFor: variantTableFor,
+    discoveredVariants: discoveredVariants,
     canGraduate: canGraduate,
     graduate: graduate,
     applyStreak: applyStreak,
