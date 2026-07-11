@@ -21,8 +21,8 @@
 빌드 과정이 없습니다. 정적 서버로 열기만 하면 됩니다.
 
 ```bash
-python3 -m http.server 8000
-# → http://localhost:8000
+python3 -m http.server 31111
+# → http://localhost:31111
 ```
 
 또는 VS Code Live Server 확장을 사용하세요.
