@@ -148,7 +148,8 @@ const HomeModule = (function () {
   }
 
   function _feed() {
-    _handleResult(GAME.feed(DB.Snail.get(), DB.Player.get()));
+    // 즉시 정산하지 않고 서식지에 상추를 떨어뜨린다 (먹기 완료 시 정산)
+    HabitatModule.dropFoodRandom();
   }
 
   function _walk() {
@@ -164,5 +165,10 @@ const HomeModule = (function () {
     document.getElementById('btn-walk').addEventListener('click', _walk);
   }
 
-  return { render: render, bind: bind };
+  return {
+    render: render,
+    bind: bind,
+    handleResult: _handleResult, // 서식지(HabitatModule)의 먹기 정산에서 재사용
+    failMessage: _failMessage
+  };
 })();

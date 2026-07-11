@@ -36,6 +36,8 @@ const HabitatModule = (function () {
   let _target = null;       // { x, y }
   let _facing = 0;          // MOTION.FLIP_* 값
   let _idleUntil = 0;
+  let _eatUntil = 0;
+  let _food = null;         // { x, y, el } — 동시에 1개만
   let _rafId = null;
   let _lastTs = null;
   let _running = false;
@@ -166,7 +168,106 @@ const HabitatModule = (function () {
       case STATE.WANDERING:
         if (_moveToward(MOTION.WANDER_SPEED, dt)) _setState(STATE.IDLE);
         break;
+      case STATE.SEEKING:
+        if (!_food) {
+          _setState(STATE.IDLE);
+          break;
+        }
+        _target = { x: _food.x, y: _food.y };
+        if (Math.hypot(_food.x - _pos.x, _food.y - _pos.y) <= MOTION.EAT_DISTANCE ||
+            _moveToward(MOTION.SEEK_SPEED, dt)) {
+          _startEating();
+        }
+        break;
+      case STATE.EATING:
+        if (nowTs >= _eatUntil) _finishEating();
+        break;
     }
+  }
+
+  // ── 먹이 ──────────────────────────────────────────────
+
+  function _foodLayer() { return document.getElementById('food-layer'); }
+
+  /**
+   * 서식지에 상추를 떨어뜨린다 — 터치/버튼 공용 단일 진입점.
+   * 드롭 시점에는 사전 검증만 하고, 상추 소모와 효과 정산은
+   * 먹기 완료 시 GAME.feed()로 한 번에 한다 (2차_MVP_구현계획.md §5.2).
+   */
+  function dropFood(x, y) {
+    const snail = DB.Snail.get();
+    if (snail.stage === 'egg') return;
+
+    if (_food || _state === STATE.EATING) {
+      Toast.show('달팽이가 먹을 상추가 이미 있어요!', 'warn');
+      return;
+    }
+
+    const player = DB.Player.get();
+    if (player.food < 1) {
+      Toast.show(HomeModule.failMessage('no_food', player), 'warn');
+      return;
+    }
+    if (snail.hunger <= 0) {
+      Toast.show(HomeModule.failMessage('not_hungry', player), 'warn');
+      return;
+    }
+
+    const p = _clampPoint(x, y);
+    const el = document.createElement('div');
+    el.className = 'food-item';
+    el.textContent = '🥬';
+    el.style.left = p.x + 'px';
+    el.style.top = p.y + 'px';
+    _foodLayer().appendChild(el);
+
+    _food = { x: p.x, y: p.y, el: el };
+    _setState(STATE.SEEKING);
+  }
+
+  /** [먹이주기] 버튼용 — 서식지 안 임의 위치에 드롭 */
+  function dropFoodRandom() {
+    const b = _bounds();
+    const edge = _edge();
+    dropFood(
+      edge + Math.random() * Math.max(b.w - edge * 2, 1),
+      edge + Math.random() * Math.max(b.h - edge * 2, 1)
+    );
+  }
+
+  function _removeFood() {
+    if (_food && _food.el) _food.el.remove();
+    _food = null;
+  }
+
+  function _startEating() {
+    _target = null;
+    _eatUntil = performance.now() + MOTION.EAT_DURATION_MS;
+    if (_food && _food.el) _food.el.classList.add('eaten'); // 점점 작아지는 연출
+    _setState(STATE.EATING);
+  }
+
+  /** 먹기 완료 — 기존 GAME.feed()로 소모/효과를 정산 */
+  function _finishEating() {
+    _removeFood();
+    const result = GAME.feed(DB.Snail.get(), DB.Player.get());
+    HomeModule.handleResult(result);
+    if (result.events.indexOf('fed') !== -1) {
+      _floatText('+' + GAME.CONFIG.FEED_EXP + ' EXP');
+    }
+    // IDLE 진입 시 현재 위치가 (정산으로 덮인) 스냅샷 위에 다시 저장된다
+    _setState(STATE.IDLE);
+  }
+
+  /** 달팽이 머리 위 플로팅 텍스트 (+EXP) */
+  function _floatText(text) {
+    const el = document.createElement('div');
+    el.className = 'float-text';
+    el.textContent = text;
+    el.style.left = _pos.x + 'px';
+    el.style.top = (_pos.y - _edge()) + 'px';
+    _habitat().appendChild(el);
+    setTimeout(function () { el.remove(); }, 1200);
   }
 
   // ── 게임 루프 (rAF + deltaTime) ────────────────────────
@@ -208,6 +309,12 @@ const HabitatModule = (function () {
       else resume();
     });
 
+    // 서식지 터치/클릭 → 해당 위치에 먹이 드롭 (모바일 pointerdown 지원)
+    _habitat().addEventListener('pointerdown', function (e) {
+      const rect = _habitat().getBoundingClientRect();
+      dropFood(e.clientX - rect.left, e.clientY - rect.top);
+    });
+
     if (DB.Snail.get().stage !== 'egg') {
       _loadPosition();
       _setState(STATE.IDLE);
@@ -228,6 +335,8 @@ const HabitatModule = (function () {
     onHatched: onHatched,
     pause: pause,
     resume: resume,
+    dropFood: dropFood,
+    dropFoodRandom: dropFoodRandom,
     /** QA/디버그용 현재 상태 */
     debugState: function () {
       return { state: _state, x: _pos.x, y: _pos.y, running: _running };
