@@ -36,6 +36,15 @@ const GAME = (function () {
     HATCH_HUNGER: 40,
     HATCH_HAPPINESS: 80,
 
+    // 복귀 리포트 / 부재 중 발견
+    AWAY_REPORT_MIN: 30,     // 부재 N분 이상이면 복귀 리포트 표시
+    FIND_INTERVAL_HOURS: 4,  // 부재 N시간마다 발견 판정 1회
+    FIND_CHANCE: 0.35,
+    FIND_MAX: 2,             // 누적 최대 발견 건수
+    FIND_COIN_MIN: 5,
+    FIND_COIN_MAX: 15,
+    FIND_FOOD_CHANCE: 0.3,   // 발견물이 상추일 확률 (나머지는 코인)
+
     STAT_MIN: 0,
     STAT_MAX: 100
   };
@@ -226,6 +235,56 @@ const GAME = (function () {
   }
 
   /**
+   * 부재 정산 통합: 시간 감쇠 + 부재 중 발견(긍정적 오프라인 진행).
+   * 복귀 리포트에 쓸 요약(report)을 함께 반환한다.
+   * @param {Function} [rng] 난수 함수 주입 (기본 Math.random — 테스트에서 시드 고정용)
+   * @returns {{snail: object, player: object, report: object, events: string[]}}
+   */
+  function summarizeAway(snail, player, nowISO, rng) {
+    const random = rng || Math.random;
+    let s = _clone(snail);
+    const p = _clone(player);
+    const events = [];
+    const report = { away_minutes: 0, hunger_delta: 0, happiness_delta: 0, finds: [] };
+
+    if (s.stage === 'egg' || !p.last_seen) {
+      return { snail: s, player: p, report: report, events: events };
+    }
+
+    report.away_minutes = Math.max(0, Math.floor((new Date(nowISO) - new Date(p.last_seen)) / 60000));
+
+    // 1) 시간 감쇠 (기존 로직 재사용, last_seen은 적용 구간만큼만 전진)
+    const decay = applyTimeDecay(s, p.last_seen, nowISO);
+    report.hunger_delta = decay.snail.hunger - s.hunger;
+    report.happiness_delta = decay.snail.happiness - s.happiness;
+    s = decay.snail;
+    if (decay.intervals > 0) {
+      p.last_seen = new Date(
+        new Date(p.last_seen).getTime() + decay.intervals * CONFIG.DECAY_INTERVAL_MIN * 60 * 1000
+      ).toISOString();
+      events.push('decayed');
+    }
+
+    // 2) 부재 중 발견 — FIND_INTERVAL_HOURS마다 1회 판정, 최대 FIND_MAX건
+    const chances = Math.floor(report.away_minutes / (CONFIG.FIND_INTERVAL_HOURS * 60));
+    for (let i = 0; i < chances && report.finds.length < CONFIG.FIND_MAX; i++) {
+      if (random() >= CONFIG.FIND_CHANCE) continue;
+      if (random() < CONFIG.FIND_FOOD_CHANCE) {
+        p.food += 1;
+        report.finds.push({ type: 'food', amount: 1 });
+      } else {
+        const amount = CONFIG.FIND_COIN_MIN +
+          Math.floor(random() * (CONFIG.FIND_COIN_MAX - CONFIG.FIND_COIN_MIN + 1));
+        p.coins += amount;
+        report.finds.push({ type: 'coins', amount: amount });
+      }
+      events.push('found_item');
+    }
+
+    return { snail: s, player: p, report: report, events: events };
+  }
+
+  /**
    * 상추 구매
    * @returns {{player: object, events: string[]}}
    */
@@ -255,6 +314,7 @@ const GAME = (function () {
     walk: walk,
     claimDaily: claimDaily,
     applyTimeDecay: applyTimeDecay,
+    summarizeAway: summarizeAway,
     buyFood: buyFood
   };
 })();

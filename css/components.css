@@ -302,6 +302,24 @@
   gap: 10px;
 }
 
+.report-lines {
+  list-style: none;
+  text-align: left;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.report-lines li {
+  font-size: 13px;
+  color: var(--color-text-sub);
+  padding: 9px 12px;
+  background: rgba(120, 145, 100, 0.1);
+  border-radius: var(--radius-sm);
+  line-height: 1.5;
+}
+
 @keyframes celebrate-pop {
   0%   { transform: scale(0.3); }
   60%  { transform: scale(1.2); }
