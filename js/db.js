@@ -175,19 +175,6 @@ const DB = (function () {
     }
   };
 
-  /**
-   * 대표 달팽이 (첫 번째 레코드) — v4 호환 shim.
-   * 멀티 전환(6차 2~3단계) 동안만 사용하고 이후 제거한다.
-   */
-  const Snail = {
-    get: function () {
-      return Snails.get()[0];
-    },
-    save: function (snail) {
-      return Snails.saveOne(snail);
-    }
-  };
-
   /** 앨범 — 여행 보낸 역대 달팽이 기록 (세대순 append) */
   const Album = {
     get: function () {
@@ -254,7 +241,6 @@ const DB = (function () {
   return {
     KEYS: KEYS,
     Player: Player,
-    Snail: Snail,
     Snails: Snails,
     Journal: Journal,
     Album: Album,

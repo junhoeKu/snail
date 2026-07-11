@@ -5,6 +5,33 @@
 const StatsModule = (function () {
   'use strict';
 
+  let _selectedId = null;
+
+  /** 선택된 달팽이 (없거나 사라졌으면 첫 부화 개체 → 첫 레코드 순으로 폴백) */
+  function _selected(snails) {
+    let rec = snails.find(function (s) { return s.id === _selectedId; });
+    if (!rec) rec = snails.find(function (s) { return s.stage !== 'egg'; }) || snails[0];
+    _selectedId = rec ? rec.id : null;
+    return rec;
+  }
+
+  function _renderSelect(snails, selected) {
+    const wrap = document.getElementById('snail-select');
+    wrap.innerHTML = '';
+    if (snails.length <= 1) return; // 1마리면 선택기 불필요
+
+    snails.forEach(function (s) {
+      const btn = document.createElement('button');
+      btn.className = 'snail-select-btn' + (selected && s.id === selected.id ? ' active' : '');
+      btn.textContent = s.stage === 'egg' ? '🥚 알' : s.name;
+      btn.addEventListener('click', function () {
+        _selectedId = s.id;
+        render();
+      });
+      wrap.appendChild(btn);
+    });
+  }
+
   function _setBar(id, percent) {
     document.getElementById(id).style.width = Math.max(0, Math.min(100, percent)) + '%';
   }
@@ -21,9 +48,11 @@ const StatsModule = (function () {
   }
 
   function render() {
-    const snail = DB.Snail.get();
+    const snails = DB.Snails.get();
+    const snail = _selected(snails);
+    _renderSelect(snails, snail);
 
-    if (snail.stage === 'egg') {
+    if (!snail || snail.stage === 'egg') {
       document.getElementById('stats-name').textContent = '???';
       document.getElementById('stats-level').textContent = '-';
       document.getElementById('stats-stage').textContent = '알';
@@ -34,7 +63,7 @@ const StatsModule = (function () {
       _setBar('bar-exp', 0);
       _setBar('bar-hunger', 0);
       _setBar('bar-happiness', 0);
-      document.getElementById('stats-next').textContent = '알을 부화시키면 스탯이 표시돼요.';
+      document.getElementById('stats-next').textContent = '서식지에서 알을 터치해 이름을 지어주면 부화해요.';
       document.getElementById('btn-graduate').classList.add('hidden');
       document.getElementById('graduate-hint').classList.add('hidden');
       _renderDex();
@@ -88,29 +117,33 @@ const StatsModule = (function () {
   }
 
   function _graduate() {
-    const snail = DB.Snail.get();
-    if (!GAME.canGraduate(snail)) return;
+    const snail = DB.Snails.getById(_selectedId);
+    if (!snail || !GAME.canGraduate(snail)) return;
 
     Toast.confirm({
       title: '여행 보내기',
-      message: snail.name + '(이)가 넓은 세상으로 여행을 떠나요. 영영 이별이 아니라 앨범에 남고, 새 알이 도착해요!',
+      message: snail.name + '(이)가 넓은 세상으로 여행을 떠나요. 영영 이별이 아니라 앨범에 남고, 그 자리에 새 알이 도착해요!',
       confirmLabel: '보내기',
       confirmClass: 'btn-primary',
-      onConfirm: _doGraduate
+      onConfirm: function () { _doGraduate(snail.id); }
     });
   }
 
-  function _doGraduate() {
-    const result = GAME.graduate(DB.Snail.get(), DB.Player.get(), DB.now());
+  function _doGraduate(snailId) {
+    const rec = DB.Snails.getById(snailId);
+    if (!rec) return;
+    const result = GAME.graduate(rec, DB.Player.get(), DB.now());
     if (result.events.indexOf('graduated') === -1) return;
 
     DB.Album.add(result.record);
-    DB.Snail.save(result.snail);
+    DB.Snails.removeById(snailId);
+    DB.Snails.add(result.snail); // 그 자리의 새 알
     DB.Player.save(result.player);
     DB.Journal.add('graduate',
       result.record.name + '(' + result.record.generation + '세대)가 넓은 세상으로 여행을 떠났어요.');
 
-    HabitatModule.pause(); // 알 상태 — 홈에서 온보딩으로 이어진다
+    _selectedId = null;
+    HabitatModule.sync();
     App.refreshHeader();
     DecoModule.claimUnlocks(); // 이끼 바위(세대) 해금 확인
     render();
@@ -130,7 +163,7 @@ const StatsModule = (function () {
 
   /** 도감 — 변이 5종 그리드 (발견: 색상+이름 / 미발견: 실루엣+???) */
   function _renderDex() {
-    const discovered = GAME.discoveredVariants(DB.Album.get(), DB.Snail.get());
+    const discovered = GAME.discoveredVariants(DB.Album.get(), DB.Snails.get());
     const grid = document.getElementById('dex-grid');
     grid.innerHTML = '';
 

@@ -48,13 +48,17 @@ const App = (function () {
    */
   function _settleTime() {
     const player = DB.Player.get();
-    const snail = DB.Snail.get();
-    const result = GAME.applyTimeDecay(snail, player.last_seen, DB.now());
+    let intervals = 0;
+    const updated = DB.Snails.get().map(function (snail) {
+      const result = GAME.applyTimeDecay(snail, player.last_seen, DB.now());
+      intervals = Math.max(intervals, result.intervals);
+      return result.snail;
+    });
 
-    if (result.intervals <= 0) return false;
+    if (intervals <= 0) return false;
 
-    DB.Snail.save(result.snail);
-    const advancedMs = result.intervals * GAME.CONFIG.DECAY_INTERVAL_MIN * 60 * 1000;
+    DB.Snails.save(updated);
+    const advancedMs = intervals * GAME.CONFIG.DECAY_INTERVAL_MIN * 60 * 1000;
     player.last_seen = new Date(new Date(player.last_seen).getTime() + advancedMs).toISOString();
     DB.Player.save(player);
     return true;
@@ -83,21 +87,25 @@ const App = (function () {
 
   function _awayLines(report) {
     const lines = [];
-    if (report.hunger_delta > 0) lines.push('배고픔이 ' + report.hunger_delta + ' 올랐어요.');
-    if (report.happiness_delta < 0) lines.push('조금 심심했나 봐요. (행복 ' + report.happiness_delta + ')');
+    report.snails.forEach(function (s) {
+      if (s.hunger_delta > 0) {
+        lines.push(s.name + ': 배고픔 +' + s.hunger_delta +
+          (s.happiness_delta < 0 ? ', 행복 ' + s.happiness_delta : ''));
+      }
+    });
     report.finds.forEach(function (find) {
       lines.push(find.type === 'coins'
         ? '돌아다니다 코인 ' + find.amount + '개를 주웠어요!'
         : '어디선가 상추를 하나 물어왔어요!');
     });
-    if (lines.length === 0) lines.push('얌전히 기다리고 있었어요.');
+    if (lines.length === 0) lines.push('다들 얌전히 기다리고 있었어요.');
     return lines;
   }
 
-  /** 부팅 시 부재 정산 (감쇠 + 발견) + 복귀 리포트 표시 */
+  /** 부팅 시 부재 정산 (개체별 감쇠 + 계정 발견) + 복귀 리포트 표시 */
   function _settleAway() {
-    const result = GAME.summarizeAway(DB.Snail.get(), DB.Player.get(), DB.now());
-    DB.Snail.save(result.snail);
+    const result = GAME.summarizeAway(DB.Snails.get(), DB.Player.get(), DB.now());
+    DB.Snails.save(result.snails);
     DB.Player.save(result.player);
 
     result.report.finds.forEach(function (find) {
@@ -148,14 +156,15 @@ const App = (function () {
       : '관리자 모드 꺼짐');
   }
 
-  /** v2 데이터 마이그레이션: 기존 달팽이에게 성격 1회 소급 부여 */
+  /** 구버전 데이터 마이그레이션: 부화한 달팽이에게 성격 1회 소급 부여 */
   function _ensurePersonality() {
-    const snail = DB.Snail.get();
-    if (snail.stage === 'egg' || snail.personality) return;
-    snail.personality = GAME.rollPersonality();
-    DB.Snail.save(snail);
-    DB.Journal.add('personality',
-      snail.name + '의 성격이 "' + GAME.PERSONALITIES[snail.personality].label + '"라는 걸 알게 됐어요.');
+    DB.Snails.get().forEach(function (snail) {
+      if (snail.stage === 'egg' || snail.personality) return;
+      snail.personality = GAME.rollPersonality();
+      DB.Snails.saveOne(snail);
+      DB.Journal.add('personality',
+        snail.name + '의 성격이 "' + GAME.PERSONALITIES[snail.personality].label + '"라는 걸 알게 됐어요.');
+    });
   }
 
   /** 접속 보상 + 출석 스트릭 (하루 1회 자동 지급) */
@@ -186,7 +195,7 @@ const App = (function () {
   function init() {
     // 첫 실행이면 기본값(알 + 시작 자원)이 생성된다
     DB.Player.get();
-    DB.Snail.get();
+    DB.Snails.get();
 
     _bindNav();
     HomeModule.bind();

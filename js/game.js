@@ -250,7 +250,9 @@ const GAME = (function () {
     s.hunger = CONFIG.HATCH_HUNGER;
     s.happiness = CONFIG.HATCH_HAPPINESS;
     s.personality = rollPersonality(rng);
-    s.color = rollVariant(rng, generation);
+    // 야생 알은 발견한 맵에서 예약된 변이를 사용한다
+    s.color = s.wild_variant || rollVariant(rng, generation);
+    s.wild_variant = null;
     events.push('hatched');
     return { snail: s, events: events };
   }
@@ -348,12 +350,14 @@ const GAME = (function () {
    * 도감 발견 목록 — 별도 저장 없이 앨범 + 현재 달팽이에서 파생한다
    * @returns {string[]} 발견한 변이 id 목록
    */
-  function discoveredVariants(album, snail) {
+  function discoveredVariants(album, snails) {
     const found = {};
     (album || []).forEach(function (record) {
       if (record.color) found[record.color] = true;
     });
-    if (snail && snail.stage !== 'egg' && snail.color) found[snail.color] = true;
+    (Array.isArray(snails) ? snails : [snails]).forEach(function (s) {
+      if (s && s.stage !== 'egg' && s.color) found[s.color] = true;
+    });
     return Object.keys(VARIANTS).filter(function (key) { return found[key]; });
   }
 
@@ -596,37 +600,48 @@ const GAME = (function () {
   }
 
   /**
-   * 부재 정산 통합: 시간 감쇠 + 부재 중 발견(긍정적 오프라인 진행).
-   * 복귀 리포트에 쓸 요약(report)을 함께 반환한다.
-   * @param {Function} [rng] 난수 함수 주입 (기본 Math.random — 테스트에서 시드 고정용)
-   * @returns {{snail: object, player: object, report: object, events: string[]}}
+   * 부재 정산 통합 (멀티 달팽이): 개체별 시간 감쇠 + 계정 단위 발견.
+   * @param {object[]} snails 달팽이 목록 (단일 객체도 허용)
+   * @param {Function} [rng] 난수 함수 주입 (테스트에서 시드 고정용)
+   * @returns {{snails: object[], player: object, report: object, events: string[]}}
    */
-  function summarizeAway(snail, player, nowISO, rng) {
+  function summarizeAway(snails, player, nowISO, rng) {
     const random = rng || Math.random;
-    let s = _clone(snail);
+    const list = (Array.isArray(snails) ? snails : [snails]).map(_clone);
     const p = _clone(player);
     const events = [];
-    const report = { away_minutes: 0, hunger_delta: 0, happiness_delta: 0, finds: [] };
+    const report = { away_minutes: 0, snails: [], finds: [] };
 
-    if (s.stage === 'egg' || !p.last_seen) {
-      return { snail: s, player: p, report: report, events: events };
+    const hasHatched = list.some(function (s) { return s.stage !== 'egg'; });
+    if (!hasHatched || !p.last_seen) {
+      return { snails: list, player: p, report: report, events: events };
     }
 
     report.away_minutes = Math.max(0, Math.floor((new Date(nowISO) - new Date(p.last_seen)) / 60000));
 
-    // 1) 시간 감쇠 (기존 로직 재사용, last_seen은 적용 구간만큼만 전진)
-    const decay = applyTimeDecay(s, p.last_seen, nowISO);
-    report.hunger_delta = decay.snail.hunger - s.hunger;
-    report.happiness_delta = decay.snail.happiness - s.happiness;
-    s = decay.snail;
-    if (decay.intervals > 0) {
+    // 1) 개체별 시간 감쇠 (last_seen은 적용 구간만큼만 전진 — 잔여 시간 보존)
+    let intervals = 0;
+    const updated = list.map(function (s) {
+      const decay = applyTimeDecay(s, p.last_seen, nowISO);
+      if (decay.intervals > 0) {
+        intervals = Math.max(intervals, decay.intervals);
+        report.snails.push({
+          id: s.id,
+          name: s.name,
+          hunger_delta: decay.snail.hunger - s.hunger,
+          happiness_delta: decay.snail.happiness - s.happiness
+        });
+      }
+      return decay.snail;
+    });
+    if (intervals > 0) {
       p.last_seen = new Date(
-        new Date(p.last_seen).getTime() + decay.intervals * CONFIG.DECAY_INTERVAL_MIN * 60 * 1000
+        new Date(p.last_seen).getTime() + intervals * CONFIG.DECAY_INTERVAL_MIN * 60 * 1000
       ).toISOString();
       events.push('decayed');
     }
 
-    // 2) 부재 중 발견 — FIND_INTERVAL_HOURS마다 1회 판정, 최대 FIND_MAX건
+    // 2) 부재 중 발견 (계정 단위) — FIND_INTERVAL_HOURS마다 1회 판정, 최대 FIND_MAX건
     const chances = Math.floor(report.away_minutes / (CONFIG.FIND_INTERVAL_HOURS * 60));
     for (let i = 0; i < chances && report.finds.length < CONFIG.FIND_MAX; i++) {
       if (random() >= CONFIG.FIND_CHANCE) continue;
@@ -642,7 +657,7 @@ const GAME = (function () {
       events.push('found_item');
     }
 
-    return { snail: s, player: p, report: report, events: events };
+    return { snails: updated, player: p, report: report, events: events };
   }
 
   /**

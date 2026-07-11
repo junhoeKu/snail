@@ -149,5 +149,60 @@ const Toast = (function () {
     root.appendChild(overlay);
   }
 
-  return { show: show, celebrate: celebrate, report: report, confirm: confirm };
+  /**
+   * 입력 모달 — 이름 짓기 등
+   * @param {{title: string, message: string, placeholder: string, onSubmit: Function}} opts
+   */
+  function prompt(opts) {
+    const root = document.getElementById('modal-root');
+    root.innerHTML = '';
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const box = document.createElement('div');
+    box.className = 'modal-box';
+
+    const title = document.createElement('h3');
+    title.textContent = opts.title || '';
+    const message = document.createElement('p');
+    message.textContent = opts.message || '';
+
+    const input = document.createElement('input');
+    input.className = 'text-input';
+    input.type = 'text';
+    input.maxLength = 12;
+    input.placeholder = opts.placeholder || '';
+
+    const actions = document.createElement('div');
+    actions.className = 'modal-actions';
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'btn btn-ghost';
+    cancelBtn.textContent = '취소';
+    cancelBtn.addEventListener('click', function () { overlay.remove(); });
+    const okBtn = document.createElement('button');
+    okBtn.className = 'btn btn-primary';
+    okBtn.textContent = '확인';
+
+    function submit() {
+      const value = input.value;
+      overlay.remove();
+      if (typeof opts.onSubmit === 'function') opts.onSubmit(value);
+    }
+    okBtn.addEventListener('click', submit);
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') submit();
+    });
+
+    actions.appendChild(cancelBtn);
+    actions.appendChild(okBtn);
+    box.appendChild(title);
+    box.appendChild(message);
+    box.appendChild(input);
+    box.appendChild(actions);
+    overlay.appendChild(box);
+    root.appendChild(overlay);
+    input.focus();
+  }
+
+  return { show: show, celebrate: celebrate, report: report, confirm: confirm, prompt: prompt };
 })();
