@@ -51,6 +51,63 @@ const HomeModule = (function () {
       snail.name + ' · Lv.' + snail.level + ' ' + stage.label;
     document.getElementById('chip-hunger').textContent = snail.hunger;
     document.getElementById('chip-happiness').textContent = snail.happiness;
+
+    _renderMissionChip();
+  }
+
+  function _renderMissionChip() {
+    const progress = GAME.missionProgress(DB.Player.get(), DB.today());
+    document.getElementById('mission-progress').textContent = progress.done + '/' + progress.total;
+    document.getElementById('mission-chip').classList.toggle('all-done', progress.allDone);
+  }
+
+  /** 미션 시트 (오늘의 돌봄 목록 오버레이) */
+  function _showMissionSheet() {
+    const player = DB.Player.get();
+    const progress = GAME.missionProgress(player, DB.today());
+    const streak = player.streak && player.streak.count ? player.streak.count : 0;
+
+    const lines = progress.items.map(function (item) {
+      return (item.done ? '✅' : '⬜') + ' ' + item.label + '  ' + item.count + '/' + item.goal +
+        '  (+' + GAME.CONFIG.MISSION_REWARD_COINS + ' 코인)';
+    });
+    lines.push((progress.allDone ? '✅' : '🎁') + ' 완주 보너스  +' +
+      GAME.CONFIG.MISSION_BONUS_COINS + ' 코인, 상추 +' + GAME.CONFIG.MISSION_BONUS_FOOD);
+    if (streak > 0) lines.push('🔥 연속 접속 ' + streak + '일째');
+
+    Toast.report({
+      emoji: '📋',
+      title: '오늘의 돌봄',
+      lines: lines,
+      buttonLabel: '닫기'
+    });
+  }
+
+  /** 행동 이벤트 → 미션 진행 반영 (달성 보상은 자동 지급 + 토스트) */
+  function _recordMissions(events) {
+    const kinds = [];
+    if (events.indexOf('fed') !== -1) kinds.push('feed');
+    if (events.indexOf('walked') !== -1) kinds.push('walk');
+    if (events.indexOf('petted') !== -1) kinds.push('pet');
+
+    kinds.forEach(function (kind) {
+      const result = GAME.recordMission(DB.Player.get(), kind, DB.today());
+      DB.Player.save(result.player);
+      if (result.events.indexOf('mission_done') !== -1) {
+        Toast.show('✅ 미션 완료: ' + GAME.MISSION_DEFS[kind].label +
+          ' (+' + GAME.CONFIG.MISSION_REWARD_COINS + ' 코인)');
+      }
+      if (result.events.indexOf('mission_all_done') !== -1) {
+        Toast.show('🎉 오늘의 돌봄 완주! +' + GAME.CONFIG.MISSION_BONUS_COINS +
+          ' 코인, 상추 +' + GAME.CONFIG.MISSION_BONUS_FOOD);
+        DB.Journal.add('mission', '오늘의 돌봄을 모두 완료했어요.');
+      }
+    });
+
+    if (kinds.length > 0) {
+      App.refreshHeader();
+      _renderMissionChip();
+    }
   }
 
   /** 행동 결과 저장 + 렌더링 + 이벤트 연출 */
@@ -68,6 +125,7 @@ const HomeModule = (function () {
     render();
     StatsModule.render();
     _showEvents(result.events, result.player || DB.Player.get());
+    _recordMissions(result.events);
   }
 
   function _showEvents(events, player) {
@@ -154,6 +212,7 @@ const HomeModule = (function () {
     document.getElementById('snail-chip').addEventListener('click', function () {
       App.navigate('stats');
     });
+    document.getElementById('mission-chip').addEventListener('click', _showMissionSheet);
   }
 
   return {
