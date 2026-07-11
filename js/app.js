@@ -5,6 +5,9 @@
 const App = (function () {
   'use strict';
 
+  let _tickTimer = null;
+  const TICK_MS = 60 * 1000; // 1분마다 경과 시간 확인
+
   /**
    * 화면 전환
    * @param {string} screen 'home' | 'shop'
@@ -22,6 +25,38 @@ const App = (function () {
     const player = DB.Player.get();
     document.getElementById('coin-count').textContent = player.coins;
     document.getElementById('food-count').textContent = player.food;
+  }
+
+  /**
+   * 경과 시간 정산 (미접속분 포함).
+   * 1시간 단위로만 적용되며, 적용된 구간만큼만 last_seen을 전진시켜
+   * 1시간 미만의 잔여 시간을 잃지 않는다.
+   * @returns {boolean} 감쇠가 적용되었는지
+   */
+  function _settleTime() {
+    const player = DB.Player.get();
+    const snail = DB.Snail.get();
+    const result = GAME.applyTimeDecay(snail, player.last_seen, DB.now());
+
+    if (result.intervals <= 0) return false;
+
+    DB.Snail.save(result.snail);
+    const advancedMs = result.intervals * GAME.CONFIG.DECAY_INTERVAL_MIN * 60 * 1000;
+    player.last_seen = new Date(new Date(player.last_seen).getTime() + advancedMs).toISOString();
+    DB.Player.save(player);
+    return true;
+  }
+
+  /** 앱 사용 중에도 시간 감쇠가 반영되도록 주기 확인 */
+  function _startTick() {
+    if (_tickTimer) clearInterval(_tickTimer);
+    _tickTimer = setInterval(function () {
+      if (!_settleTime()) return;
+      refreshHeader();
+      if (document.getElementById('screen-home').classList.contains('active')) {
+        HomeModule.render();
+      }
+    }, TICK_MS);
   }
 
   /** 저장된 배경을 body에 적용 */
@@ -57,10 +92,12 @@ const App = (function () {
     HomeModule.bind();
     ShopModule.bind();
 
+    _settleTime();
     _claimDailyReward();
     applyBackground();
     refreshHeader();
     navigate('home');
+    _startTick();
   }
 
   document.addEventListener('DOMContentLoaded', init);
