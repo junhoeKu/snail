@@ -104,7 +104,8 @@ def test_hatch_feed_flow(guest):
     r = client.post(f"/v1/snails/{egg_id}/feed", json={"requestId": rid()}, headers=guest["headers"]).json()
     snail = r["changes"]["snails"][0]
     player = r["changes"]["player"]
-    assert snail["hunger"] == 10 and snail["exp"] == 10
+    # 상추 exp 22 → Lv1(need5)+Lv2(need10) 소진 → Lv3, exp 7. hunger 40-30=10
+    assert snail["hunger"] == 10 and snail["level"] == 3 and snail["exp"] == 7
     assert player["foods"]["lettuce"] == 2
     assert any(e["type"] == "fed" for e in r["events"])
 
@@ -169,7 +170,7 @@ def test_graduate_flow(guest):
     r = client.post(f"/v1/snails/{egg_id}/graduate", json={"requestId": rid()}, headers=guest["headers"])
     assert r.json()["error"]["code"] == "cannot_graduate"
 
-    set_snail(egg_id, stage="adult", level=12)
+    set_snail(egg_id, stage="adult", level=20)
     r = client.post(f"/v1/snails/{egg_id}/graduate", json={"requestId": rid()}, headers=guest["headers"]).json()
     assert any(e["type"] == "graduated" for e in r["events"])
     assert r["changes"]["player"]["generation"] == 2
@@ -210,7 +211,7 @@ def test_server_time_authority(guest):
     set_snail(egg_id, last_state_at=service.utcnow() - datetime.timedelta(hours=5))
     state = client.get("/v1/game/state", headers=guest["headers"]).json()
     snail = state["changes"]["snails"][0]
-    assert snail["hunger"] == 40 + 25  # 5시간 × 5
+    assert snail["hunger"] == 40 + 35  # 5시간 × 7
 
     # 일일 보상은 사용자 타임존의 서버 날짜 기준 — 같은 날 중복 없음
     coins = state["changes"]["player"]["coins"]

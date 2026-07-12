@@ -164,7 +164,7 @@ function clickSnail(w, entId) {
   console.log('[7] 팝업 여행 보내기');
   const list7 = snails(w);
   const dal = list7.find(s => s.name === '달달이');
-  dal.level = 12; dal.stage = 'adult';
+  dal.level = 20; dal.stage = 'adult';
   w.localStorage.setItem('sn_snails', JSON.stringify(list7));
   w.HomeModule.render(); // sync
   clickSnail(w, dal.id);
@@ -196,8 +196,8 @@ function clickSnail(w, entId) {
     ['sn_player', 'sn_snails', 'sn_journal', 'sn_album'].map(k => [k, w.localStorage.getItem(k)])
   ), 0.99);
   const mongAfter = JSON.parse(w2effects.localStorage.getItem('sn_snails')).find(s => s.name === '몽이');
-  assert(mongAfter.hunger === Math.min(100, mongBefore.hunger + Math.round(25 * 0.9)),
-    '이끼 바위: 5시간 배고픔 +23 (기본 +25): ' + (mongAfter.hunger - mongBefore.hunger));
+  assert(mongAfter.hunger === Math.min(100, mongBefore.hunger + Math.round(35 * 0.9)),
+    '이끼 바위: 5시간 배고픔 +32 (기본 +35, 감쇠 7×5): ' + (mongAfter.hunger - mongBefore.hunger));
   const modal9 = w2effects.document.querySelector('.modal-overlay');
   if (modal9) modal9.querySelector('button').click();
 
