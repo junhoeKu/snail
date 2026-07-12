@@ -10,4 +10,4 @@
  *   http://localhost:31111/?api=http://localhost:8000   ← 켜기(기억됨)
  *   http://localhost:31111/?api=                        ← 끄기
  */
-window.SNAIL_API_BASE = '';
+window.SNAIL_API_BASE = 'https://snail-production-2a89.up.railway.app';
