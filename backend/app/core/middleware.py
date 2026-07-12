@@ -21,8 +21,18 @@ WINDOW_SEC = 60
 _hits: dict[tuple, deque] = defaultdict(deque)
 
 
+def _client_ip(request) -> str:
+    """리버스 프록시(Railway 등) 뒤에서는 request.client.host가 프록시 IP라 매 요청
+    달라진다. X-Forwarded-For의 첫 값(원 클라이언트)을 우선 사용한다."""
+    fwd = request.headers.get("x-forwarded-for", "")
+    if fwd:
+        return fwd.split(",")[0].strip()
+    client = request.client
+    return client.host if client else "?"
+
+
 def _client_key(request) -> str:
-    """토큰 sub 우선(만료 무시 — 식별용), 없으면 IP."""
+    """토큰 sub 우선(만료 무시 — 식별용), 없으면 클라이언트 IP."""
     auth = request.headers.get("authorization", "")
     if auth.startswith("Bearer "):
         try:
@@ -33,8 +43,7 @@ def _client_key(request) -> str:
             return "u:" + str(payload.get("sub", "?"))
         except pyjwt.PyJWTError:
             pass
-    client = request.client
-    return "ip:" + (client.host if client else "?")
+    return "ip:" + _client_ip(request)
 
 
 class StructuredLogMiddleware(BaseHTTPMiddleware):
