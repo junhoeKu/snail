@@ -92,6 +92,8 @@ class ActionIn(BaseModel):
 def _run(db: Session, user: models.User, action_type: str, request_id: str,
          target_id: str | None, payload: dict, fn) -> dict:
     """행 잠금 → 멱등(해시 검증) → 선정산 → 행동 → revision → 상태 응답 → 이력 → 커밋."""
+    if user.suspended_at is not None:
+        raise ApiError(403, "suspended", "이용이 정지된 계정입니다. 운영자에게 문의해주세요.")
     phash = service.payload_fingerprint(payload)
 
     # 같은 사용자 동시 요청 직렬화 (재화 복제/음수 방지). 멱등 조회도 이 잠금 안에서.

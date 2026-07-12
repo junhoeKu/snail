@@ -122,3 +122,43 @@ def test_notices():
     client.post(f"/admin/notices/{nid}/end", headers=ADMIN, json={"reason": "완료"})
     active2 = client.get("/v1/notices/active").json()["notices"]
     assert all(n["id"] != nid for n in active2)
+
+
+# ── 어드민 사용자 운영 ──────────────────────────────────
+
+def test_admin_user_ops(guest):
+    uid = guest["userId"]
+    hatch_first(guest)
+
+    # 검색 · 상세
+    found = client.get(f"/admin/users?query={uid}", headers=ADMIN).json()["users"]
+    assert any(u["id"] == uid for u in found)
+    detail = client.get(f"/admin/users/{uid}", headers=ADMIN).json()
+    assert detail["id"] == uid and "inventory" in detail
+
+    # 보상: 원장 경유(잔액 직접 수정 없음), 사유 필수
+    assert client.post(f"/admin/users/{uid}/compensate", headers=ADMIN,
+                       json={"coins": 100, "reason": ""}).status_code == 422
+    before = detail["coins"]
+    r = client.post(f"/admin/users/{uid}/compensate", headers=ADMIN,
+                    json={"coins": 100, "reason": "탐험 중복 차감 보상"}).json()
+    assert r["coins"] == before + 100
+    ledger = client.get(f"/admin/users/{uid}/ledger", headers=ADMIN).json()
+    assert any(c["reason"] == "ADMIN_COMPENSATION" and c["amount"] == 100 for c in ledger["coins"])
+
+    # 정지 → 행동 403, 조회는 허용
+    client.post(f"/admin/users/{uid}/suspend", headers=ADMIN, json={"suspend": True, "reason": "테스트"})
+    egg = client.get("/v1/game/state", headers=guest["headers"]).json()["changes"]["snails"][0]["id"]
+    act = client.post(f"/v1/snails/{egg}/pet", json={"requestId": rid()}, headers=guest["headers"])
+    assert act.status_code == 403 and act.json()["error"]["code"] == "suspended"
+    assert client.get("/v1/game/state", headers=guest["headers"]).status_code == 200
+
+    # 해제 → 행동 복구
+    client.post(f"/admin/users/{uid}/suspend", headers=ADMIN, json={"suspend": False, "reason": "해제"})
+    assert client.post(f"/v1/snails/{egg}/pet", json={"requestId": rid()},
+                       headers=guest["headers"]).status_code == 200
+
+
+def test_admin_ui_page():
+    r = client.get("/admin/ui")  # 인증 없이 로드(페이지 내 토큰 입력)
+    assert r.status_code == 200 and "Snail 어드민" in r.text

@@ -1,0 +1,28 @@
+name: Deploy Smoke
+
+# main 병합 시 Railway가 백엔드를 자동 배포한다(그게 CD). 이 워크플로는 배포가
+# 반영되기를 기다렸다 운영 API가 살아있고 핵심 엔드포인트가 동작하는지 검증한다.
+on:
+  push:
+    branches: [main]
+
+jobs:
+  smoke:
+    name: 운영 API 스모크
+    runs-on: ubuntu-latest
+    steps:
+      - name: 배포 반영 대기 + 헬스/핵심 엔드포인트 검증
+        run: |
+          API="https://snail-production-2a89.up.railway.app"
+          echo "운영 API 준비 대기..."
+          ok=""
+          for i in $(seq 1 30); do
+            code=$(curl -s -m 8 -o /dev/null -w "%{http_code}" "$API/healthz" || echo 000)
+            if [ "$code" = "200" ]; then ok=1; break; fi
+            sleep 10
+          done
+          [ -n "$ok" ] || { echo "❌ healthz 응답 없음"; exit 1; }
+          curl -sf -m 8 "$API/healthz" | grep -q '"ok":true' || { echo "❌ healthz"; exit 1; }
+          curl -sf -m 8 "$API/v1/game/config" | grep -q '"pond"' || { echo "❌ game/config"; exit 1; }
+          curl -sf -m 8 "$API/v1/notices/active" >/dev/null || { echo "❌ notices"; exit 1; }
+          echo "✅ 운영 스모크 통과"

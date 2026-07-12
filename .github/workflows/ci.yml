@@ -38,9 +38,11 @@ jobs:
           DATABASE_URL: postgresql+psycopg2://postgres:postgres@localhost:5432/snail_test
         run: |
           # 운영은 create_all이 스키마를 만들고 alembic이 그 위에 얹힌다(하이브리드).
-          # alembic을 두 번 실행해 재실행 안전성(idempotent)까지 검증한다.
           python -c "from app.core.database import Base, engine; import app.models; Base.metadata.create_all(engine)"
           alembic upgrade head
+          alembic upgrade head            # idempotent(재실행 안전)
+          # 무중단 마이그레이션 왕복: downgrade(Contract) → 재 upgrade 가 깨지지 않아야 머지된다
+          alembic downgrade base
           alembic upgrade head
 
   frontend:
