@@ -177,13 +177,16 @@ snail/
 
 - 계층: `router → service → domain rule(app/domain/rules.py) → repository → DB`. **라우터에서 게임 수치를 계산하지 않는다**
 - 게임 판정의 단일 소스는 `backend/app/domain/rules.py` — 수치 변경 절차: 계획서 → rules.py → 클라 표시 수치는 `GET /v1/game/config`. 클라 `js/game.js`와 어긋나면 안 된다 (로컬 모드/연출용으로 유지됨)
-- 코인 증감은 반드시 `service.add_coins`(currency_ledger 원장)를 경유한다
-- 행동 API는 `request_id` 멱등키 필수, 클라이언트는 결과 수치(경험치/코인/당첨)를 절대 보내지 않는다
+- 코인 증감은 반드시 `service.add_coins`, 아이템 증감은 `service.add_item`(각각 currency_ledger·inventory_ledger 원장)을 경유한다
+- 행동 API는 `request_id` 멱등키 필수, 클라이언트는 결과 수치(경험치/코인/당첨)를 절대 보내지 않는다. 같은 request_id·다른 payload는 `payload_hash`로 거부(보안 이벤트 기록). 재화 변동 행동은 `service.lock_user`(row lock)로 직렬화한다
 - 시간 판정(감쇠/일일 리셋/쿨다운)은 서버 시각 + 사용자 타임존 기준 — 배치 없이 lazy 계산
+- 로그는 **stdout 한 스트림**으로 일원화한다(basicConfig `stream=sys.stdout` + uvicorn `--no-access-log`) — access/구조화 로그가 갈리면 수집기가 inf/err로 이중 태깅한다. Rate Limit은 프록시 뒤 실 클라 식별을 위해 `X-Forwarded-For`를 쓴다
+- 스키마 변경은 Alembic 마이그레이션을 추가한다. 운영/CI는 **create_all(스키마 생성) + alembic(컬럼·신규테이블 얹기) 하이브리드** — create_all 호출 전 반드시 `import app.models`. 마이그레이션은 방어적(존재검사)으로 idempotent하게 쓴다
 - **sw.js는 `/v1/*` API를 절대 캐시하지 않는다**
 - **js/css/자산을 바꾼 커밋을 배포할 때는 반드시 `sw.js`의 `CACHE_VERSION`을 함께 올린다** — 안 올리면 기존 사용자 브라우저는 캐시된 옛 코드를 계속 실행한다 (핫픽스가 전달되지 않음)
 - 달팽이 스프라이트 경로는 `GAME.spritePath(color, stage)`로만 생성한다 — 문자열 직접 조립 금지 (무효 변이 404 방지 폴백 내장)
 - 테스트: `backend`에서 `pytest` — 클라이언트 jsdom 테스트 수치와 교차 대조 유지
+- CI: `.github/workflows/ci.yml`가 PR/main에서 백엔드 pytest+마이그레이션, 프론트 `node --check`+jsdom 회귀(`npm test`, 하네스는 `tests/`), **sw-guard**(자산 변경 시 CACHE_VERSION 범프 강제)를 검증한다. 프론트 런타임은 여전히 무빌드(package.json은 테스트/CI 전용)
 
 ---
 
