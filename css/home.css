@@ -238,19 +238,19 @@ body[data-weather="fog"] .snail-habitat::before {
   filter: drop-shadow(0 3px 3px rgba(20, 18, 10, 0.28)) saturate(1.12) brightness(1.04);
 }
 
-/* 황금 변이: 은은한 반짝임 */
-.snail-sprite.variant-golden .snail-img {
-  animation: golden-glow 2.6s ease-in-out infinite;
+/* 레어(연못) 변이: 은은한 반짝임 */
+.snail-sprite.variant-pond .snail-img {
+  animation: rare-glow 2.6s ease-in-out infinite;
 }
 
-@keyframes golden-glow {
+@keyframes rare-glow {
   0%, 100% {
     filter: drop-shadow(0 3px 3px rgba(20, 18, 10, 0.28))
-            drop-shadow(0 0 5px rgba(242, 215, 135, 0.45));
+            drop-shadow(0 0 5px rgba(140, 200, 170, 0.45));
   }
   50% {
     filter: drop-shadow(0 3px 3px rgba(20, 18, 10, 0.28))
-            drop-shadow(0 0 12px rgba(242, 215, 135, 0.9));
+            drop-shadow(0 0 12px rgba(140, 200, 170, 0.9));
   }
 }
 
@@ -412,9 +412,9 @@ body[data-weather="fog"] .snail-habitat::before {
   filter: drop-shadow(0 3px 3px rgba(20, 18, 10, 0.25));
 }
 
-.popup-img.popup-golden {
+.popup-img.popup-rare {
   filter: drop-shadow(0 3px 3px rgba(20, 18, 10, 0.25))
-          drop-shadow(0 0 8px rgba(242, 215, 135, 0.8));
+          drop-shadow(0 0 8px rgba(140, 200, 170, 0.8));
 }
 
 .snail-popup h3 {

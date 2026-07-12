@@ -70,13 +70,21 @@ FOOD_DEFS = {
 
 # 등급: 갈색/적갈색/회갈색 = 기본(common), 올리브 = 레어(rare), 황금 = 에픽(epic)
 VARIANTS = {
-    "brown": {"label": "갈색", "chance": 0.55, "rarity": "common"},
-    "gray": {"label": "회갈색", "chance": 0.18, "rarity": "common"},
-    "russet": {"label": "적갈색", "chance": 0.15, "rarity": "common"},
-    "olive": {"label": "올리브", "chance": 0.10, "rarity": "rare"},
-    "golden": {"label": "황금", "chance": 0.02, "rarity": "epic"},
+    "brown": {"label": "갈색", "chance": 0.1225, "rarity": "common"},
+    "gray": {"label": "회갈색", "chance": 0.1225, "rarity": "common"},
+    "olive": {"label": "올리브", "chance": 0.1225, "rarity": "common"},
+    "yellow": {"label": "노란색", "chance": 0.1225, "rarity": "common"},
+    "bluegray": {"label": "블루그레이", "chance": 0.1225, "rarity": "common"},
+    "lavender": {"label": "라벤더그레이", "chance": 0.1225, "rarity": "common"},
+    "red": {"label": "붉은색", "chance": 0.1225, "rarity": "common"},
+    "herb": {"label": "허브", "chance": 0.1225, "rarity": "common"},
+    "pond": {"label": "연못", "chance": 0.02, "rarity": "rare"},
 }
-VARIANT_GEN_DELTA = {"brown": -6, "gray": 1, "russet": 1.5, "olive": 2, "golden": 1.5}
+# 세대 보정: 연못(레어)이 세대마다 오르고 기본 8종이 균등하게 조금씩 내린다 (합계 0)
+VARIANT_GEN_DELTA = {
+    "brown": -0.125, "gray": -0.125, "olive": -0.125, "yellow": -0.125,
+    "bluegray": -0.125, "lavender": -0.125, "red": -0.125, "herb": -0.125, "pond": 1.0,
+}
 
 PERSONALITIES = {"foodie": 0.40, "explorer": 0.35, "sleepy": 0.25}
 
@@ -89,8 +97,8 @@ DECORATIONS = {
 
 EXPLORE_MAPS = {
     "moss": {"variant_boost": "olive", "locked": False},
-    "field": {"variant_boost": "russet", "locked": False},
-    "pond": {"variant_boost": "gray", "golden_mult": 2, "locked": True},
+    "field": {"variant_boost": "red", "locked": False},
+    "pond": {"variant_boost": "gray", "rare_mult": 2, "locked": True},  # 연못 맵 → 연못(레어) 부스트
 }
 
 MISSION_DEFS = {"feed": 2, "pet": 1, "explore": 1}
@@ -167,10 +175,10 @@ def wild_egg_variant(map_id: str, generation: int, rng=random.random) -> str:
     shift = min(0.10, table["brown"] - 0.05)
     table["brown"] -= shift
     table[m["variant_boost"]] += shift
-    if m.get("golden_mult"):
-        extra = min(table["golden"] * (m["golden_mult"] - 1), table["brown"] - 0.05)
+    if m.get("rare_mult"):
+        extra = min(table["pond"] * (m["rare_mult"] - 1), table["brown"] - 0.05)
         table["brown"] -= extra
-        table["golden"] += extra
+        table["pond"] += extra
     return _pick_weighted(table, rng())
 
 

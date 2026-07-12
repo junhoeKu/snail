@@ -20,7 +20,9 @@ const DB = (function () {
   };
 
   const JOURNAL_MAX = 100; // 성장 일지 최대 보관 건수
-  const VALID_COLORS = ['brown', 'gray', 'russet', 'olive', 'golden']; // GAME.VARIANTS 키와 일치
+  const VALID_COLORS = ['brown', 'gray', 'olive', 'yellow', 'bluegray', 'lavender', 'red', 'herb', 'pond']; // GAME.VARIANTS 키와 일치
+  // 은퇴한 변이 → 후속 변이 매핑 (황금→노란색, 적갈색→붉은색)
+  const RETIRED_COLORS = { golden: 'yellow', russet: 'red' };
 
   /** 현재 타임스탬프 (ISO 문자열, 로컬 기준) */
   function now() {
@@ -157,6 +159,11 @@ const DB = (function () {
         if (!record.id || record.schema_version !== SCHEMA_VERSION) dirty = true;
         const merged = Object.assign(_defaultSnail(), record);
         merged.schema_version = SCHEMA_VERSION;
+        // 은퇴 변이(황금/적갈색) → 후속 변이로 이전
+        if (RETIRED_COLORS[merged.color]) {
+          merged.color = RETIRED_COLORS[merged.color];
+          dirty = true;
+        }
         // 구버전(v1~v3)의 color:'default' 등 무효 변이 치유 — 스프라이트 404 방지
         if (VALID_COLORS.indexOf(merged.color) === -1) {
           merged.color = 'brown';
@@ -199,6 +206,10 @@ const DB = (function () {
       // 구버전 색 치유 (스냅숏도 스프라이트 경로에 쓰인다)
       let dirty = false;
       const healed = stored.map(function (record) {
+        if (RETIRED_COLORS[record.color]) {
+          record = Object.assign({}, record, { color: RETIRED_COLORS[record.color] });
+          dirty = true;
+        }
         if (VALID_COLORS.indexOf(record.color) === -1) {
           record = Object.assign({}, record, { color: 'brown' });
           dirty = true;
