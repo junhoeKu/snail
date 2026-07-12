@@ -5,3 +5,6 @@ backend/**/__pycache__/
 backend/*.db
 backend/.pytest_cache/
 .env
+node_modules/
+package-lock.json
+backend/backups/
