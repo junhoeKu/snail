@@ -52,8 +52,15 @@ python3 -m http.server 31111
 | 구분 | 기술 |
 |------|------|
 | Frontend | Vanilla HTML/CSS/JavaScript (SPA, IIFE 모듈) |
-| 저장소 | LocalStorage |
+| Backend (선택) | FastAPI + PostgreSQL — [backend/](backend/README.md) 참고 |
+| 저장소 | 듀얼 모드: 서버(계정) 또는 LocalStorage |
 | 아이콘 | Font Awesome 6.4 (CDN) |
+
+## 서버 모드 (v1.0.0+)
+
+`index.html`의 `window.SNAIL_API_BASE`에 백엔드 주소를 넣으면 **계정 기반 서버 저장**으로 동작합니다:
+게스트 계정 자동 생성, 기기 간 데이터 유지, 모든 게임 판정(먹이/성장/탐험/보상)의 서버 처리, 기존 로컬 데이터 1회 이전.
+비워두면 기존 LocalStorage 모드로 동작합니다. 백엔드 실행/배포는 [backend/README.md](backend/README.md).
 
 ## 문서
 
@@ -64,6 +71,8 @@ python3 -m http.server 31111
 - [5차 MVP 구현 계획](docs/5차_MVP_구현계획.md) — 수집의 완성 (세대/도감/장식) & 게임필
 - [6차 MVP 구현 계획](docs/6차_MVP_구현계획.md) — 멀티 달팽이 & 탐험 채집 & 앱 기반(PWA/백업)
 - [7차 MVP 구현 계획](docs/7차_MVP_구현계획.md) — 양육자 레벨 · 먹이 4종 · 개체 팝업 UI
+- [8차 MVP 구현 계획](docs/8차_MVP_구현계획.md) — 계정 · 서버 저장 · 서버 권위형 게임
+- [9차 MVP 구현 계획](docs/9차_MVP_구현계획.md) — 살아있는 생태계 (예정)
 - [CLAUDE.md](CLAUDE.md) — 아키텍처 규칙 및 작업 원칙
 
 ## 개발자 콘솔 (QA)
