@@ -159,8 +159,8 @@ const GAME = (function () {
   /** 탐험 맵 — 맵마다 특산 변이가 다르다 (수집 전략) */
   const EXPLORE_MAPS = {
     moss: { id: 'moss', label: '이끼 숲', emoji: '🌿', variantBoost: 'olive', locked: false },
-    field: { id: 'field', label: '햇살 들판', emoji: '🌤️', variantBoost: 'russet', locked: false },
-    pond: { id: 'pond', label: '이슬 연못', emoji: '💧', variantBoost: 'gray', goldenMult: 2, locked: true }
+    field: { id: 'field', label: '햇살 들판', emoji: '🌤️', variantBoost: 'red', locked: false },
+    pond: { id: 'pond', label: '이슬 연못', emoji: '💧', variantBoost: 'gray', rareMult: 2, locked: true }
   };
 
   const STAGES = {
@@ -207,11 +207,15 @@ const GAME = (function () {
   };
 
   const VARIANTS = {
-    brown: { id: 'brown', label: '갈색', chance: 0.55, rarity: 'common' },
-    gray: { id: 'gray', label: '회갈색', chance: 0.18, rarity: 'common' },
-    russet: { id: 'russet', label: '적갈색', chance: 0.15, rarity: 'common' },
-    olive: { id: 'olive', label: '올리브', chance: 0.10, rarity: 'rare' },
-    golden: { id: 'golden', label: '황금', chance: 0.02, rarity: 'epic' }
+    brown: { id: 'brown', label: '갈색', chance: 0.1225, rarity: 'common' },
+    gray: { id: 'gray', label: '회갈색', chance: 0.1225, rarity: 'common' },
+    olive: { id: 'olive', label: '올리브', chance: 0.1225, rarity: 'common' },
+    yellow: { id: 'yellow', label: '노란색', chance: 0.1225, rarity: 'common' },
+    bluegray: { id: 'bluegray', label: '블루그레이', chance: 0.1225, rarity: 'common' },
+    lavender: { id: 'lavender', label: '라벤더그레이', chance: 0.1225, rarity: 'common' },
+    red: { id: 'red', label: '붉은색', chance: 0.1225, rarity: 'common' },
+    herb: { id: 'herb', label: '허브', chance: 0.1225, rarity: 'common' },
+    pond: { id: 'pond', label: '연못', chance: 0.02, rarity: 'rare' }
   };
 
   /**
@@ -224,8 +228,11 @@ const GAME = (function () {
     return 'assets/characters/snail_' + safeColor + '_' + safeStage + '.png';
   }
 
-  /** 세대당 변이 확률 변화 (%p) — 합계 0이라 항상 총합 100% 유지 */
-  const VARIANT_GEN_DELTA = { brown: -6, gray: 1, russet: 1.5, olive: 2, golden: 1.5 };
+  /** 세대당 변이 확률 변화 (%p) — 연못(레어) 상승, 기본 8종 균등 하락 (합계 0) */
+  const VARIANT_GEN_DELTA = {
+    brown: -0.125, gray: -0.125, olive: -0.125, yellow: -0.125,
+    bluegray: -0.125, lavender: -0.125, red: -0.125, herb: -0.125, pond: 1.0
+  };
 
   /** 세대 보정된 변이 확률 테이블 (5차_MVP_구현계획.md §3.2) */
   function variantTableFor(generation) {
@@ -548,10 +555,10 @@ const GAME = (function () {
     table.brown.chance -= shift;
     table[map.variantBoost].chance += shift;
 
-    if (map.goldenMult) {
-      const extra = Math.min(table.golden.chance * (map.goldenMult - 1), table.brown.chance - 0.05);
+    if (map.rareMult) {
+      const extra = Math.min(table.pond.chance * (map.rareMult - 1), table.brown.chance - 0.05);
       table.brown.chance -= extra;
-      table.golden.chance += extra;
+      table.pond.chance += extra;
     }
     return _pickWeighted(table, (rng || Math.random)());
   }

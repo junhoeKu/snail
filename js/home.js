@@ -372,7 +372,8 @@ const HomeModule = (function () {
 
     const safeColor = GAME.VARIANTS[rec.color] ? rec.color : 'brown';
     const img = document.createElement('img');
-    img.className = 'popup-img' + (safeColor === 'golden' ? ' popup-golden' : '');
+    const rareVariant = GAME.VARIANTS[safeColor] && GAME.VARIANTS[safeColor].rarity !== 'common';
+    img.className = 'popup-img' + (rareVariant ? ' popup-rare' : '');
     img.src = GAME.spritePath(safeColor, rec.stage);
     img.alt = rec.name;
     box.appendChild(img);

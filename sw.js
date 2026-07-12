@@ -2,7 +2,7 @@
  * Snail 서비스 워커 — 정적 자산 캐시 우선 (오프라인 실행)
  * CACHE_VERSION을 올리면 다음 방문 시 새 캐시로 교체된다.
  */
-const CACHE_VERSION = 'snail-v1.0.4';
+const CACHE_VERSION = 'snail-v1.1.0';
 
 const PRECACHE = [
   '.',
@@ -41,15 +41,27 @@ const PRECACHE = [
   'assets/characters/snail_gray_baby.png',
   'assets/characters/snail_gray_junior.png',
   'assets/characters/snail_gray_adult.png',
-  'assets/characters/snail_russet_baby.png',
-  'assets/characters/snail_russet_junior.png',
-  'assets/characters/snail_russet_adult.png',
   'assets/characters/snail_olive_baby.png',
   'assets/characters/snail_olive_junior.png',
   'assets/characters/snail_olive_adult.png',
-  'assets/characters/snail_golden_baby.png',
-  'assets/characters/snail_golden_junior.png',
-  'assets/characters/snail_golden_adult.png'
+  'assets/characters/snail_yellow_baby.png',
+  'assets/characters/snail_yellow_junior.png',
+  'assets/characters/snail_yellow_adult.png',
+  'assets/characters/snail_bluegray_baby.png',
+  'assets/characters/snail_bluegray_junior.png',
+  'assets/characters/snail_bluegray_adult.png',
+  'assets/characters/snail_lavender_baby.png',
+  'assets/characters/snail_lavender_junior.png',
+  'assets/characters/snail_lavender_adult.png',
+  'assets/characters/snail_red_baby.png',
+  'assets/characters/snail_red_junior.png',
+  'assets/characters/snail_red_adult.png',
+  'assets/characters/snail_herb_baby.png',
+  'assets/characters/snail_herb_junior.png',
+  'assets/characters/snail_herb_adult.png',
+  'assets/characters/snail_pond_baby.png',
+  'assets/characters/snail_pond_junior.png',
+  'assets/characters/snail_pond_adult.png'
 ];
 
 self.addEventListener('install', function (event) {

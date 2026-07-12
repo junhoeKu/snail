@@ -44,7 +44,7 @@ const ExploreModule = (function () {
       const desc = document.createElement('div');
       desc.className = 'explore-map-desc';
       desc.textContent = GAME.VARIANTS[map.variantBoost].label + ' 변이가 자주 나와요' +
-        (map.goldenMult ? ' · 황금 확률 ' + map.goldenMult + '배!' : '');
+        (map.rareMult ? ' · 레어(연못) 확률 ' + map.rareMult + '배!' : '');
       info.appendChild(name);
       info.appendChild(desc);
       li.appendChild(info);
