@@ -87,6 +87,7 @@ const HomeModule = (function () {
     HabitatModule.sync();
     _renderChip(snails);
     _renderMissionChip();
+    App.updateFavicon();
   }
 
   /** 좌상단 요약 칩: 1마리면 상세, 여럿이면 무리 요약 */
