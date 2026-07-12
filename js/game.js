@@ -11,7 +11,7 @@ const GAME = (function () {
   const CONFIG = {
     // 시간 감쇠: 1시간 경과마다 적용
     DECAY_INTERVAL_MIN: 60,
-    DECAY_HUNGER: 5,
+    DECAY_HUNGER: 7,
     DECAY_HAPPINESS: 5,
 
     // 먹이 주기 (종류별 효과는 FOOD_DEFS)
@@ -52,7 +52,7 @@ const GAME = (function () {
     PET_HAPPINESS: 5,
 
     // 여행 보내기 (세대 교체)
-    GRADUATE_MIN_LEVEL: 12,
+    GRADUATE_MIN_LEVEL: 20,
     GRADUATE_COINS: 100,
     GENERATION_BOOST_CAP: 5, // 변이 확률 보정이 커지는 최대 세대 수 (6세대+에서 고정)
 
@@ -73,7 +73,7 @@ const GAME = (function () {
     ADMIN_EXP_MULT: 10, // 먹이 경험치 배수 (빠른 레벨업 실험)
 
     // 성장
-    EXP_PER_LEVEL: 20,
+    EXP_PER_LEVEL: 5,
 
     // 부화 직후 초기 스탯
     HATCH_HUNGER: 40,
@@ -100,10 +100,10 @@ const GAME = (function () {
 
   /** 먹이 4종 — 양육자 레벨로 해금 (7차_MVP_구현계획.md §6) */
   const FOOD_DEFS = {
-    lettuce: { id: 'lettuce', label: '상추', emoji: '🥬', price: 10, hunger: 30, exp: 10, happiness: 5, unlockLevel: 1 },
-    carrot: { id: 'carrot', label: '당근', emoji: '🥕', price: 18, hunger: 45, exp: 14, happiness: 5, unlockLevel: 2 },
-    apple: { id: 'apple', label: '사과', emoji: '🍎', price: 30, hunger: 35, exp: 16, happiness: 12, unlockLevel: 4 },
-    salad: { id: 'salad', label: '특제 샐러드', emoji: '🥗', price: 60, hunger: 100, exp: 30, happiness: 15, unlockLevel: 6 }
+    lettuce: { id: 'lettuce', label: '상추', emoji: '🥬', price: 10, hunger: 30, exp: 22, happiness: 5, unlockLevel: 1 },
+    carrot: { id: 'carrot', label: '당근', emoji: '🥕', price: 18, hunger: 45, exp: 28, happiness: 5, unlockLevel: 2 },
+    apple: { id: 'apple', label: '사과', emoji: '🍎', price: 30, hunger: 35, exp: 32, happiness: 12, unlockLevel: 4 },
+    salad: { id: 'salad', label: '특제 샐러드', emoji: '🥗', price: 60, hunger: 100, exp: 52, happiness: 15, unlockLevel: 6 }
   };
 
   // ── 양육자 레벨 ────────────────────────────────────────
@@ -166,8 +166,8 @@ const GAME = (function () {
   const STAGES = {
     egg: { id: 'egg', label: '알', emoji: '🥚', minLevel: 0 },
     baby: { id: 'baby', label: '아기', emoji: '🐌', minLevel: 1 },
-    junior: { id: 'junior', label: '어린', emoji: '🐌', minLevel: 5 },
-    adult: { id: 'adult', label: '성체', emoji: '🐌', minLevel: 10 }
+    junior: { id: 'junior', label: '어린', emoji: '🐌', minLevel: 10 },
+    adult: { id: 'adult', label: '성체', emoji: '🐌', minLevel: 20 }
   };
 
   /** 날씨 (날짜 해시로 결정적 — 저장 불필요) */

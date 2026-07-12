@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 CONFIG = {
     # 시간 감쇠 (1시간마다)
     "DECAY_INTERVAL_MIN": 60,
-    "DECAY_HUNGER": 5,
+    "DECAY_HUNGER": 7,
     "DECAY_HAPPINESS": 5,
     # 먹이/보상
     "FEED_COINS": 2,
@@ -27,11 +27,11 @@ CONFIG = {
     # 쓰다듬기
     "PET_HAPPINESS": 5,
     # 성장
-    "EXP_PER_LEVEL": 20,
+    "EXP_PER_LEVEL": 5,
     "HATCH_HUNGER": 40,
     "HATCH_HAPPINESS": 80,
     # 여행/세대
-    "GRADUATE_MIN_LEVEL": 12,
+    "GRADUATE_MIN_LEVEL": 20,
     "GRADUATE_COINS": 100,
     "GENERATION_BOOST_CAP": 5,
     # 슬롯 (9차에서 8마리로 확장 예정 — MAX는 config/env)
@@ -62,10 +62,10 @@ CONFIG = {
 }
 
 FOOD_DEFS = {
-    "lettuce": {"id": "lettuce", "label": "상추", "emoji": "🥬", "price": 10, "hunger": 30, "exp": 10, "happiness": 5, "unlockLevel": 1},
-    "carrot": {"id": "carrot", "label": "당근", "emoji": "🥕", "price": 18, "hunger": 45, "exp": 14, "happiness": 5, "unlockLevel": 2},
-    "apple": {"id": "apple", "label": "사과", "emoji": "🍎", "price": 30, "hunger": 35, "exp": 16, "happiness": 12, "unlockLevel": 4},
-    "salad": {"id": "salad", "label": "특제 샐러드", "emoji": "🥗", "price": 60, "hunger": 100, "exp": 30, "happiness": 15, "unlockLevel": 6},
+    "lettuce": {"id": "lettuce", "label": "상추", "emoji": "🥬", "price": 10, "hunger": 30, "exp": 22, "happiness": 5, "unlockLevel": 1},
+    "carrot": {"id": "carrot", "label": "당근", "emoji": "🥕", "price": 18, "hunger": 45, "exp": 28, "happiness": 5, "unlockLevel": 2},
+    "apple": {"id": "apple", "label": "사과", "emoji": "🍎", "price": 30, "hunger": 35, "exp": 32, "happiness": 12, "unlockLevel": 4},
+    "salad": {"id": "salad", "label": "특제 샐러드", "emoji": "🥗", "price": 60, "hunger": 100, "exp": 52, "happiness": 15, "unlockLevel": 6},
 }
 
 # 등급: 갈색/적갈색/회갈색 = 기본(common), 올리브 = 레어(rare), 황금 = 에픽(epic)
@@ -95,7 +95,7 @@ EXPLORE_MAPS = {
 
 MISSION_DEFS = {"feed": 2, "pet": 1, "explore": 1}
 
-STAGE_LEVELS = {"junior": 5, "adult": 10}
+STAGE_LEVELS = {"junior": 10, "adult": 20}  # 외형 변화 Lv1(baby)/10(junior)/20(adult)
 
 
 def clamp(v: float) -> float:
