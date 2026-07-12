@@ -9,9 +9,29 @@
 const Api = (function () {
   'use strict';
 
-  const BASE = String(window.SNAIL_API_BASE || '').replace(/\/+$/, '');
   const TOKEN_KEY = 'sn_access_token';
   const REFRESH_KEY = 'sn_refresh_token';
+  const API_BASE_KEY = 'sn_api_base';
+
+  /**
+   * API 주소 결정: URL 파라미터(?api=) > localStorage 기억값 > config.js.
+   * ?api=주소 로 켜면 기억되고, ?api= (빈 값)으로 끈다.
+   */
+  function _resolveBase() {
+    try {
+      const params = new URLSearchParams(location.search);
+      if (params.has('api')) {
+        const value = params.get('api') || '';
+        if (value) localStorage.setItem(API_BASE_KEY, value);
+        else localStorage.removeItem(API_BASE_KEY);
+      }
+      const stored = localStorage.getItem(API_BASE_KEY);
+      if (stored) return stored;
+    } catch (e) { /* 무시 */ }
+    return String(window.SNAIL_API_BASE || '');
+  }
+
+  const BASE = _resolveBase().replace(/\/+$/, '');
 
   function enabled() {
     return BASE.length > 0;

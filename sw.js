@@ -75,6 +75,18 @@ self.addEventListener('fetch', function (event) {
   // 서버 API는 절대 캐시하지 않는다 — 낡은 게임 상태 응답 방지
   if (event.request.url.indexOf('/v1/') !== -1) return;
 
+  // config.js는 네트워크 우선 (설정 변경이 즉시 반영되도록, 오프라인 시 캐시 폴백)
+  if (event.request.url.indexOf('config.js') !== -1) {
+    event.respondWith(
+      fetch(event.request).then(function (response) {
+        const copy = response.clone();
+        caches.open(CACHE_VERSION).then(function (cache) { cache.put(event.request, copy); });
+        return response;
+      }).catch(function () { return caches.match(event.request); })
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then(function (cached) {
       if (cached) return cached;

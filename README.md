@@ -58,7 +58,8 @@ python3 -m http.server 31111
 
 ## 서버 모드 (v1.0.0+)
 
-`index.html`의 `window.SNAIL_API_BASE`에 백엔드 주소를 넣으면 **계정 기반 서버 저장**으로 동작합니다:
+루트의 **`config.js`**(정적 호스팅의 .env 역할)에 백엔드 주소를 넣으면 **계정 기반 서버 저장**으로 동작합니다.
+개발 중에는 파일 수정 없이 `?api=http://localhost:8000` URL 파라미터로 켜고(기억됨) `?api=`로 끌 수 있습니다:
 게스트 계정 자동 생성, 기기 간 데이터 유지, 모든 게임 판정(먹이/성장/탐험/보상)의 서버 처리, 기존 로컬 데이터 1회 이전.
 비워두면 기존 LocalStorage 모드로 동작합니다. 백엔드 실행/배포는 [backend/README.md](backend/README.md).
 
