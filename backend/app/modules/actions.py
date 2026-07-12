@@ -78,7 +78,7 @@ def _missions(db: Session, user: models.User, kinds: list[str]) -> list[dict]:
             db.add(models.CurrencyLedger(user_id=user.id, currency="coins", amount=delta,
                                          balance_after=user.coins, reason="mission_reward"))
         if reward["food"]:
-            service.add_item(db, user, "lettuce", reward["food"])
+            service.add_item(db, user, "lettuce", reward["food"], "mission_reward")
         if any(e["type"] == "mission_all_done" for e in mission_events):
             service.add_journal(db, user, "mission", "오늘의 돌봄을 모두 완료했어요.")
             events += _deco_unlocks(db, user)
@@ -91,9 +91,21 @@ class ActionIn(BaseModel):
 
 def _run(db: Session, user: models.User, action_type: str, request_id: str,
          target_id: str | None, payload: dict, fn) -> dict:
-    """멱등 → 선정산 → 행동 → 전체 상태 응답 → 이력 기록 → 커밋."""
+    """행 잠금 → 멱등(해시 검증) → 선정산 → 행동 → revision → 상태 응답 → 이력 → 커밋."""
+    phash = service.payload_fingerprint(payload)
+
+    # 같은 사용자 동시 요청 직렬화 (재화 복제/음수 방지). 멱등 조회도 이 잠금 안에서.
+    service.lock_user(db, user)
+
     existing = service.find_action(db, user, request_id)
     if existing is not None:
+        # 같은 request_id인데 내용이 다르면 조작 의심 → 반영 없이 거부 + 보안 로그
+        if existing.payload_hash and existing.payload_hash != phash:
+            service.record_security_event(db, user.id, "idempotency_conflict",
+                                          {"request_id": request_id, "action": action_type})
+            db.commit()
+            raise ApiError(409, "idempotency_conflict",
+                           "같은 요청 번호로 다른 내용이 접수되었습니다.")
         return existing.result
 
     events = service.settle(db, user)
@@ -105,9 +117,10 @@ def _run(db: Session, user: models.User, action_type: str, request_id: str,
         db.rollback()
         raise ApiError(status, code, message)
 
+    service.bump_revision(user)
     result = service.state_payload(db, user, events)
     service.record_action(db, user, action_type, request_id, target_id, payload,
-                          {"events": events})
+                          {"events": events}, payload_hash=phash)
     db.commit()
     return result
 
@@ -128,7 +141,7 @@ def feed(snail_id: str, body: FeedIn,
         food_id = body.foodId or user.selected_food or "lettuce"
         d, events = rules.feed(s, food_id, foods, user.decoration_slots)
         service.apply_snail_dict(snail, s)
-        service.set_item(db, user, food_id, foods[food_id])
+        service.add_item(db, user, food_id, -1, "feed_consume", snail.id)
         service.add_coins(db, user, rules.CONFIG["FEED_COINS"], "feed_reward", snail.id)
         for e in events:
             if e["type"] == "levelup":
@@ -211,6 +224,7 @@ def graduate(snail_id: str, body: ActionIn,
 
 class NameIn(BaseModel):
     name: str
+    expectedVersion: int | None = None  # 있으면 낙관적 잠금 검증 (없으면 하위호환 스킵)
 
 
 @router.patch("/snails/{snail_id}/name")
@@ -220,9 +234,13 @@ def rename(snail_id: str, body: NameIn,
     name = body.name.strip()[:12]
     if not name:
         raise ApiError(422, "name_required", "이름을 입력해주세요.")
+    if body.expectedVersion is not None and snail.version != body.expectedVersion:
+        raise ApiError(409, "version_conflict", "다른 기기에서 먼저 변경되었어요. 최신 상태로 새로고침합니다.")
     snail.name = name
+    snail.version += 1
+    service.bump_revision(user)
     db.commit()
-    return {"ok": True, "name": name}
+    return {"ok": True, "name": name, "version": snail.version}
 
 
 # ── 상점 ────────────────────────────────────────────────
@@ -245,7 +263,7 @@ def purchase(body: PurchaseIn,
                 raise ApiError(409, "food_locked", "아직 잠긴 먹이예요.")
             price = rules.food_price(body.itemId, body.count)
             service.add_coins(db, user, -price, "shop_food", None)
-            service.add_item(db, user, body.itemId, body.count)
+            service.add_item(db, user, body.itemId, body.count, "shop_food")
             events.append({"type": "food_bought", "foodId": body.itemId, "count": body.count})
 
         elif body.kind == "egg_slot":
@@ -325,7 +343,7 @@ def explore_search(body: ExploreIn,
         if result["type"] == "coins":
             service.add_coins(db, user, result["amount"], "explore_find")
         elif result["type"] == "food":
-            service.add_item(db, user, "lettuce", result["amount"])
+            service.add_item(db, user, "lettuce", result["amount"], "explore_find")
         elif result["type"] == "egg":
             active = service.active_snails(db, user)
             if len(active) < user.snail_slots:

@@ -29,14 +29,17 @@ docker compose up --build
 
 1. `.env.example`을 참고해 환경변수 설정 (JWT_SECRET은 `openssl rand -hex 32`)
 2. Dockerfile로 배포, `DATABASE_URL`은 관리형 PostgreSQL(Neon 등)
-3. 스키마: 첫 배포는 startup의 `create_all`로 생성됨.
-   이후 모델 변경 시 Alembic 사용:
-   ```bash
-   DATABASE_URL=... alembic revision --autogenerate -m "설명"
-   DATABASE_URL=... alembic upgrade head
-   ```
+3. 스키마: Docker 컨테이너가 기동 시 `alembic upgrade head`를 먼저 실행한다(Dockerfile CMD).
+   - 신규 테이블은 startup의 `create_all`도 보강하지만, **기존 테이블 컬럼 추가는 Alembic만 처리**한다.
+   - 마이그레이션은 방어적(존재 검사)이라 8차 운영 DB·신규 DB 모두에서 idempotent하다.
+   - 모델 변경 시 새 마이그레이션 추가:
+     ```bash
+     DATABASE_URL=... alembic revision --autogenerate -m "설명"   # 초안 생성
+     DATABASE_URL=... alembic upgrade head                         # 적용
+     ```
 4. `CORS_ORIGINS`에 프론트 도메인(`https://junhoeku.github.io`) 지정
-5. 스테이징/운영은 별도 앱 + 별도 DB로 분리
+5. Rate Limit 임계값(선택): `RATE_LIMIT_PER_MIN`(기본 60), `RATE_LIMIT_AUTH_PER_MIN`(기본 20)
+6. 스테이징/운영은 별도 앱 + 별도 DB로 분리
 
 ## 계층 규칙
 
