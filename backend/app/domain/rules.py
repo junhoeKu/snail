@@ -1,0 +1,399 @@
+"""게임 규칙 — js/game.js의 순수 함수를 이식한 단일 판정 소스.
+
+수치를 바꿀 때는 반드시 docs/N차_MVP_구현계획.md를 먼저 갱신한다.
+클라이언트는 GET /v1/game/config로 표시용 수치를 받는다 (여기와 어긋나면 안 됨).
+모든 확률은 rng 주입식(기본 random.random)이라 테스트에서 결정적으로 검증한다.
+"""
+import random
+from datetime import datetime, timedelta
+
+CONFIG = {
+    # 시간 감쇠 (1시간마다)
+    "DECAY_INTERVAL_MIN": 60,
+    "DECAY_HUNGER": 5,
+    "DECAY_HAPPINESS": 5,
+    # 먹이/보상
+    "FEED_COINS": 2,
+    "FOOD_BUNDLE_COUNT": 10,
+    "FOOD_BUNDLE_DISCOUNT": 0.9,
+    "DAILY_COINS": 20,
+    "STREAK_BONUS_PER_DAY": 2,
+    "STREAK_BONUS_CAP": 20,
+    "STREAK_WEEKLY_FOOD": 3,
+    # 미션
+    "MISSION_REWARD_COINS": 10,
+    "MISSION_BONUS_COINS": 20,
+    "MISSION_BONUS_FOOD": 1,
+    # 쓰다듬기
+    "PET_HAPPINESS": 5,
+    # 성장
+    "EXP_PER_LEVEL": 20,
+    "HATCH_HUNGER": 40,
+    "HATCH_HAPPINESS": 80,
+    # 여행/세대
+    "GRADUATE_MIN_LEVEL": 12,
+    "GRADUATE_COINS": 100,
+    "GENERATION_BOOST_CAP": 5,
+    # 슬롯 (9차에서 8마리로 확장 예정 — MAX는 config/env)
+    "EGG_SLOT_PRICES": [0, 500, 1500],
+    # 부재 중 발견
+    "FIND_INTERVAL_HOURS": 4,
+    "FIND_CHANCE": 0.35,
+    "FIND_MAX": 2,
+    "FIND_COIN_MIN": 5,
+    "FIND_COIN_MAX": 15,
+    "FIND_FOOD_CHANCE": 0.3,
+    # 탐험
+    "EXPLORE_SEARCHES_PER_DAY": 10,
+    "EXPLORE_COIN_MIN": 3,
+    "EXPLORE_COIN_MAX": 12,
+    "EXPLORE_MAP_PRICE": 1000,
+    "WILD_EGG_FALLBACK_COINS": 30,
+    # 양육자
+    "KEEPER_XP": {
+        "feed": 2, "explore": 1, "daily": 5, "mission": 5,
+        "mission_all": 10, "hatch": 15, "graduate": 30, "dex_new": 25,
+    },
+    "KEEPER_LEVEL_COIN_MULT": 30,
+    "KEEPER_STAMINA_LEVELS": [5, 8],
+    # 장식 해금
+    "DECO_MISSIONS_REQUIRED": 7,
+    "DECO_GENERATION_REQUIRED": 2,
+}
+
+FOOD_DEFS = {
+    "lettuce": {"id": "lettuce", "label": "상추", "emoji": "🥬", "price": 10, "hunger": 30, "exp": 10, "happiness": 5, "unlockLevel": 1},
+    "carrot": {"id": "carrot", "label": "당근", "emoji": "🥕", "price": 18, "hunger": 45, "exp": 14, "happiness": 5, "unlockLevel": 2},
+    "apple": {"id": "apple", "label": "사과", "emoji": "🍎", "price": 30, "hunger": 35, "exp": 16, "happiness": 12, "unlockLevel": 4},
+    "salad": {"id": "salad", "label": "특제 샐러드", "emoji": "🥗", "price": 60, "hunger": 100, "exp": 30, "happiness": 15, "unlockLevel": 6},
+}
+
+VARIANTS = {
+    "brown": {"label": "갈색", "chance": 0.55},
+    "gray": {"label": "회갈색", "chance": 0.18},
+    "russet": {"label": "적갈색", "chance": 0.15},
+    "olive": {"label": "올리브", "chance": 0.10},
+    "golden": {"label": "황금", "chance": 0.02},
+}
+VARIANT_GEN_DELTA = {"brown": -6, "gray": 1, "russet": 1.5, "olive": 2, "golden": 1.5}
+
+PERSONALITIES = {"foodie": 0.40, "explorer": 0.35, "sleepy": 0.25}
+
+DECORATIONS = {
+    "pebble": {"label": "조약돌", "type": "buy", "price": 50},
+    "mushroom": {"label": "버섯", "type": "buy", "price": 80},
+    "wildflower": {"label": "들꽃", "type": "unlock"},
+    "mossrock": {"label": "이끼 바위", "type": "unlock"},
+}
+
+EXPLORE_MAPS = {
+    "moss": {"variant_boost": "olive", "locked": False},
+    "field": {"variant_boost": "russet", "locked": False},
+    "pond": {"variant_boost": "gray", "golden_mult": 2, "locked": True},
+}
+
+MISSION_DEFS = {"feed": 2, "pet": 1, "explore": 1}
+
+STAGE_LEVELS = {"junior": 5, "adult": 10}
+
+
+def clamp(v: float) -> float:
+    return max(0.0, min(100.0, v))
+
+
+# ── 성장 ────────────────────────────────────────────────
+
+def exp_to_next(level: int) -> int:
+    return level * CONFIG["EXP_PER_LEVEL"]
+
+
+def stage_for_level(level: int) -> str:
+    if level >= STAGE_LEVELS["adult"]:
+        return "adult"
+    if level >= STAGE_LEVELS["junior"]:
+        return "junior"
+    return "baby"
+
+
+def gain_exp(snail: dict, amount: int) -> list[dict]:
+    """snail(dict)을 제자리 갱신하고 events 반환."""
+    events: list[dict] = []
+    if snail["stage"] == "egg":
+        return events
+    snail["exp"] += amount
+    while snail["exp"] >= exp_to_next(snail["level"]):
+        snail["exp"] -= exp_to_next(snail["level"])
+        snail["level"] += 1
+        events.append({"type": "levelup", "snailId": snail["id"], "level": snail["level"]})
+        next_stage = stage_for_level(snail["level"])
+        if next_stage != snail["stage"]:
+            snail["stage"] = next_stage
+            events.append({"type": "stage_up", "snailId": snail["id"], "stage": next_stage})
+    return events
+
+
+# ── 변이/성격 ───────────────────────────────────────────
+
+def variant_table_for(generation: int) -> dict[str, float]:
+    boost = min(max(generation - 1, 0), CONFIG["GENERATION_BOOST_CAP"])
+    return {
+        key: (base["chance"] * 100 + VARIANT_GEN_DELTA[key] * boost) / 100
+        for key, base in VARIANTS.items()
+    }
+
+
+def _pick_weighted(table: dict[str, float], roll: float) -> str:
+    acc = 0.0
+    keys = list(table.keys())
+    for key in keys:
+        acc += table[key]
+        if roll < acc:
+            return key
+    return keys[-1]
+
+
+def roll_variant(generation: int, rng=random.random) -> str:
+    return _pick_weighted(variant_table_for(generation), rng())
+
+
+def roll_personality(rng=random.random) -> str:
+    return _pick_weighted(PERSONALITIES, rng())
+
+
+def wild_egg_variant(map_id: str, generation: int, rng=random.random) -> str:
+    m = EXPLORE_MAPS[map_id]
+    table = variant_table_for(generation)
+    shift = min(0.10, table["brown"] - 0.05)
+    table["brown"] -= shift
+    table[m["variant_boost"]] += shift
+    if m.get("golden_mult"):
+        extra = min(table["golden"] * (m["golden_mult"] - 1), table["brown"] - 0.05)
+        table["brown"] -= extra
+        table["golden"] += extra
+    return _pick_weighted(table, rng())
+
+
+# ── 시간 감쇠 (lazy — 배치 없음) ────────────────────────
+
+def apply_decay(snail: dict, now: datetime, deco_fx: dict) -> tuple[int, list[dict]]:
+    """last_state_at 기준 경과 구간만 적용, 잔여 시간은 last_state_at 보존으로 유지."""
+    events: list[dict] = []
+    if snail["stage"] == "egg":
+        return 0, events
+    elapsed_min = (now - snail["last_state_at"]).total_seconds() / 60
+    intervals = int(elapsed_min // CONFIG["DECAY_INTERVAL_MIN"])
+    if intervals <= 0:
+        return 0, events
+    snail["hunger"] = clamp(snail["hunger"] + round(intervals * CONFIG["DECAY_HUNGER"] * deco_fx["hungerDecayMult"]))
+    snail["happiness"] = clamp(snail["happiness"] - round(intervals * CONFIG["DECAY_HAPPINESS"] * deco_fx["happinessDecayMult"]))
+    snail["last_state_at"] = snail["last_state_at"] + timedelta(minutes=intervals * CONFIG["DECAY_INTERVAL_MIN"])
+    events.append({"type": "decayed", "snailId": snail["id"]})
+    return intervals, events
+
+
+def decoration_effects(slots: list) -> dict:
+    slots = slots or []
+    return {
+        "happinessDecayMult": 0.85 if "pebble" in slots else 1.0,
+        "feedHungerMult": 1.1 if "mushroom" in slots else 1.0,
+        "petHappinessBonus": 3 if "wildflower" in slots else 0,
+        "hungerDecayMult": 0.9 if "mossrock" in slots else 1.0,
+    }
+
+
+# ── 양육자 ──────────────────────────────────────────────
+
+def keeper_xp_to_next(level: int) -> int:
+    return 50 + (level - 1) * 25
+
+
+def gain_keeper_xp(user: dict, action: str) -> tuple[int, list[dict]]:
+    """user dict 제자리 갱신, (레벨업 보상 코인, events) 반환."""
+    amount = CONFIG["KEEPER_XP"].get(action, 0)
+    events: list[dict] = []
+    coins = 0
+    if amount <= 0:
+        return 0, events
+    user["keeper_xp"] += amount
+    events.append({"type": "keeper_xp_gained", "amount": amount})
+    while user["keeper_xp"] >= keeper_xp_to_next(user["keeper_level"]):
+        user["keeper_xp"] -= keeper_xp_to_next(user["keeper_level"])
+        user["keeper_level"] += 1
+        coins += CONFIG["KEEPER_LEVEL_COIN_MULT"] * user["keeper_level"]
+        events.append({"type": "keeper_levelup", "level": user["keeper_level"], "coins": CONFIG["KEEPER_LEVEL_COIN_MULT"] * user["keeper_level"]})
+    user["coins"] += coins
+    return coins, events
+
+
+def food_unlocked(keeper_level: int, food_id: str) -> bool:
+    d = FOOD_DEFS.get(food_id)
+    return bool(d) and keeper_level >= d["unlockLevel"]
+
+
+def food_price(food_id: str, count: int) -> int:
+    d = FOOD_DEFS[food_id]
+    if count == CONFIG["FOOD_BUNDLE_COUNT"]:
+        return round(d["price"] * count * CONFIG["FOOD_BUNDLE_DISCOUNT"])
+    return d["price"] * count
+
+
+def explore_max_searches(keeper_level: int) -> int:
+    return CONFIG["EXPLORE_SEARCHES_PER_DAY"] + sum(2 for g in CONFIG["KEEPER_STAMINA_LEVELS"] if keeper_level >= g)
+
+
+# ── 스트릭/미션 (날짜 키는 사용자 타임존 기준 — 서버가 계산) ──
+
+def prev_day_key(date_key: str) -> str:
+    d = datetime.strptime(date_key, "%Y-%m-%d") - timedelta(days=1)
+    return d.strftime("%Y-%m-%d")
+
+
+def apply_streak(user: dict, today_key: str) -> tuple[dict, list[dict]]:
+    """접속 보상 + 스트릭. 반환: ({coins, food}, events)"""
+    events: list[dict] = []
+    if user.get("last_daily_reward") == today_key:
+        return {"coins": 0, "food": 0}, events
+    count = user.get("streak_count", 0) + 1 if user.get("streak_last_date") == prev_day_key(today_key) else 1
+    user["streak_count"] = count
+    user["streak_last_date"] = today_key
+    bonus = min((count - 1) * CONFIG["STREAK_BONUS_PER_DAY"], CONFIG["STREAK_BONUS_CAP"])
+    coins = CONFIG["DAILY_COINS"] + bonus
+    food = CONFIG["STREAK_WEEKLY_FOOD"] if count % 7 == 0 else 0
+    user["coins"] += coins
+    user["last_daily_reward"] = today_key
+    events.append({"type": "daily_claimed", "coins": coins, "streak": count, "food": food})
+    return {"coins": coins, "food": food}, events
+
+
+def missions_for(user: dict, today_key: str) -> dict:
+    m = user.get("missions") or {}
+    if m.get("date") == today_key:
+        return dict(m)
+    return {"date": today_key, "feed": 0, "pet": 0, "explore": 0, "bonus_given": False}
+
+
+def record_mission(user: dict, kind: str, today_key: str) -> tuple[dict, list[dict]]:
+    """미션 진행 + 자동 보상. 반환: ({coins, food}, events)"""
+    events: list[dict] = []
+    coins = 0
+    food = 0
+    if kind not in MISSION_DEFS:
+        return {"coins": 0, "food": 0}, events
+    m = missions_for(user, today_key)
+    done_before = m[kind] >= MISSION_DEFS[kind]
+    m[kind] += 1
+    if not done_before and m[kind] >= MISSION_DEFS[kind]:
+        coins += CONFIG["MISSION_REWARD_COINS"]
+        events.append({"type": "mission_done", "mission": kind, "coins": CONFIG["MISSION_REWARD_COINS"]})
+    if not m["bonus_given"] and all(m[k] >= MISSION_DEFS[k] for k in MISSION_DEFS):
+        m["bonus_given"] = True
+        coins += CONFIG["MISSION_BONUS_COINS"]
+        food += CONFIG["MISSION_BONUS_FOOD"]
+        user["mission_completions"] = user.get("mission_completions", 0) + 1
+        events.append({"type": "mission_all_done", "coins": CONFIG["MISSION_BONUS_COINS"], "food": CONFIG["MISSION_BONUS_FOOD"]})
+    user["coins"] += coins
+    user["missions"] = m
+    return {"coins": coins, "food": food}, events
+
+
+# ── 행동 ────────────────────────────────────────────────
+
+def feed(snail: dict, food_id: str, foods: dict, deco_slots: list) -> tuple[dict, list[dict]]:
+    """검증 통과 시 snail/foods 제자리 갱신. 반환: (사용한 def, events). 실패는 ValueError(code)."""
+    d = FOOD_DEFS.get(food_id)
+    if not d:
+        raise ValueError("invalid_food")
+    if snail["stage"] == "egg":
+        raise ValueError("not_hatched")
+    if snail.get("graduated_at"):
+        raise ValueError("graduated")
+    if foods.get(food_id, 0) < 1:
+        raise ValueError("no_food")
+    if snail["hunger"] <= 0:
+        raise ValueError("not_hungry")
+
+    foods[food_id] -= 1
+    fx = decoration_effects(deco_slots)
+    snail["hunger"] = clamp(snail["hunger"] - round(d["hunger"] * fx["feedHungerMult"]))
+    snail["happiness"] = clamp(snail["happiness"] + d["happiness"])
+    events = [{"type": "fed", "snailId": snail["id"], "food": food_id, "exp": d["exp"]}]
+    events += gain_exp(snail, d["exp"])
+    return d, events
+
+
+def pet(snail: dict, deco_slots: list) -> list[dict]:
+    if snail["stage"] == "egg":
+        raise ValueError("not_hatched")
+    if snail.get("graduated_at"):
+        raise ValueError("graduated")
+    fx = decoration_effects(deco_slots)
+    snail["happiness"] = clamp(snail["happiness"] + CONFIG["PET_HAPPINESS"] + fx["petHappinessBonus"])
+    return [{"type": "petted", "snailId": snail["id"]}]
+
+
+def hatch(snail: dict, name: str, generation: int, rng=random.random) -> list[dict]:
+    if snail["stage"] != "egg":
+        raise ValueError("already_hatched")
+    name = (name or "").strip()[:12]
+    if not name:
+        raise ValueError("name_required")
+    snail["name"] = name
+    snail["stage"] = "baby"
+    snail["level"] = 1
+    snail["exp"] = 0
+    snail["hunger"] = CONFIG["HATCH_HUNGER"]
+    snail["happiness"] = CONFIG["HATCH_HAPPINESS"]
+    snail["personality"] = roll_personality(rng)
+    snail["color"] = snail.get("wild_variant") or roll_variant(generation, rng)
+    snail["wild_variant"] = None
+    return [{"type": "hatched", "snailId": snail["id"], "color": snail["color"], "personality": snail["personality"]}]
+
+
+def can_graduate(snail: dict) -> bool:
+    return snail["stage"] == "adult" and snail["level"] >= CONFIG["GRADUATE_MIN_LEVEL"] and not snail.get("graduated_at")
+
+
+def egg_slot_price(current_slots: int) -> int | None:
+    prices = CONFIG["EGG_SLOT_PRICES"]
+    if current_slots >= len(prices):
+        return None
+    return prices[current_slots]
+
+
+# ── 부재 발견 / 탐험 ────────────────────────────────────
+
+def away_finds(away_minutes: float, rng=random.random) -> list[dict]:
+    finds: list[dict] = []
+    chances = int(away_minutes // (CONFIG["FIND_INTERVAL_HOURS"] * 60))
+    for _ in range(chances):
+        if len(finds) >= CONFIG["FIND_MAX"]:
+            break
+        if rng() >= CONFIG["FIND_CHANCE"]:
+            continue
+        if rng() < CONFIG["FIND_FOOD_CHANCE"]:
+            finds.append({"type": "food", "amount": 1})
+        else:
+            amount = CONFIG["FIND_COIN_MIN"] + int(rng() * (CONFIG["FIND_COIN_MAX"] - CONFIG["FIND_COIN_MIN"] + 1))
+            finds.append({"type": "coins", "amount": amount})
+    return finds
+
+
+def map_available(map_id: str, generation: int, unlocked: list) -> bool:
+    m = EXPLORE_MAPS.get(map_id)
+    if not m:
+        return False
+    if not m["locked"]:
+        return True
+    return generation >= CONFIG["DECO_GENERATION_REQUIRED"] or map_id in (unlocked or [])
+
+
+def explore_roll(generation: int, map_id: str, rng=random.random) -> dict:
+    roll = rng()
+    if roll < 0.55:
+        amount = CONFIG["EXPLORE_COIN_MIN"] + int(rng() * (CONFIG["EXPLORE_COIN_MAX"] - CONFIG["EXPLORE_COIN_MIN"] + 1))
+        return {"type": "coins", "amount": amount}
+    if roll < 0.80:
+        return {"type": "food", "amount": 1 + int(rng() * 2)}
+    if roll < 0.95:
+        return {"type": "none"}
+    return {"type": "egg", "variant": wild_egg_variant(map_id, generation, rng)}
