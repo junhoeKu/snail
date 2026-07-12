@@ -75,20 +75,22 @@ FOOD_DEFS = {
 
 # 등급: 갈색/적갈색/회갈색 = 기본(common), 올리브 = 레어(rare), 황금 = 에픽(epic)
 VARIANTS = {
-    "brown": {"label": "갈색", "chance": 0.1225, "rarity": "common"},
-    "gray": {"label": "회갈색", "chance": 0.1225, "rarity": "common"},
-    "olive": {"label": "올리브", "chance": 0.1225, "rarity": "common"},
-    "yellow": {"label": "노란색", "chance": 0.1225, "rarity": "common"},
-    "bluegray": {"label": "블루그레이", "chance": 0.1225, "rarity": "common"},
-    "lavender": {"label": "라벤더그레이", "chance": 0.1225, "rarity": "common"},
-    "red": {"label": "붉은색", "chance": 0.1225, "rarity": "common"},
-    "herb": {"label": "허브", "chance": 0.1225, "rarity": "common"},
+    "brown": {"label": "갈색", "chance": 0.098, "rarity": "common"},
+    "gray": {"label": "회갈색", "chance": 0.098, "rarity": "common"},
+    "red": {"label": "붉은색", "chance": 0.098, "rarity": "common"},
+    "yellow": {"label": "노란색", "chance": 0.098, "rarity": "common"},
+    "bluegray": {"label": "블루그레이", "chance": 0.098, "rarity": "common"},
+    "lavender": {"label": "라벤더그레이", "chance": 0.098, "rarity": "common"},
+    "herb": {"label": "허브", "chance": 0.098, "rarity": "common"},
+    "black": {"label": "검정", "chance": 0.098, "rarity": "common"},
+    "lime": {"label": "라임", "chance": 0.098, "rarity": "common"},
+    "sky": {"label": "소라", "chance": 0.098, "rarity": "common"},
     "pond": {"label": "연못", "chance": 0.02, "rarity": "rare"},
 }
-# 세대 보정: 연못(레어)이 세대마다 오르고 기본 8종이 균등하게 조금씩 내린다 (합계 0)
+# 세대 보정: 연못(레어)이 세대마다 오르고 기본 10종이 균등하게 조금씩 내린다 (합계 0)
 VARIANT_GEN_DELTA = {
-    "brown": -0.125, "gray": -0.125, "olive": -0.125, "yellow": -0.125,
-    "bluegray": -0.125, "lavender": -0.125, "red": -0.125, "herb": -0.125, "pond": 1.0,
+    "brown": -0.1, "gray": -0.1, "red": -0.1, "yellow": -0.1, "bluegray": -0.1,
+    "lavender": -0.1, "herb": -0.1, "black": -0.1, "lime": -0.1, "sky": -0.1, "pond": 1.0,
 }
 
 PERSONALITIES = {"foodie": 0.40, "explorer": 0.35, "sleepy": 0.25}
@@ -101,7 +103,7 @@ DECORATIONS = {
 }
 
 EXPLORE_MAPS = {
-    "moss": {"variant_boost": "olive", "locked": False},
+    "moss": {"variant_boost": "lime", "locked": False},
     "field": {"variant_boost": "red", "locked": False},
     "pond": {"variant_boost": "gray", "rare_mult": 2, "locked": True},  # 연못 맵 → 연못(레어) 부스트
 }
