@@ -183,6 +183,7 @@ snail/
 - 시간 판정(감쇠/일일 리셋/쿨다운)은 서버 시각 + 사용자 타임존 기준 — 배치 없이 lazy 계산
 - 로그는 **stdout 한 스트림**으로 일원화한다(basicConfig `stream=sys.stdout` + uvicorn `--no-access-log`) — access/구조화 로그가 갈리면 수집기가 inf/err로 이중 태깅한다. Rate Limit은 프록시 뒤 실 클라 식별을 위해 `X-Forwarded-For`를 쓴다
 - 스키마 변경은 Alembic 마이그레이션을 추가한다. 운영/CI는 **create_all(스키마 생성) + alembic(컬럼·신규테이블 얹기) 하이브리드** — create_all 호출 전 반드시 `import app.models`. 마이그레이션은 방어적(존재검사)으로 idempotent하게 쓴다
+- **무중단 마이그레이션(Expand–Migrate–Contract)**: 컬럼 rename/삭제는 3배포로 나눈다 — ①새 컬럼 추가·양쪽 쓰기 ②백필·읽기 전환 ③구 컬럼 제거. PWA 특성상 구버전 클라이언트가 수 주 남으므로 응답 필드 제거는 최소 2릴리스 유예한다. 모든 마이그레이션은 CI의 `upgrade head`(×2) + `downgrade base → upgrade head` 왕복 검사를 통과해야 머지된다
 - **sw.js는 `/v1/*` API를 절대 캐시하지 않는다**
 - **js/css/자산을 바꾼 커밋을 배포할 때는 반드시 `sw.js`의 `CACHE_VERSION`을 함께 올린다** — 안 올리면 기존 사용자 브라우저는 캐시된 옛 코드를 계속 실행한다 (핫픽스가 전달되지 않음)
 - 달팽이 스프라이트 경로는 `GAME.spritePath(color, stage)`로만 생성한다 — 문자열 직접 조립 금지 (무효 변이 404 방지 폴백 내장)

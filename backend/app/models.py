@@ -53,6 +53,7 @@ class User(Base):
     decoration_slots: Mapped[list] = mapped_column(JSON, default=lambda: [None, None, None])
 
     migration_done: Mapped[bool] = mapped_column(Boolean, default=False)
+    suspended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)  # 운영자 정지
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

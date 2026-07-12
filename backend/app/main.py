@@ -55,6 +55,7 @@ def create_app() -> FastAPI:
     app.include_router(mailbox.router)
     app.include_router(notices.router)
     app.include_router(admin.router)
+    app.include_router(admin.ui_router)
 
     @app.get("/healthz")
     def healthz():
