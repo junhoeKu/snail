@@ -50,8 +50,12 @@ def migrate_local_v6(body: MigrationIn,
     if user.migration_done:
         raise ApiError(409, "already_migrated", "이미 이전이 완료된 계정입니다.")
 
+    # "서버가 비어 있음" = 부화한 개체도, 앨범도 없음 (접속 보상 등 자동 정산은 허용)
+    from sqlalchemy import select as _select
     active_hatched = [s for s in service.active_snails(db, user) if s.stage != "egg"]
-    if active_hatched or user.coins != 30 or (user.keeper_level, user.keeper_xp) != (1, 0):
+    has_album = db.execute(_select(models.AlbumEntry.id)
+                           .where(models.AlbumEntry.user_id == user.id).limit(1)).first() is not None
+    if active_hatched or has_album:
         raise ApiError(409, "server_not_empty", "서버에 이미 진행 데이터가 있습니다.")
 
     p = body.player or {}
@@ -76,7 +80,11 @@ def migrate_local_v6(body: MigrationIn,
     streak = p.get("streak") or {}
     user.streak_count = _clamp_int(streak.get("count", 0), 0, 10000)
     user.streak_last_date = streak.get("last_date")
+    # 서버가 이미 오늘 보상을 지급했다면 되돌리지 않는다 (이중 지급 방지)
+    server_daily = user.last_daily_reward
     user.last_daily_reward = p.get("last_daily_reward")
+    if server_daily and (user.last_daily_reward or "") < server_daily:
+        user.last_daily_reward = server_daily
     user.missions = p.get("missions") or {}
     user.mission_completions = _clamp_int(p.get("mission_completions", 0), 0, 100000)
     user.explore_state = p.get("explore") or {}

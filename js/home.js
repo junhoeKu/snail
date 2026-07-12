@@ -57,6 +57,7 @@ const HomeModule = (function () {
         const p = DB.Player.get();
         p.selected_food = id;
         DB.Player.save(p);
+        if (Api.enabled()) Api.updateSettings({ selected_food: id }).catch(function () { /* 무시 */ });
         App.refreshHeader();
         overlay.remove();
         Toast.show(def.emoji + ' ' + def.label + ' 선택!');
@@ -136,8 +137,9 @@ const HomeModule = (function () {
     });
   }
 
-  /** 행동 이벤트 → 미션 진행 반영 (달성 보상은 자동 지급 + 토스트) */
+  /** 행동 이벤트 → 미션 진행 반영 (서버 모드는 서버가 판정) */
   function _recordMissions(events) {
+    if (Api.enabled()) return;
     const kinds = [];
     if (events.indexOf('fed') !== -1) kinds.push('feed');
     if (events.indexOf('petted') !== -1) kinds.push('pet');
@@ -243,6 +245,18 @@ const HomeModule = (function () {
   function _hatchById(snailId, name) {
     const rec = DB.Snails.getById(snailId);
     if (!rec) return;
+
+    if (Api.enabled()) {
+      Api.hatch(snailId, name).then(function (res) {
+        Api.Net.apply(res);
+        HabitatModule.sync();
+      }).catch(function (error) {
+        if (error && error.code === 'name_required') Toast.show('이름을 입력해주세요.', 'warn');
+        else Api.Net.fail(error);
+      });
+      return;
+    }
+
     const generation = DB.Player.get().generation || 1;
     const dexBefore = GAME.discoveredVariants(DB.Album.get(), DB.Snails.get()).length;
     const result = GAME.hatch(rec, name, undefined, generation);
@@ -399,6 +413,15 @@ const HomeModule = (function () {
     petBtn.className = 'btn btn-ghost';
     petBtn.textContent = '🖐️ 쓰다듬기';
     petBtn.addEventListener('click', function () {
+      if (Api.enabled()) {
+        Api.pet(snailId).then(function (res) {
+          Api.Net.apply(res);
+          Sound.play('heart');
+          HabitatModule.effect('💗', snailId);
+          _renderSnailPopup(snailId);
+        }).catch(Api.Net.fail);
+        return;
+      }
       _petById(snailId);
       _renderSnailPopup(snailId); // 수치 즉시 갱신
     });
@@ -445,6 +468,16 @@ const HomeModule = (function () {
   function _doGraduate(snailId) {
     const rec = DB.Snails.getById(snailId);
     if (!rec) return;
+
+    if (Api.enabled()) {
+      Api.graduate(snailId).then(function (res) {
+        Api.Net.apply(res);
+        HabitatModule.sync();
+        App.navigate('home');
+      }).catch(Api.Net.fail);
+      return;
+    }
+
     const result = GAME.graduate(rec, DB.Player.get(), DB.now());
     if (result.events.indexOf('graduated') === -1) return;
 

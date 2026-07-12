@@ -428,6 +428,24 @@ const HabitatModule = (function () {
     const rec = DB.Snails.getById(ent.id);
     if (!rec) { _setState(ent, STATE.IDLE); return; }
 
+    if (Api.enabled()) {
+      // 서버 판정 — 연출은 즉시, 수치는 응답으로 반영
+      Sound.play('eat');
+      const habitatRect = _habitat().getBoundingClientRect();
+      FX.flyCoins(habitatRect.left + ent.x, habitatRect.top + ent.y, 2);
+      const entX = ent.x, entY = ent.y, edge = _edge(ent);
+      Api.feed(ent.id, foodId).then(function (res) {
+        Api.Net.apply(res);
+        const fed = (res.events || []).find(function (e) { return e.type === 'fed'; });
+        if (fed) _floatAt(entX, entY - edge, '+' + fed.exp + ' EXP');
+        const fresh = DB.Snails.getById(ent.id);
+        ent.hungry = !!fresh && fresh.hunger > 0;
+      }).catch(Api.Net.fail);
+      _setState(ent, STATE.IDLE);
+      _assignFoods();
+      return;
+    }
+
     const result = GAME.feed(rec, DB.Player.get(), foodId);
     HomeModule.handleResult(result);
     if (result.events.indexOf('fed') !== -1) {

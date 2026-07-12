@@ -91,6 +91,10 @@ const DecoModule = (function () {
       ? GAME.removeDecoration(player, slotIndex)
       : GAME.placeDecoration(player, id, slotIndex);
     DB.Player.save(result.player);
+    // 서버 모드: 배치는 낙관적 반영 후 동기화 (패시브는 서버 계산에 사용됨)
+    if (Api.enabled()) {
+      Api.setDecoSlots(result.player.decorations.slots).catch(Api.Net.fail);
+    }
     HabitatModule.renderDecorations();
     Toast.show(removing
       ? GAME.DECORATIONS[id].label + ' 효과 꺼짐'
@@ -99,6 +103,15 @@ const DecoModule = (function () {
   }
 
   function _buy(id) {
+    if (Api.enabled()) {
+      Api.purchase('decoration', id).then(function (res) {
+        Api.Net.apply(res);
+        Toast.show('🎁 ' + GAME.DECORATIONS[id].label + ' 구매! 슬롯에 배치해보세요.');
+        render();
+      }).catch(Api.Net.fail);
+      return;
+    }
+
     const result = GAME.buyDecoration(DB.Player.get(), id);
     if (result.events.indexOf('deco_bought') !== -1) {
       DB.Player.save(result.player);
@@ -130,6 +143,7 @@ const DecoModule = (function () {
 
     player.background = bg;
     DB.Player.save(player);
+    if (Api.enabled()) Api.updateSettings({ background: bg }).catch(function () { /* 무시 */ });
     App.applyBackground();
     render();
     Toast.show('배경을 바꿨어요!');

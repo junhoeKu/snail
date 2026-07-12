@@ -43,6 +43,7 @@ const SettingsModule = (function () {
     const player = DB.Player.get();
     player.sound_on = player.sound_on === false;
     DB.Player.save(player);
+    if (Api.enabled()) Api.updateSettings({ sound_on: player.sound_on }).catch(function () { /* 무시 */ });
     _renderSoundToggle();
     if (player.sound_on) Sound.play('tap'); // 켤 때만 확인음
   }
