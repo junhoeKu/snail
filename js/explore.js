@@ -73,6 +73,14 @@ const ExploreModule = (function () {
   }
 
   function _buyUnlock(mapId) {
+    if (Api.enabled()) {
+      Api.purchase('map', mapId).then(function (res) {
+        Api.Net.apply(res);
+        render();
+      }).catch(Api.Net.fail);
+      return;
+    }
+
     const result = GAME.buyMapUnlock(DB.Player.get(), mapId);
     if (result.events.indexOf('map_unlocked') !== -1) {
       DB.Player.save(result.player);
@@ -117,9 +125,46 @@ const ExploreModule = (function () {
     document.getElementById('explore-map-stamina').textContent = _staminaText();
   }
 
+  /** 결과를 지점에 표시 (양 모드 공용 연출) */
+  function _showSpotResult(spotEl, result) {
+    spotEl.disabled = true;
+    spotEl.classList.add('searched');
+    if (result.type === 'coins') {
+      spotEl.textContent = '+' + result.amount + '🪙';
+      Sound.play('coin');
+      const rect = spotEl.getBoundingClientRect();
+      FX.flyCoins(rect.left + rect.width / 2, rect.top, 2);
+    } else if (result.type === 'food') {
+      spotEl.textContent = '+' + result.amount + '🥬';
+    } else if (result.type === 'egg') {
+      spotEl.textContent = '🥚';
+    } else {
+      spotEl.textContent = '💨';
+      Toast.show('이슬만 반짝이고 있었어요.');
+    }
+    document.getElementById('explore-map-stamina').textContent = _staminaText();
+    document.getElementById('explore-stamina').textContent = _staminaText();
+  }
+
   /** 뒤지기 1회 */
   function _search(spotEl) {
     if (spotEl.disabled) return;
+    Sound.play('tap');
+
+    if (Api.enabled()) {
+      // 서버 판정 — 스태미나/확률/야생 알 수용 전부 서버
+      Api.explore(_currentMap).then(function (res) {
+        Api.Net.apply(res);
+        const explored = (res.events || []).find(function (e) { return e.type === 'explored'; });
+        if (explored) _showSpotResult(spotEl, explored.result);
+        HabitatModule.sync(); // 야생 알 반영
+      }).catch(function (error) {
+        if (error && error.code === 'no_stamina') Toast.show('오늘은 더 뒤질 힘이 없어요. 내일 다시 와요!', 'warn');
+        else Api.Net.fail(error);
+      });
+      return;
+    }
+
     const result = GAME.explore(DB.Player.get(), _currentMap, DB.today());
 
     if (result.events.indexOf('no_stamina') !== -1) {
@@ -128,32 +173,16 @@ const ExploreModule = (function () {
     }
     if (result.events.indexOf('map_locked') !== -1) return;
 
-    spotEl.disabled = true;
-    spotEl.classList.add('searched');
-    Sound.play('tap');
-
     if (result.result.type === 'egg') {
       _handleWildEgg(result.player, result.result.variant);
     } else {
       DB.Player.save(result.player);
-      if (result.result.type === 'coins') {
-        spotEl.textContent = '+' + result.result.amount + '🪙';
-        Sound.play('coin');
-        const rect = spotEl.getBoundingClientRect();
-        FX.flyCoins(rect.left + rect.width / 2, rect.top, 2);
-      } else if (result.result.type === 'food') {
-        spotEl.textContent = '+' + result.result.amount + '🥬';
-      } else {
-        spotEl.textContent = '💨';
-        Toast.show('이슬만 반짝이고 있었어요.');
-      }
     }
+    _showSpotResult(spotEl, result.result);
 
     App.refreshHeader();
     App.gainKeeperXp('explore');
     HomeModule.recordMissions(['explored']);
-    document.getElementById('explore-map-stamina').textContent = _staminaText();
-    document.getElementById('explore-stamina').textContent = _staminaText();
   }
 
   /** 야생 알: 빈 보금자리가 있으면 수용, 가득이면 코인 전환 */

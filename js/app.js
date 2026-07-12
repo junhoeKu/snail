@@ -44,8 +44,9 @@ const App = (function () {
     FX.bumpNumber(document.getElementById('food-count'), (player.foods && player.foods[def.id]) || 0);
   }
 
-  /** 양육자 XP 지급 + 레벨업/해금 연출 — 모든 모듈이 이 경로를 쓴다 */
+  /** 양육자 XP 지급 + 레벨업/해금 연출 — 모든 모듈이 이 경로를 쓴다 (서버 모드는 서버가 판정) */
   function gainKeeperXp(action) {
+    if (Api.enabled()) return;
     const result = GAME.gainKeeperXp(DB.Player.get(), action);
     DB.Player.save(result.player);
     if (result.events.indexOf('keeper_levelup') === -1) return;
@@ -102,6 +103,7 @@ const App = (function () {
     if (_tickTimer) clearInterval(_tickTimer);
     _tickTimer = setInterval(function () {
       applyWeather(); // 자정을 넘기면 날씨가 바뀔 수 있다
+      if (Api.enabled()) return; // 서버 모드: 감쇠는 서버 lazy 정산
       if (!_settleTime()) return;
       refreshHeader();
       if (document.getElementById('screen-home').classList.contains('active')) {
@@ -228,8 +230,18 @@ const App = (function () {
     });
   }
 
-  function init() {
-    // 첫 실행이면 기본값(알 + 시작 자원)이 생성된다
+  /** 서버 모드: 위치는 주기 저장 (경제 데이터 아님) */
+  function _startPositionSync() {
+    setInterval(function () {
+      const positions = DB.Snails.get()
+        .filter(function (s) { return s.stage !== 'egg'; })
+        .map(function (s) { return { id: s.id, rx: s.pos.rx, ry: s.pos.ry }; });
+      if (positions.length) Api.syncPosition(positions).catch(function () { /* 무시 */ });
+    }, 60 * 1000);
+  }
+
+  async function init() {
+    // 첫 실행이면 기본값(알 + 시작 자원)이 생성된다 (로컬 미러)
     DB.Player.get();
     DB.Snails.get();
 
@@ -242,11 +254,28 @@ const App = (function () {
     SettingsModule.bind();
     SettingsModule.render();
 
-    _applyAdminFromURL();
-    _ensurePersonality();
-    _settleAway();
-    _claimDailyReward();
-    DecoModule.claimUnlocks();
+    if (Api.enabled()) {
+      // 서버 모드: 정산/보상/판정은 전부 서버 — 로컬 정산 경로를 타지 않는다
+      try {
+        await Api.ensureAuth();
+        let state = await Api.state();
+        state = await Api.Net.maybeOfferMigration(state);
+        Api.Net.apply(state);
+        _startPositionSync();
+        document.addEventListener('visibilitychange', function () {
+          if (!document.hidden) Api.state().then(Api.Net.apply).catch(function () { /* 무시 */ });
+        });
+      } catch (e) {
+        Toast.show('서버에 연결할 수 없어요. 연결되면 자동으로 이어집니다.', 'warn');
+      }
+    } else {
+      _applyAdminFromURL();
+      _ensurePersonality();
+      _settleAway();
+      _claimDailyReward();
+      DecoModule.claimUnlocks();
+    }
+
     applyBackground();
     applyWeather();
     refreshHeader();

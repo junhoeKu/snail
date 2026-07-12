@@ -80,8 +80,18 @@ const ShopModule = (function () {
   }
 
   function _buyFood(foodId, count) {
-    const result = GAME.buyFood(DB.Player.get(), foodId, count);
     const def = GAME.FOOD_DEFS[foodId];
+
+    if (Api.enabled()) {
+      Api.purchase('food', foodId, count).then(function (res) {
+        Api.Net.apply(res);
+        Toast.show(def.emoji + ' ' + def.label + ' ' + count + '개를 구매했어요!');
+        render();
+      }).catch(Api.Net.fail);
+      return;
+    }
+
+    const result = GAME.buyFood(DB.Player.get(), foodId, count);
 
     if (result.events.indexOf('food_bought') !== -1) {
       DB.Player.save(result.player);
@@ -98,6 +108,16 @@ const ShopModule = (function () {
   }
 
   function _buyEgg() {
+    if (Api.enabled()) {
+      Api.purchase('egg_slot').then(function (res) {
+        Api.Net.apply(res);
+        Toast.show('🥚 알이 서식지에 도착했어요! 터치해서 이름을 지어주세요.');
+        HabitatModule.sync();
+        render();
+      }).catch(Api.Net.fail);
+      return;
+    }
+
     const result = GAME.buyEggSlot(DB.Player.get(), DB.now());
 
     if (result.events.indexOf('egg_bought') !== -1) {

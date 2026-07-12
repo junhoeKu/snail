@@ -199,6 +199,7 @@ def player_payload(db: Session, user: models.User) -> dict:
         "decorations": {"owned": user.decorations_owned or [], "slots": user.decoration_slots or [None, None, None]},
         "last_seen": _aware(user.last_seen_at).isoformat(),
         "server_mode": True,
+        "migration_done": user.migration_done,
     }
 
 

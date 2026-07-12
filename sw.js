@@ -2,7 +2,7 @@
  * Snail 서비스 워커 — 정적 자산 캐시 우선 (오프라인 실행)
  * CACHE_VERSION을 올리면 다음 방문 시 새 캐시로 교체된다.
  */
-const CACHE_VERSION = 'snail-v0.9.0';
+const CACHE_VERSION = 'snail-v1.0.0';
 
 const PRECACHE = [
   '.',
@@ -18,6 +18,7 @@ const PRECACHE = [
   'js/db.js',
   'js/game.js',
   'js/toast.js',
+  'js/api.js',
   'js/sound.js',
   'js/fx.js',
   'js/stats.js',
@@ -71,6 +72,8 @@ self.addEventListener('activate', function (event) {
 
 self.addEventListener('fetch', function (event) {
   if (event.request.method !== 'GET') return;
+  // 서버 API는 절대 캐시하지 않는다 — 낡은 게임 상태 응답 방지
+  if (event.request.url.indexOf('/v1/') !== -1) return;
 
   event.respondWith(
     caches.match(event.request).then(function (cached) {
