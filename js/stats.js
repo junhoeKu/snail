@@ -61,7 +61,7 @@ const StatsModule = (function () {
       if (found) {
         const img = document.createElement('img');
         img.className = 'dex-img';
-        img.src = 'assets/characters/snail_' + key + '_baby.png';
+        img.src = GAME.spritePath(key, 'baby');
         img.alt = GAME.VARIANTS[key].label;
         cell.appendChild(img);
       } else {
@@ -113,7 +113,7 @@ const StatsModule = (function () {
 
       const img = document.createElement('img');
       img.className = 'dex-img album-img';
-      img.src = 'assets/characters/snail_' + (record.color || 'brown') + '_adult.png';
+      img.src = GAME.spritePath(record.color, 'adult');
       img.alt = record.name;
 
       const info = document.createElement('div');

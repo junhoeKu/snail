@@ -19,6 +19,7 @@ const DB = (function () {
   };
 
   const JOURNAL_MAX = 100; // 성장 일지 최대 보관 건수
+  const VALID_COLORS = ['brown', 'gray', 'russet', 'olive', 'golden']; // GAME.VARIANTS 키와 일치
 
   /** 현재 타임스탬프 (ISO 문자열, 로컬 기준) */
   function now() {
@@ -151,7 +152,6 @@ const DB = (function () {
       }
 
       // 필드 치유 (기본값 병합 + id/버전 보장). 치유가 일어나면 영속화해 id를 고정한다
-      const VALID_COLORS = ['brown', 'gray', 'russet', 'olive', 'golden'];
       const healed = list.map(function (record) {
         if (!record.id || record.schema_version !== SCHEMA_VERSION) dirty = true;
         const merged = Object.assign(_defaultSnail(), record);
@@ -194,7 +194,18 @@ const DB = (function () {
   const Album = {
     get: function () {
       const stored = _read(KEYS.ALBUM);
-      return Array.isArray(stored) ? stored : [];
+      if (!Array.isArray(stored)) return [];
+      // 구버전 색 치유 (스냅숏도 스프라이트 경로에 쓰인다)
+      let dirty = false;
+      const healed = stored.map(function (record) {
+        if (VALID_COLORS.indexOf(record.color) === -1) {
+          record = Object.assign({}, record, { color: 'brown' });
+          dirty = true;
+        }
+        return record;
+      });
+      if (dirty) _write(KEYS.ALBUM, healed);
+      return healed;
     },
     add: function (record) {
       const list = Album.get();

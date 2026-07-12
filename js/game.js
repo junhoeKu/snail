@@ -214,6 +214,16 @@ const GAME = (function () {
     golden: { id: 'golden', label: '황금', chance: 0.02, rarity: 'epic' }
   };
 
+  /**
+   * 스프라이트 경로 단일 생성 지점 — 무효 변이/단계는 brown/baby로 폴백해 404를 원천 차단한다.
+   * 화면 모듈은 경로를 직접 문자열로 조립하지 말고 반드시 이 함수를 쓴다.
+   */
+  function spritePath(color, stage) {
+    const safeColor = VARIANTS[color] ? color : 'brown';
+    const safeStage = (STAGES[stage] && stage !== 'egg') ? stage : 'baby';
+    return 'assets/characters/snail_' + safeColor + '_' + safeStage + '.png';
+  }
+
   /** 세대당 변이 확률 변화 (%p) — 합계 0이라 항상 총합 100% 유지 */
   const VARIANT_GEN_DELTA = { brown: -6, gray: 1, russet: 1.5, olive: 2, golden: 1.5 };
 
@@ -988,6 +998,7 @@ const GAME = (function () {
     PERSONALITIES: PERSONALITIES,
     VARIANTS: VARIANTS,
     RARITIES: RARITIES,
+    spritePath: spritePath,
     DECORATIONS: DECORATIONS,
     decorationEffects: decorationEffects,
     MISSION_DEFS: MISSION_DEFS,

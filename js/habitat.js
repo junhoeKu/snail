@@ -182,7 +182,7 @@ const HabitatModule = (function () {
       (condition.id !== 'normal' ? ' cond-' + condition.id : '');
 
     const img = ent.spriteEl.querySelector('.snail-img');
-    const src = 'assets/characters/snail_' + color + '_' + rec.stage + '.png';
+    const src = GAME.spritePath(color, rec.stage);
     if (img && img.getAttribute('src') !== src) img.setAttribute('src', src);
 
     // 머리 위 배지 갱신

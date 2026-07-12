@@ -373,7 +373,7 @@ const HomeModule = (function () {
     const safeColor = GAME.VARIANTS[rec.color] ? rec.color : 'brown';
     const img = document.createElement('img');
     img.className = 'popup-img' + (safeColor === 'golden' ? ' popup-golden' : '');
-    img.src = 'assets/characters/snail_' + safeColor + '_' + rec.stage + '.png';
+    img.src = GAME.spritePath(safeColor, rec.stage);
     img.alt = rec.name;
     box.appendChild(img);
 
