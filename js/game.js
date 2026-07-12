@@ -70,7 +70,7 @@ const GAME = (function () {
     // 관리자 모드 (?admin=1 — 졸업 등 실험용)
     ADMIN_COINS: 999999,
     ADMIN_FOOD: 999,
-    ADMIN_EXP_MULT: 10, // 먹이 경험치 배수 (빠른 레벨업 실험)
+    ADMIN_EXP_MULT: 100, // 먹이 경험치 배수 — 한 번 먹이면 만렙(Lv20)까지 (실험용)
 
     // 성장
     EXP_PER_LEVEL: 5,

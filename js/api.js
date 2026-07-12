@@ -15,18 +15,18 @@ const Api = (function () {
 
   /**
    * API 주소 결정: URL 파라미터(?api=) > localStorage 기억값 > config.js.
-   * ?api=주소 로 켜면 기억되고, ?api= (빈 값)으로 끈다.
+   * ?api=주소 로 켜고(기억됨), ?api= (빈 값)으로 **로컬 모드 강제**(config.js 주소도 무시).
+   * 로컬 모드에서만 ?admin=1 실험이 동작한다(서버 모드는 서버가 판정).
    */
   function _resolveBase() {
     try {
       const params = new URLSearchParams(location.search);
       if (params.has('api')) {
-        const value = params.get('api') || '';
-        if (value) localStorage.setItem(API_BASE_KEY, value);
-        else localStorage.removeItem(API_BASE_KEY);
+        // 빈 값은 "명시적 로컬"(빈 문자열 마커) — config.js fallback까지 끈다
+        localStorage.setItem(API_BASE_KEY, params.get('api') || '');
       }
       const stored = localStorage.getItem(API_BASE_KEY);
-      if (stored) return stored;
+      if (stored !== null) return stored; // '' 이면 로컬 모드
     } catch (e) { /* 무시 */ }
     return String(window.SNAIL_API_BASE || '');
   }
