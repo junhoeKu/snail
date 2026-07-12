@@ -2,10 +2,10 @@
 import hashlib
 import json
 import random
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from .. import models
@@ -166,7 +166,40 @@ def settle(db: Session, user: models.User) -> list[dict]:
             balance_after=user.coins, reason="daily_streak",
         ))
         events += streak_events
+
+    # 4) 졸업 달팽이 엽서 (하루 1회 판정 — 각 졸업 달팽이 독립 확률)
+    events += _settle_letters(db, user, now)
     return events
+
+
+def _settle_letters(db: Session, user: models.User, now: datetime) -> list[dict]:
+    tk = today_key(user, now)
+    if user.last_letter_date == tk:
+        return []
+    user.last_letter_date = tk
+    albums = db.execute(select(models.AlbumEntry)
+                        .where(models.AlbumEntry.user_id == user.id)).scalars().all()
+    if not albums:
+        return []
+    sent = 0
+    for a in albums:
+        if sent >= rules.CONFIG["LETTER_MAX_PER_DAY"]:
+            break
+        letter = rules.roll_letter(a.name)
+        if letter:
+            db.add(models.MailboxMessage(
+                user_id=user.id, kind="letter", title=letter["title"], body=letter["body"],
+                rewards={"coins": letter["coins"]}, expires_at=now + timedelta(days=30),
+            ))
+            sent += 1
+    return [{"type": "mail_arrived", "count": sent}] if sent else []
+
+
+def mailbox_unread(db: Session, user: models.User) -> int:
+    return db.execute(select(func.count()).select_from(models.MailboxMessage).where(
+        models.MailboxMessage.user_id == user.id,
+        models.MailboxMessage.claimed_at.is_(None),
+    )).scalar_one()
 
 
 # ── ORM ↔ dict (도메인 규칙은 dict로만 계산) ────────────
@@ -269,6 +302,7 @@ def state_payload(db: Session, user: models.User, events: list[dict]) -> dict:
             for j in db.execute(select(models.JournalEntry).where(models.JournalEntry.user_id == user.id)
                                 .order_by(models.JournalEntry.ts).limit(100)).scalars()
         ],
+        "mailbox_unread": mailbox_unread(db, user),
         "events": events,
     }
 

@@ -152,7 +152,9 @@ const Api = (function () {
     },
     migrate: function (payload) {
       return _request('POST', '/v1/migrations/local-v6', payload);
-    }
+    },
+    mailbox: function () { return _request('GET', '/v1/mailbox'); },
+    claimMail: function (id) { return _request('POST', '/v1/mailbox/' + id + '/claim'); }
   };
 
   // ── Net — 서버 응답을 로컬 미러/UI에 반영 ─────────────
@@ -265,6 +267,10 @@ const Api = (function () {
             break;
           case 'away_report':
             Toast.show('🐌 다녀오셨어요? (' + Math.floor(e.minutes / 60) + '시간 ' + (e.minutes % 60) + '분)');
+            break;
+          case 'mail_arrived':
+            Sound.play('coin');
+            Toast.show('📬 여행 간 달팽이가 편지를 보내왔어요! (설정 탭 우편함)');
             break;
         }
       });
@@ -427,6 +433,8 @@ const Api = (function () {
     syncPosition: endpoints.syncPosition,
     updateSettings: endpoints.updateSettings,
     migrate: endpoints.migrate,
+    mailbox: endpoints.mailbox,
+    claimMail: endpoints.claimMail,
     Net: Net
   };
 })();

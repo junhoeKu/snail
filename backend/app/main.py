@@ -11,7 +11,7 @@ from .core.database import Base, SessionLocal, engine
 from .core.errors import ApiError, api_error_handler
 from .core.middleware import RateLimitMiddleware, StructuredLogMiddleware
 from .domain import rules
-from .modules import actions, auth, game, migration
+from .modules import actions, admin, auth, config_service, game, mailbox, migration
 
 
 def seed_items() -> None:
@@ -52,6 +52,8 @@ def create_app() -> FastAPI:
     app.include_router(game.router)
     app.include_router(actions.router)
     app.include_router(migration.router)
+    app.include_router(mailbox.router)
+    app.include_router(admin.router)
 
     @app.get("/healthz")
     def healthz():
@@ -63,6 +65,8 @@ def create_app() -> FastAPI:
         # 운영 스키마 진화(컬럼 추가 등)는 Dockerfile의 `alembic upgrade head`가 담당한다.
         Base.metadata.create_all(engine)
         seed_items()
+        with SessionLocal() as db:
+            config_service.apply_active(db)  # 활성 원격 설정을 rules 전역에 반영
 
     return app
 
