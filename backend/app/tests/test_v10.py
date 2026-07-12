@@ -73,3 +73,52 @@ def test_mailbox_letter_and_claim(guest, monkeypatch):
     # 멱등: 재수령해도 재지급 없음
     r2 = client.post(f"/v1/mailbox/{letter['id']}/claim", headers=guest["headers"]).json()
     assert r2.get("already") is True and r2["coins"] == coins_before + 10
+
+
+# ── 라이브 이벤트 · 공지 ────────────────────────────────
+
+def _iso(dt):
+    return dt.isoformat()
+
+
+def test_live_event_overlay_and_cancel(guest):
+    from datetime import timedelta
+    now = service.utcnow()
+    # 탐험 코인 2배 이벤트 (진행 중)
+    r = client.post("/admin/events", headers=ADMIN, json={
+        "title": "탐험 코인 UP", "config": {"config": {"EXPLORE_COIN_MIN": 6, "EXPLORE_COIN_MAX": 24}},
+        "starts_at": _iso(now - timedelta(hours=1)), "ends_at": _iso(now + timedelta(hours=1)),
+        "reason": "주말",
+    })
+    assert r.status_code == 200
+    event_id = r.json()["id"]
+
+    # state 조회 → 유효 설정에 반영 + liveEvents 요약
+    state = client.get("/v1/game/state", headers=guest["headers"]).json()
+    assert rules.CONFIG["EXPLORE_COIN_MAX"] == 24
+    assert any(e["id"] == event_id for e in state["liveEvents"])
+
+    # 취소 → 즉시 복원
+    client.post(f"/admin/events/{event_id}/cancel", headers=ADMIN, json={"reason": "종료"})
+    client.get("/v1/game/state", headers=guest["headers"])
+    assert rules.CONFIG["EXPLORE_COIN_MAX"] == 12
+
+    # 잘못된 기간은 거부
+    bad = client.post("/admin/events", headers=ADMIN, json={
+        "title": "x", "config": {}, "starts_at": _iso(now + timedelta(hours=2)),
+        "ends_at": _iso(now), "reason": ""})
+    assert bad.status_code == 422
+
+
+def test_notices():
+    r = client.post("/admin/notices", headers=ADMIN,
+                    json={"title": "점검 안내", "body": "곧 점검이 있어요", "priority": "urgent"})
+    assert r.status_code == 200
+    active = client.get("/v1/notices/active").json()["notices"]
+    assert any(n["title"] == "점검 안내" and n["priority"] == "urgent" for n in active)
+
+    # 종료 → 목록에서 사라짐
+    nid = r.json()["id"]
+    client.post(f"/admin/notices/{nid}/end", headers=ADMIN, json={"reason": "완료"})
+    active2 = client.get("/v1/notices/active").json()["notices"]
+    assert all(n["id"] != nid for n in active2)

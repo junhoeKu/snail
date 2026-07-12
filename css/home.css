@@ -465,3 +465,18 @@ body[data-weather="fog"] .snail-habitat::before {
   15%  { opacity: 1; }
   100% { transform: translate(-50%, -28px); opacity: 0; }
 }
+
+/* ── 라이브 이벤트 / 공지 배너 ─────────────── */
+.live-banner {
+  margin: 0 0 10px;
+  padding: 9px 14px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, rgba(242, 215, 135, 0.28), rgba(140, 200, 170, 0.22));
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text);
+  text-align: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

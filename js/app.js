@@ -263,6 +263,7 @@ const App = (function () {
         state = await Api.Net.maybeOfferMigration(state);
         Api.Net.apply(state);
         Api.flushQueue(); // 지난 세션에 밀린 오프라인 행동 재전송
+        loadNotices();    // 공지 배너 / urgent 모달
         _startPositionSync();
         document.addEventListener('visibilitychange', function () {
           if (!document.hidden) {
@@ -307,10 +308,63 @@ const App = (function () {
     _registerServiceWorker();
   });
 
+  // ── 라이브 이벤트 / 공지 배너 (서버 모드) ──────────────
+  let _liveEvents = [];
+  let _notices = [];
+
+  function setLiveEvents(events) {
+    _liveEvents = events || [];
+    renderLiveBanner();
+  }
+
+  function renderLiveBanner() {
+    const el = document.getElementById('live-banner');
+    if (!el) return;
+    const items = [];
+    _liveEvents.forEach(function (e) { items.push('🌟 ' + e.title); });
+    _notices.filter(function (n) { return n.priority !== 'urgent'; })
+      .forEach(function (n) { items.push('📢 ' + n.title); });
+    if (items.length === 0) { el.classList.add('hidden'); return; }
+    el.classList.remove('hidden');
+    el.textContent = items.join('   ·   ');
+  }
+
+  function loadNotices() {
+    if (!Api.enabled()) return;
+    Api.notices().then(function (res) {
+      _notices = res.notices || [];
+      renderLiveBanner();
+      _showUrgentNotice();
+    }).catch(function () { /* 무시 */ });
+  }
+
+  /** urgent 공지는 부팅 시 모달 1회 (읽음은 로컬 저장) */
+  function _showUrgentNotice() {
+    let read;
+    try { read = JSON.parse(localStorage.getItem('sn_read_notices') || '[]'); }
+    catch (e) { read = []; }
+    const urgent = _notices.find(function (n) {
+      return n.priority === 'urgent' && read.indexOf(n.id) === -1;
+    });
+    if (!urgent) return;
+    Toast.confirm({
+      title: '📢 ' + urgent.title,
+      message: urgent.body || '',
+      confirmLabel: '확인',
+      confirmClass: 'btn-primary',
+      onConfirm: function () {
+        read.push(urgent.id);
+        localStorage.setItem('sn_read_notices', JSON.stringify(read));
+      }
+    });
+  }
+
   return {
     navigate: navigate,
     refreshHeader: refreshHeader,
     gainKeeperXp: gainKeeperXp,
-    applyBackground: applyBackground
+    applyBackground: applyBackground,
+    setLiveEvents: setLiveEvents,
+    loadNotices: loadNotices
   };
 })();

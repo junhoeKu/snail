@@ -154,7 +154,8 @@ const Api = (function () {
       return _request('POST', '/v1/migrations/local-v6', payload);
     },
     mailbox: function () { return _request('GET', '/v1/mailbox'); },
-    claimMail: function (id) { return _request('POST', '/v1/mailbox/' + id + '/claim'); }
+    claimMail: function (id) { return _request('POST', '/v1/mailbox/' + id + '/claim'); },
+    notices: function () { return _request('GET', '/v1/notices/active'); }
   };
 
   // ── Net — 서버 응답을 로컬 미러/UI에 반영 ─────────────
@@ -172,6 +173,7 @@ const Api = (function () {
       if (typeof result.revision === 'number') {
         localStorage.setItem('sn_revision', String(result.revision));
       }
+      if (result.liveEvents) App.setLiveEvents(result.liveEvents);
       App.refreshHeader();
       App.applyBackground();
       HomeModule.render();
@@ -435,6 +437,7 @@ const Api = (function () {
     migrate: endpoints.migrate,
     mailbox: endpoints.mailbox,
     claimMail: endpoints.claimMail,
+    notices: endpoints.notices,
     Net: Net
   };
 })();

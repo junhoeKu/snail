@@ -124,6 +124,9 @@ def active_snails(db: Session, user: models.User) -> list[models.Snail]:
 
 def settle(db: Session, user: models.User) -> list[dict]:
     """감쇠 + 접속 보상(스트릭) + 부재 중 발견 + 양육자 daily XP. events 반환."""
+    from . import config_service
+    config_service.refresh_for_request(db)  # 활성 라이브 이벤트를 유효 설정에 반영
+
     events: list[dict] = []
     now = utcnow()
     deco_fx = rules.decoration_effects(user.decoration_slots)
@@ -303,8 +306,16 @@ def state_payload(db: Session, user: models.User, events: list[dict]) -> dict:
                                 .order_by(models.JournalEntry.ts).limit(100)).scalars()
         ],
         "mailbox_unread": mailbox_unread(db, user),
+        "liveEvents": live_event_summaries(db),
         "events": events,
     }
+
+
+def live_event_summaries(db: Session) -> list[dict]:
+    from . import config_service
+    return [{"id": e.id, "title": e.title,
+             "endsAt": _aware(e.ends_at).isoformat()}
+            for e in config_service.active_events(db)]
 
 
 def new_egg(db: Session, user: models.User) -> models.Snail:
