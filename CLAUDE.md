@@ -228,4 +228,5 @@ GAME.expToNext(DB.Snail.get().level);
 ## 참고 링크
 
 - MVP 구현 계획: [docs/1차_MVP_구현계획.md](docs/1차_MVP_구현계획.md)
+- 게임 밸런스(목표 곡선·원격 설정): [docs/밸런스_목표곡선_및_원격설정.md](docs/밸런스_목표곡선_및_원격설정.md) — 게임 수치 변경의 단일 소스
 - MDN Web Storage API: https://developer.mozilla.org/docs/Web/API/Web_Storage_API
