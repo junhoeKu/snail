@@ -1,5 +1,6 @@
 """Snail API 엔트리포인트."""
 import logging
+import sys
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -26,7 +27,10 @@ def seed_items() -> None:
 
 
 def create_app() -> FastAPI:
-    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    # 로그는 stdout 한 스트림으로 일원화한다 — access 로그(uvicorn, stdout)와
+    # 구조화 로그(stderr)가 갈라지면 로그 수집기가 서로 다른 레벨로 태깅해 혼란을 준다.
+    # uvicorn access 로그는 Dockerfile의 --no-access-log로 끄고 이 구조화 로그로 대체한다.
+    logging.basicConfig(level=logging.INFO, format="%(message)s", stream=sys.stdout)
     app = FastAPI(title="Snail API", version="0.1.0", docs_url="/docs" if settings.env != "prod" else None)
 
     # 미들웨어는 나중에 add한 것이 바깥 계층 — CORS를 가장 바깥에 둬서
@@ -40,6 +44,7 @@ def create_app() -> FastAPI:
         allow_origins=settings.cors_origins,
         allow_methods=["*"],
         allow_headers=["*"],
+        max_age=600,  # preflight(OPTIONS) 결과를 10분 캐시 — 매 요청 preflight 방지
     )
     app.add_exception_handler(ApiError, api_error_handler)
 
