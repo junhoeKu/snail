@@ -272,6 +272,8 @@ def purchase(body: PurchaseIn,
             price = rules.egg_slot_price(user.snail_slots)
             if price is None or user.snail_slots >= settings.max_snails:
                 raise ApiError(409, "max_slots", "보금자리가 가득해요.")
+            if user.keeper_level < rules.egg_slot_level(user.snail_slots):
+                raise ApiError(409, "slot_locked", "아직 잠긴 보금자리예요. 양육자 레벨을 올려보세요!")
             service.add_coins(db, user, -price, "shop_egg_slot", None)
             user.snail_slots += 1
             service.new_egg(db, user)

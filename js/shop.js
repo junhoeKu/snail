@@ -73,10 +73,20 @@ const ShopModule = (function () {
       return;
     }
     const price = GAME.CONFIG.EGG_SLOT_PRICES[slots];
+    const needLevel = (GAME.CONFIG.EGG_SLOT_LEVELS || [])[slots] || 0;
+    const keeperLv = (player.keeper && player.keeper.level) || 1;
+
+    if (keeperLv < needLevel) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-lock"></i> 양육자 Lv.' + needLevel;
+      desc.textContent = (slots + 1) + '번째 보금자리는 양육자 Lv.' + needLevel +
+        '부터 (' + slots + '/' + GAME.CONFIG.MAX_SNAILS + ')';
+      return;
+    }
     btn.disabled = false;
     btn.innerHTML = price + ' <i class="fa-solid fa-coins"></i>';
-    desc.textContent = (slots + 1) + '번째 보금자리와 함께 알이 도착해요 (' +
-      slots + '/' + GAME.CONFIG.MAX_SNAILS + ')';
+    desc.textContent = (slots + 1) + '번째 보금자리와 함께 알이 도착해요 · 양육자 Lv.' + needLevel +
+      ' 해금 (' + slots + '/' + GAME.CONFIG.MAX_SNAILS + ')';
   }
 
   function _buyFood(foodId, count) {
@@ -128,6 +138,8 @@ const ShopModule = (function () {
       Toast.show('🥚 알이 서식지에 도착했어요! 터치해서 이름을 지어주세요.');
       HabitatModule.sync();
       App.refreshHeader();
+    } else if (result.events.indexOf('slot_locked') !== -1) {
+      Toast.show('아직 잠긴 보금자리예요. 양육자 레벨을 올려보세요!', 'warn');
     } else if (result.events.indexOf('not_enough_coins') !== -1) {
       Toast.show('코인이 부족해요.', 'warn');
     }

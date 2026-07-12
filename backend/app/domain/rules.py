@@ -39,7 +39,8 @@ CONFIG = {
     "LETTER_COINS": 10,
     "LETTER_MAX_PER_DAY": 3,       # 하루 최대 편지 수(스팸 가드)
     # 슬롯 (9차에서 8마리로 확장 예정 — MAX는 config/env)
-    "EGG_SLOT_PRICES": [0, 500, 1500],
+    "EGG_SLOT_PRICES": [0, 500, 1500, 3000, 5000, 8000, 12000, 20000],
+    "EGG_SLOT_LEVELS": [0, 2, 4, 6, 8, 10, 12, 14],
     # 부재 중 발견
     "FIND_INTERVAL_HOURS": 4,
     "FIND_CHANCE": 0.35,
@@ -371,6 +372,12 @@ def egg_slot_price(current_slots: int) -> int | None:
     if current_slots >= len(prices):
         return None
     return prices[current_slots]
+
+
+def egg_slot_level(current_slots: int) -> int:
+    """다음 슬롯 해금에 필요한 양육자 레벨."""
+    levels = CONFIG["EGG_SLOT_LEVELS"]
+    return levels[current_slots] if current_slots < len(levels) else 999
 
 
 # ── 부재 발견 / 탐험 ────────────────────────────────────

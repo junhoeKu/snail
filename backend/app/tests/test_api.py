@@ -149,7 +149,7 @@ def test_purchase_and_coin_invariant(guest):
     state = client.get("/v1/game/state", headers=guest["headers"]).json()
     assert state["changes"]["player"]["coins"] >= 0
 
-    set_user(guest["userId"], coins=5000)
+    set_user(guest["userId"], coins=5000, keeper_level=2)  # 슬롯2는 양육자 Lv2부터
     r = client.post("/v1/shop/purchase",
                     json={"kind": "food", "itemId": "lettuce", "count": 10, "requestId": rid()},
                     headers=guest["headers"]).json()
@@ -262,8 +262,7 @@ def test_migration_roundtrip_and_once(guest):
 
 def test_migration_validation(guest):
     bad = {**V6_PAYLOAD, "player": {**V6_PAYLOAD["player"], "coins": 99999999},
-           "snails": V6_PAYLOAD["snails"] + [{"stage": "dragon", "color": "rainbow"},
-                                             {"stage": "baby"}]}
+           "snails": V6_PAYLOAD["snails"] + [{"stage": "baby"}] * 9}  # 2+9=11 > MAX 8
     r = client.post("/v1/migrations/local-v6", json=bad, headers=guest["headers"])
     assert r.status_code == 422 and r.json()["error"]["code"] == "too_many_snails"
 

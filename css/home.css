@@ -480,3 +480,33 @@ body[data-weather="fog"] .snail-habitat::before {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+
+/* ── 이모트 잔류 버블 (11차 생태계) ─────────── */
+.snail-emote {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  font-size: 18px;
+  pointer-events: none;
+  z-index: 6;
+  animation: emote-pop 0.3s ease, emote-fade 0.4s ease 2.1s forwards;
+}
+@keyframes emote-pop {
+  from { opacity: 0; transform: translate(-50%, -80%) scale(0.6); }
+  to   { opacity: 1; transform: translate(-50%, -100%) scale(1); }
+}
+@keyframes emote-fade { to { opacity: 0; } }
+
+/* ── 밤 오버레이 ─────────────────────────────── */
+body[data-daytime="night"] #snail-habitat::after {
+  content: '🌙';
+  position: absolute;
+  inset: 0;
+  background: rgba(24, 34, 78, 0.30);
+  font-size: 22px;
+  text-align: right;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 3;
+}
