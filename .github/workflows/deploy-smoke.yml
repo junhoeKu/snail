@@ -14,15 +14,16 @@ jobs:
       - name: 배포 반영 대기 + 헬스/핵심 엔드포인트 검증
         run: |
           API="https://snail-production-2a89.up.railway.app"
-          echo "운영 API 준비 대기..."
-          ok=""
-          for i in $(seq 1 30); do
-            code=$(curl -s -m 8 -o /dev/null -w "%{http_code}" "$API/healthz" || echo 000)
-            if [ "$code" = "200" ]; then ok=1; break; fi
-            sleep 10
-          done
-          [ -n "$ok" ] || { echo "❌ healthz 응답 없음"; exit 1; }
-          curl -sf -m 8 "$API/healthz" | grep -q '"ok":true' || { echo "❌ healthz"; exit 1; }
-          curl -sf -m 8 "$API/v1/game/config" | grep -q '"pond"' || { echo "❌ game/config"; exit 1; }
-          curl -sf -m 8 "$API/v1/notices/active" >/dev/null || { echo "❌ notices"; exit 1; }
+          # 엔드포인트가 기대 문자열을 반환할 때까지 재시도 (배포 중 재시작 순간의 일시적 5xx 오탐 방지)
+          probe() { # $1=path $2=grep-pattern
+            for i in $(seq 1 30); do
+              body=$(curl -s -m 8 "$API$1" || true)
+              if echo "$body" | grep -q "$2"; then return 0; fi
+              sleep 10
+            done
+            echo "❌ $1 (기대: $2)"; return 1
+          }
+          probe "/healthz" '"ok":true' || exit 1
+          probe "/v1/game/config" '"pond"' || exit 1
+          probe "/v1/notices/active" '"notices"' || exit 1
           echo "✅ 운영 스모크 통과"
