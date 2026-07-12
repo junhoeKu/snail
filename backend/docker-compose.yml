@@ -1,0 +1,32 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      ENV: dev
+      DATABASE_URL: postgresql+psycopg2://snail:snail@db:5432/snail
+      JWT_SECRET: local-dev-secret-please-change-32bytes!
+      CORS_ORIGINS: "http://localhost:31111,http://127.0.0.1:31111"
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: snail
+      POSTGRES_PASSWORD: snail
+      POSTGRES_DB: snail
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+
+volumes:
+  pgdata:

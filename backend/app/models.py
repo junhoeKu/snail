@@ -1,0 +1,165 @@
+"""전체 스키마 — SQLite(개발)/PostgreSQL(운영) 호환 타입만 사용."""
+import uuid
+from datetime import datetime, timezone
+
+from sqlalchemy import (
+    JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text,
+    UniqueConstraint,
+)
+from sqlalchemy.orm import Mapped, mapped_column
+
+from .core.database import Base
+
+
+def _uuid() -> str:
+    return uuid.uuid4().hex
+
+
+def utcnow() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    auth_type: Mapped[str] = mapped_column(String(16), default="guest")  # guest | social
+    provider: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    provider_user_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    nickname: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    timezone: Mapped[str] = mapped_column(String(48), default="Asia/Seoul")
+
+    keeper_level: Mapped[int] = mapped_column(Integer, default=1)
+    keeper_xp: Mapped[int] = mapped_column(Integer, default=0)
+    coins: Mapped[int] = mapped_column(Integer, default=30)
+    generation: Mapped[int] = mapped_column(Integer, default=1)
+    snail_slots: Mapped[int] = mapped_column(Integer, default=1)
+    sound_on: Mapped[bool] = mapped_column(Boolean, default=True)
+    selected_food: Mapped[str] = mapped_column(String(16), default="lettuce")
+    background: Mapped[str] = mapped_column(String(16), default="default")
+
+    streak_count: Mapped[int] = mapped_column(Integer, default=0)
+    streak_last_date: Mapped[str | None] = mapped_column(String(10), nullable=True)  # YYYY-MM-DD (user tz)
+    last_daily_reward: Mapped[str | None] = mapped_column(String(10), nullable=True)
+
+    # 미션/탐험/장식 상태 (실용적 절충: 조인 없이 JSON 컬럼 — 계획서 §4.4 분리안 대비 단순화)
+    missions: Mapped[dict] = mapped_column(JSON, default=dict)          # {date, feed, pet, explore, bonus_given}
+    mission_completions: Mapped[int] = mapped_column(Integer, default=0)
+    explore_state: Mapped[dict] = mapped_column(JSON, default=dict)     # {date, searches}
+    unlocked_maps: Mapped[list] = mapped_column(JSON, default=list)
+    decorations_owned: Mapped[list] = mapped_column(JSON, default=list)
+    decoration_slots: Mapped[list] = mapped_column(JSON, default=lambda: [None, None, None])
+
+    migration_done: Mapped[bool] = mapped_column(Boolean, default=False)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class Snail(Base):
+    __tablename__ = "snails"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(String(32), ForeignKey("users.id"), index=True)
+    name: Mapped[str] = mapped_column(String(24), default="")
+    stage: Mapped[str] = mapped_column(String(12), default="egg")  # egg|baby|junior|adult
+    level: Mapped[int] = mapped_column(Integer, default=0)
+    exp: Mapped[int] = mapped_column(Integer, default=0)
+    hunger: Mapped[float] = mapped_column(Float, default=0)
+    happiness: Mapped[float] = mapped_column(Float, default=100)
+    color: Mapped[str] = mapped_column(String(16), default="brown")
+    personality: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    wild_variant: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    pos_x: Mapped[float] = mapped_column(Float, default=0.5)  # 0~1 비율 좌표
+    pos_y: Mapped[float] = mapped_column(Float, default=0.5)
+    hatched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_state_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    version: Mapped[int] = mapped_column(Integer, default=1)  # 낙관적 잠금
+    graduated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class Item(Base):
+    """먹이·장식·향후 재화 공용 카탈로그."""
+    __tablename__ = "items"
+
+    id: Mapped[str] = mapped_column(String(24), primary_key=True)
+    item_type: Mapped[str] = mapped_column(String(16))  # food | decoration
+    name: Mapped[str] = mapped_column(String(32))
+    meta: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
+class Inventory(Base):
+    __tablename__ = "inventories"
+    __table_args__ = (UniqueConstraint("user_id", "item_id"),)
+
+    user_id: Mapped[str] = mapped_column(String(32), ForeignKey("users.id"), primary_key=True)
+    item_id: Mapped[str] = mapped_column(String(24), ForeignKey("items.id"), primary_key=True)
+    quantity: Mapped[int] = mapped_column(Integer, default=0)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class AlbumEntry(Base):
+    __tablename__ = "album_entries"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(String(32), ForeignKey("users.id"), index=True)
+    name: Mapped[str] = mapped_column(String(24))
+    color: Mapped[str] = mapped_column(String(16))
+    personality: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    level: Mapped[int] = mapped_column(Integer)
+    generation: Mapped[int] = mapped_column(Integer)
+    hatched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    graduated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class JournalEntry(Base):
+    __tablename__ = "journal_entries"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(String(32), ForeignKey("users.id"), index=True)
+    ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    type: Mapped[str] = mapped_column(String(24))
+    text: Mapped[str] = mapped_column(Text)
+
+
+class GameAction(Base):
+    """행동 이력 + 멱등키 (request_id)."""
+    __tablename__ = "game_actions"
+    __table_args__ = (UniqueConstraint("user_id", "request_id"),)
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(String(32), ForeignKey("users.id"), index=True)
+    action_type: Mapped[str] = mapped_column(String(32))
+    target_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    request_id: Mapped[str] = mapped_column(String(64))
+    payload: Mapped[dict] = mapped_column(JSON, default=dict)
+    result: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class CurrencyLedger(Base):
+    """코인 원장 — 중복 지급/차감 추적·복구용."""
+    __tablename__ = "currency_ledger"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(String(32), ForeignKey("users.id"), index=True)
+    currency: Mapped[str] = mapped_column(String(16), default="coins")
+    amount: Mapped[int] = mapped_column(Integer)
+    balance_after: Mapped[int] = mapped_column(Integer)
+    reason: Mapped[str] = mapped_column(String(48))
+    reference_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class AuthSession(Base):
+    """Refresh 토큰 세션 — 회전/폐기 관리."""
+    __tablename__ = "auth_sessions"
+
+    jti: Mapped[str] = mapped_column(String(32), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(32), ForeignKey("users.id"), index=True)
+    revoked: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

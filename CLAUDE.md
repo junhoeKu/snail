@@ -155,7 +155,7 @@ snail/
 
 - `game.js`에서 DOM 조작이나 `localStorage`/`DB` 직접 저장 — 순수 함수 유지
 - `localStorage`를 `DB` 모듈 밖에서 직접 호출 — 반드시 `DB`를 경유
-- MVP 범위 밖 기능 임의 추가 (달팽이 다종/교배/도감/친구/이벤트/미니게임/수익화 등, 1차_MVP_구현계획.md §2.3)
+- MVP 범위 밖 기능 임의 추가 (교배/친구/랭킹/결제 등 — 최신 N차 계획서의 제외 목록 기준)
 - 게임 수치를 코드 곳곳에 하드코딩 — 반드시 `GAME.CONFIG`에 모은다
 - 사용자 확인 없이 저장된 플레이어/달팽이 데이터 초기화
 - 프레임워크/번들러/빌드 단계/게임엔진 도입
@@ -166,11 +166,22 @@ snail/
 
 | 구분 | 기술 |
 |------|------|
-| Frontend | Vanilla HTML/CSS/JavaScript (SPA, IIFE 모듈) |
-| 저장소 | LocalStorage (클라이언트 퍼시스턴스) |
-| 그래픽 | 이모지 + CSS 애니메이션 |
+| Frontend | Vanilla HTML/CSS/JavaScript (SPA, IIFE 모듈) — 번들러/프레임워크 금지 유지 |
+| Backend (8차+) | Python 3.12 · FastAPI · SQLAlchemy 2 · PostgreSQL · Alembic (`backend/`) |
+| 저장소 | 서버 모드: PostgreSQL (LocalStorage는 미러 캐시) / 로컬 모드: LocalStorage |
+| 그래픽 | 일러스트 PNG + 인라인 SVG + CSS 애니메이션 |
 | 아이콘 | Font Awesome 6.4 (CDN) |
-| 배포 | GitHub Pages / Vercel Static Hosting |
+| 배포 | 프론트: GitHub Pages / API: Docker (Fly.io·Railway 등) |
+
+## 백엔드 규칙 (8차+)
+
+- 계층: `router → service → domain rule(app/domain/rules.py) → repository → DB`. **라우터에서 게임 수치를 계산하지 않는다**
+- 게임 판정의 단일 소스는 `backend/app/domain/rules.py` — 수치 변경 절차: 계획서 → rules.py → 클라 표시 수치는 `GET /v1/game/config`. 클라 `js/game.js`와 어긋나면 안 된다 (로컬 모드/연출용으로 유지됨)
+- 코인 증감은 반드시 `service.add_coins`(currency_ledger 원장)를 경유한다
+- 행동 API는 `request_id` 멱등키 필수, 클라이언트는 결과 수치(경험치/코인/당첨)를 절대 보내지 않는다
+- 시간 판정(감쇠/일일 리셋/쿨다운)은 서버 시각 + 사용자 타임존 기준 — 배치 없이 lazy 계산
+- **sw.js는 `/v1/*` API를 절대 캐시하지 않는다**
+- 테스트: `backend`에서 `pytest` — 클라이언트 jsdom 테스트 수치와 교차 대조 유지
 
 ---
 
