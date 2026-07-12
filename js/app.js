@@ -308,6 +308,23 @@ const App = (function () {
     _registerServiceWorker();
   });
 
+  // ── 파비콘: 현재 키우는 대표 달팽이로 동적 반영 ────────
+  // 부화하면 그 달팽이(변이색)로, 자라서 외형이 바뀌면 자란 버전으로 탭 아이콘이 바뀐다.
+  function updateFavicon() {
+    const link = document.querySelector('link[rel="icon"]');
+    if (!link) return;
+    const snails = DB.Snails.get();
+    const hatched = snails.filter(function (s) { return s.stage !== 'egg'; });
+    const rep = hatched[0] || snails[0];
+    const href = (!rep || rep.stage === 'egg')
+      ? 'assets/characters/egg.png'
+      : GAME.spritePath(rep.color, rep.stage);
+    if (link.getAttribute('href') !== href) {
+      link.setAttribute('type', 'image/png');
+      link.setAttribute('href', href);
+    }
+  }
+
   // ── 라이브 이벤트 / 공지 배너 (서버 모드) ──────────────
   let _liveEvents = [];
   let _notices = [];
@@ -365,6 +382,7 @@ const App = (function () {
     gainKeeperXp: gainKeeperXp,
     applyBackground: applyBackground,
     setLiveEvents: setLiveEvents,
-    loadNotices: loadNotices
+    loadNotices: loadNotices,
+    updateFavicon: updateFavicon
   };
 })();
