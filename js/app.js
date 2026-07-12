@@ -143,6 +143,11 @@ const App = (function () {
     DB.Snails.save(result.snails);
     DB.Player.save(result.player);
 
+    // 부재 중 생활 시뮬 — "살아 있었다는 증거" (11차 §5)
+    const life = GAME.simulateAwayLife(result.snails, result.player,
+      result.report.away_minutes, DB.today());
+    _recordLifeJournal(life.lines);
+
     result.report.finds.forEach(function (find) {
       DB.Journal.add('find', find.type === 'coins'
         ? '돌아다니다 코인 ' + find.amount + '개를 주워왔어요!'
@@ -153,10 +158,41 @@ const App = (function () {
       Toast.report({
         emoji: '🐌',
         title: '다녀오셨어요? (' + _durationText(result.report.away_minutes) + ')',
-        lines: _awayLines(result.report),
+        lines: life.lines.concat(_awayLines(result.report)),
         buttonLabel: '보러 가기'
       });
     }
+    _applySceneLater(life.scene);
+  }
+
+  /** 생활 문장을 성장 일지에 기록 — 하루 최대 2건 (스팸 가드) */
+  function _recordLifeJournal(lines) {
+    if (!lines || !lines.length) return;
+    const player = DB.Player.get();
+    const today = DB.today();
+    const used = (player.last_life_journal_date === today) ? (player.last_life_journal_count || 0) : 0;
+    const room = Math.max(0, 2 - used);
+    for (let i = 0; i < Math.min(room, lines.length); i++) DB.Journal.add('life', lines[i]);
+    player.last_life_journal_date = today;
+    player.last_life_journal_count = used + Math.min(room, lines.length);
+    DB.Player.save(player);
+  }
+
+  /** 복귀 장면은 서식지 준비 후 배치 (문장과 화면 일치) */
+  function _applySceneLater(scene) {
+    if (!scene || !scene.length) return;
+    setTimeout(function () {
+      try { HabitatModule.applyScene(scene); } catch (e) { /* 서식지 미준비 시 무시 */ }
+    }, 200);
+  }
+
+  /** 서버 모드 복귀 처리 — 미러 상태로 생활 시뮬 후 일지/장면 반영, 문장 반환 */
+  function showAwayLife(minutes) {
+    const life = GAME.simulateAwayLife(DB.Snails.get(), DB.Player.get(), minutes, DB.today());
+    _recordLifeJournal(life.lines);
+    if (life.lines.length) StatsModule.render();
+    _applySceneLater(life.scene);
+    return life.lines;
   }
 
   /** 저장된 배경을 body에 적용 */
@@ -240,10 +276,19 @@ const App = (function () {
     }, 60 * 1000);
   }
 
+  /** 밤낮 리듬 — body[data-daytime]로 CSS 오버레이 제어 (22~07시=밤) */
+  function _updateDaytime() {
+    const h = new Date().getHours();
+    document.body.dataset.daytime = (h >= 22 || h < 7) ? 'night' : 'day';
+  }
+
   async function init() {
     // 첫 실행이면 기본값(알 + 시작 자원)이 생성된다 (로컬 미러)
     DB.Player.get();
     DB.Snails.get();
+
+    _updateDaytime();
+    setInterval(_updateDaytime, 60000);
 
     _bindNav();
     HomeModule.bind();
@@ -383,6 +428,7 @@ const App = (function () {
     applyBackground: applyBackground,
     setLiveEvents: setLiveEvents,
     loadNotices: loadNotices,
-    updateFavicon: updateFavicon
+    updateFavicon: updateFavicon,
+    showAwayLife: showAwayLife
   };
 })();

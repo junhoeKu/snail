@@ -35,8 +35,10 @@ const GAME = (function () {
     // 접속 보상 / 상점
     DAILY_COINS: 20,
     FOOD_BUNDLE_COUNT: 10,
-    MAX_SNAILS: 3,
-    EGG_SLOT_PRICES: [0, 500, 1500], // [현재 슬롯 수] → 다음 보금자리 가격
+    MAX_SNAILS: 8,
+    // [현재 슬롯 수] → 다음 보금자리 가격 / 필요 양육자 레벨 (11차 §6)
+    EGG_SLOT_PRICES: [0, 500, 1500, 3000, 5000, 8000, 12000, 20000],
+    EGG_SLOT_LEVELS: [0, 2, 4, 6, 8, 10, 12, 14],
 
     // 출석 스트릭
     STREAK_BONUS_PER_DAY: 2,   // 연속 1일당 추가 코인
@@ -298,6 +300,66 @@ const GAME = (function () {
     if (roll < 60) return 'sunny';
     if (roll < 85) return 'rain';
     return 'fog';
+  }
+
+  /**
+   * 부재 중 생활 시뮬레이션 (순수 함수, 11차 §5) — "살아 있었다는 증거".
+   * 부재 30분↑일 때 생활 문장 1~3개 + 복귀 장면(scene)을 생성한다.
+   * 문장과 화면이 일치하도록 scene을 함께 반환한다. rng 주입으로 결정적.
+   * @returns {{lines: string[], scene: {id, state, anchor}[]}}
+   */
+  function simulateAwayLife(snails, player, awayMinutes, dateKey, rng, nightOverride) {
+    const rand = rng || Math.random;
+    const hatched = (snails || []).filter(function (s) { return s.stage !== 'egg'; });
+    if (awayMinutes < CONFIG.AWAY_REPORT_MIN || hatched.length === 0) {
+      return { lines: [], scene: [] };
+    }
+    const weather = WEATHER[weatherFor(dateKey)] || { id: 'sunny' };
+    const rain = weather.id === 'rain';
+    const night = (typeof nightOverride === 'boolean')
+      ? nightOverride : (function () { const h = new Date().getHours(); return h >= 22 || h < 7; })();
+    const slots = ((player.decorations || {}).slots) || [];
+    const hasMoss = slots.indexOf('mossrock') >= 0;
+    const hasMushroom = slots.indexOf('mushroom') >= 0;
+    const shelterName = hasMoss ? '이끼 바위' : (hasMushroom ? '버섯 그늘' : '서식지 구석');
+    const shelterAnchor = hasMoss ? 'mossrock' : (hasMushroom ? 'mushroom' : 'corner');
+
+    const scene = [];
+    const lines = [];
+    hatched.forEach(function (s) {
+      let state, anchor, line;
+      if (night) {
+        state = 'napping'; anchor = shelterAnchor;
+        line = '🌙 ' + s.name + '은(는) ' + shelterName + ' 옆에서 곤히 잤어요';
+      } else if (rain) {
+        state = 'resting'; anchor = shelterAnchor;
+        line = '☔ 비가 와서 ' + s.name + '은(는) ' + shelterName + ' 밑으로 숨었어요';
+      } else if (s.personality === 'sleepy') {
+        state = 'napping'; anchor = hasMushroom ? 'mushroom' : 'corner';
+        line = '💤 ' + s.name + '은(는) 그늘에서 오래 낮잠을 잤어요';
+      } else if (s.personality === 'foodie') {
+        state = 'resting'; anchor = 'corner';
+        line = '🍽️ ' + s.name + '은(는) 먹이를 기다리며 서성였어요';
+      } else if (s.personality === 'explorer') {
+        state = 'resting'; anchor = 'corner';
+        line = '🐌 ' + s.name + '은(는) 서식지 구석구석을 돌아다녔어요';
+      } else {
+        state = 'resting'; anchor = 'corner';
+        line = '🎵 ' + s.name + '은(는) 느긋하게 쉬었어요';
+      }
+      scene.push({ id: s.id, state: state, anchor: anchor });
+      lines.push(line);
+    });
+
+    if (hatched.length >= 2 && rand() < 0.6) {
+      const a = hatched[0].name, b = hatched[1].name;
+      lines.push(rand() < 0.5
+        ? '💕 ' + a + '와(과) ' + b + '이(가) 나란히 쉬었어요'
+        : '💕 ' + a + '와(과) ' + b + '이(가) 한참을 붙어 다녔어요');
+    }
+
+    const count = 1 + Math.floor(rand() * Math.min(3, lines.length));
+    return { lines: lines.slice(0, count), scene: scene };
   }
 
   /** 스탯 → 컨디션 (표정/속도 배수. 저장하지 않고 파생) */
@@ -643,6 +705,11 @@ const GAME = (function () {
 
     if (slots >= CONFIG.MAX_SNAILS) {
       events.push('max_slots');
+      return { player: p, egg: null, events: events };
+    }
+    const needLevel = CONFIG.EGG_SLOT_LEVELS[slots] || 0;
+    if (!p.admin && keeperLevel(p) < needLevel) {
+      events.push('slot_locked');
       return { player: p, egg: null, events: events };
     }
     const price = CONFIG.EGG_SLOT_PRICES[slots];
@@ -1030,6 +1097,7 @@ const GAME = (function () {
     placeDecoration: placeDecoration,
     removeDecoration: removeDecoration,
     weatherFor: weatherFor,
+    simulateAwayLife: simulateAwayLife,
     conditionOf: conditionOf,
     rollPersonality: rollPersonality,
     rollVariant: rollVariant,

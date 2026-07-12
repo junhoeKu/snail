@@ -267,9 +267,16 @@ const Api = (function () {
           case 'food_bought':
             Sound.play('coin');
             break;
-          case 'away_report':
-            Toast.show('🐌 다녀오셨어요? (' + Math.floor(e.minutes / 60) + '시간 ' + (e.minutes % 60) + '분)');
+          case 'away_report': {
+            const lines = App.showAwayLife(e.minutes);
+            Toast.report({
+              emoji: '🐌',
+              title: '다녀오셨어요? (' + Math.floor(e.minutes / 60) + '시간 ' + (e.minutes % 60) + '분)',
+              lines: lines.length ? lines : ['그동안 서식지는 평화로웠어요'],
+              buttonLabel: '보러 가기'
+            });
             break;
+          }
           case 'mail_arrived':
             Sound.play('coin');
             Toast.show('📬 여행 간 달팽이가 편지를 보내왔어요! (설정 탭 우편함)');

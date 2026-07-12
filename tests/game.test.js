@@ -97,5 +97,23 @@ for (let i = 0; i < 400 && s.level < 20; i++) {
 assert(stageUps.join(',') === '10:junior,20:adult', '외형 변화 Lv10→junior, Lv20→adult (실제: ' + stageUps.join(',') + ')');
 assert(GAME.expToNext(1) === 5 && GAME.expToNext(9) === 45, 'expToNext = level×5');
 
+// ── [11] 슬롯 8 & 부재 생활 시뮬 (11차) ──────────────────
+console.log('[11] 슬롯 8 & 생활 시뮬');
+assert(GAME.CONFIG.MAX_SNAILS === 8, '최대 슬롯 8');
+assert(GAME.CONFIG.EGG_SLOT_LEVELS[3] === 6, '슬롯4 해금 양육자 Lv6');
+
+const lifeSnails = [
+  { id: 'a', name: '달달이', stage: 'junior', color: 'brown', personality: 'sleepy' },
+  { id: 'b', name: '몽이', stage: 'baby', color: 'pond', personality: 'explorer' }
+];
+const lifePlayer = { decorations: { slots: ['mossrock', null, null] } };
+const seedRng = (function () { let i = 0; const s = [0.2, 0.3, 0.1, 0.4]; return function () { return s[i++ % s.length]; }; })();
+const day = GAME.simulateAwayLife(lifeSnails, lifePlayer, 200, '2026-07-13', seedRng, false);
+assert(day.scene.length === 2, '복귀 장면 2개체');
+assert(day.lines.length >= 1 && day.lines.length <= 3, '생활 문장 1~3개');
+const night = GAME.simulateAwayLife(lifeSnails, lifePlayer, 200, '2026-07-13', () => 0.1, true);
+assert(night.scene.every(function (s) { return s.state === 'napping'; }), '밤엔 전부 취침 장면');
+assert(GAME.simulateAwayLife(lifeSnails, lifePlayer, 10, '2026-07-13', seedRng).lines.length === 0, '부재 30분 미만 생활 문장 없음');
+
 console.log(failures === 0 ? '\n✅ 전체 통과' : '\n❌ 실패 ' + failures + '건');
 process.exit(failures === 0 ? 0 : 1);

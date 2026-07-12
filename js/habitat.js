@@ -33,14 +33,43 @@ const HabitatModule = (function () {
     WANDERING: 'wandering',
     SEEKING: 'seeking_food',
     EATING: 'eating',
-    NAPPING: 'napping'
+    NAPPING: 'napping',
+    RESTING: 'resting',        // 앵커 휴식
+    SOCIALIZING: 'socializing', // 동료에게 다가가 인사
+    WATCHING: 'watching'        // 먹는 동료 구경
   };
 
-  // 알 오브젝트 배치 지점 (% 좌표)
+  // 행동 선택기(Behavior Director) 수치 — 전부 연출 계층 (GAME.CONFIG 아님, 11차 §2)
+  const BEHAVIOR = {
+    BASE: { wander: 40, nap: 10, rest: 20, socialize: 15, watch: 0 },
+    REST_MIN_MS: 8000,
+    REST_MAX_MS: 20000,
+    SOCIAL_COOLDOWN_MS: 90000,
+    GREET_MS: 1500,
+    ANCHOR_INSET: 0.16,        // 모서리 앵커 안쪽 비율
+    EMOTE_MS: 2500,
+    EMOTE_INTERVAL_MS: 4000    // resting/napping 중 간헐 이모트 간격
+  };
+
+  function _isNight() {
+    const h = new Date().getHours();
+    return h >= 22 || h < 7;
+  }
+
+  // 행동 선택 rng — 테스트에서 주입 가능(결정적)
+  let _rng = Math.random;
+  function setBehaviorRng(fn) { _rng = fn || Math.random; }
+
+  // 알 오브젝트 배치 지점 (% 좌표) — 최대 8슬롯 (11차 §6)
   const EGG_SPOTS = [
-    { x: '24%', y: '78%' },
-    { x: '50%', y: '82%' },
-    { x: '76%', y: '78%' }
+    { x: '20%', y: '76%' },
+    { x: '38%', y: '82%' },
+    { x: '56%', y: '80%' },
+    { x: '74%', y: '76%' },
+    { x: '28%', y: '90%' },
+    { x: '48%', y: '92%' },
+    { x: '66%', y: '90%' },
+    { x: '84%', y: '84%' }
   ];
 
   // 슬롯 위치 (장식 — 서식지 바닥, % 좌표)
@@ -233,6 +262,7 @@ const HabitatModule = (function () {
 
     if (next === STATE.IDLE) {
       ent.target = null;
+      ent.pending = null;
       ent.idleUntil = performance.now() +
         (MOTION.IDLE_MIN_MS + Math.random() * (MOTION.IDLE_MAX_MS - MOTION.IDLE_MIN_MS)) * ent.mods.idleFactor;
       const p = _clampPoint(ent.x, ent.y, _edge(ent));
@@ -266,13 +296,165 @@ const HabitatModule = (function () {
     _setState(ent, STATE.WANDERING);
   }
 
-  function _startNap(ent) {
+  function _startNapHere(ent) {
     ent.target = null;
     ent.napUntil = performance.now() +
-      (MOTION.NAP_MIN_MS + Math.random() * (MOTION.NAP_MAX_MS - MOTION.NAP_MIN_MS)) *
+      (MOTION.NAP_MIN_MS + _rng() * (MOTION.NAP_MAX_MS - MOTION.NAP_MIN_MS)) *
       (ent.mods.napLenFactor || 1);
     _setState(ent, STATE.NAPPING);
-    _floatAt(ent.x, ent.y - _edge(ent), '💤');
+    _emote(ent, '💤');
+  }
+
+  // ── 앵커 (장소성) ──────────────────────────────────────
+
+  function _pctPx(v, total) { return (parseFloat(v) / 100) * total; }
+
+  /** 앵커 = 배치된 장식 위치 + 서식지 네 모서리 안쪽 */
+  function _anchors() {
+    const b = _bounds();
+    const list = [];
+    const slots = ((DB.Player.get().decorations || {}).slots) || [];
+    slots.forEach(function (id, i) {
+      if (id && DECO_SLOTS[i]) {
+        list.push({ x: _pctPx(DECO_SLOTS[i].x, b.w), y: _pctPx(DECO_SLOTS[i].y, b.h) - 16, deco: id });
+      }
+    });
+    const m = BEHAVIOR.ANCHOR_INSET;
+    list.push({ x: b.w * m, y: b.h * (1 - m) }, { x: b.w * (1 - m), y: b.h * (1 - m) },
+              { x: b.w * m, y: b.h * m + 30 }, { x: b.w * (1 - m), y: b.h * m + 30 });
+    return list;
+  }
+
+  function _nearestAnchor(ent, preferShelter) {
+    let pool = _anchors();
+    if (preferShelter) {
+      const shelters = pool.filter(function (a) { return a.deco === 'mossrock' || a.deco === 'mushroom'; });
+      if (shelters.length) pool = shelters;
+    }
+    let best = null, bd = Infinity;
+    pool.forEach(function (a) {
+      const d = Math.hypot(a.x - ent.x, a.y - ent.y);
+      if (d < bd) { bd = d; best = a; }
+    });
+    return best;
+  }
+
+  // ── 이모트 잔류 버블 ───────────────────────────────────
+
+  function _emote(ent, text) {
+    const el = document.createElement('div');
+    el.className = 'snail-emote';
+    el.textContent = text;
+    el.style.left = ent.x + 'px';
+    el.style.top = (ent.y - _edge(ent) - 6) + 'px';
+    _habitat().appendChild(el);
+    setTimeout(function () { el.remove(); }, BEHAVIOR.EMOTE_MS);
+  }
+
+  // ── 행동 선택기 (idle 만료 시) ─────────────────────────
+
+  function _chooseBehavior(ent) {
+    const rec = DB.Snails.getById(ent.id);
+    if (!rec) { _startWander(ent); return; }
+    const night = _isNight();
+    const weather = GAME.WEATHER[GAME.weatherFor(DB.today())] || { id: 'sunny' };
+    const rain = weather.id === 'rain';
+    const per = rec.personality;
+    const now = performance.now();
+    const peers = _ents.filter(function (e) {
+      return e !== ent && e.state !== STATE.EATING && DB.Snails.getById(e.id);
+    });
+    const eatingPeer = _ents.find(function (e) { return e !== ent && e.state === STATE.EATING; });
+    const hasDeco = (((DB.Player.get().decorations || {}).slots) || []).some(Boolean);
+    const canSocial = !ent.socialUntil || now >= ent.socialUntil;
+
+    const w = {
+      wander: BEHAVIOR.BASE.wander * (per === 'explorer' ? 2 : 1) * (rain ? 1.5 : 1) * (night ? 0.3 : 1),
+      nap: BEHAVIOR.BASE.nap * (per === 'sleepy' ? 3 : 1) * (night ? 5 : 1) * (rain ? 1.3 : 1),
+      rest: BEHAVIOR.BASE.rest * (hasDeco ? 1.5 : 1) * (rec.hunger < 20 ? 1.5 : 1),
+      socialize: (canSocial && peers.length) ? BEHAVIOR.BASE.socialize * (per === 'explorer' ? 1.5 : 1) : 0,
+      watch: (canSocial && eatingPeer) ? 25 * (per === 'foodie' ? 2 : 1) : 0
+    };
+    const total = w.wander + w.nap + w.rest + w.socialize + w.watch;
+    let r = _rng() * total;
+    if ((r -= w.wander) < 0) return _startWander(ent);
+    if ((r -= w.nap) < 0) return _startAnchorNap(ent, rain || night);
+    if ((r -= w.rest) < 0) return _startRest(ent, rain || night);
+    if ((r -= w.socialize) < 0) return _startSocialize(ent, peers);
+    return _startWatch(ent, eatingPeer);
+  }
+
+  /** 앵커로 이동 후 nap/rest 시작 — 이동 자체가 디오라마. WANDERING pending으로 처리 */
+  function _startAnchorNap(ent, shelter) {
+    const a = _nearestAnchor(ent, shelter);
+    if (!a) { _startNapHere(ent); return; }
+    ent.target = { x: a.x, y: a.y };
+    ent.pending = 'nap';
+    ent.pendingShelter = shelter;
+    _setState(ent, STATE.WANDERING);
+  }
+
+  function _startRest(ent, shelter) {
+    const a = _nearestAnchor(ent, shelter);
+    ent.target = a ? { x: a.x, y: a.y } : null;
+    ent.pending = 'rest';
+    _setState(ent, STATE.WANDERING);
+  }
+
+  function _beginNap(ent, shelter) {
+    const rain = (GAME.WEATHER[GAME.weatherFor(DB.today())] || {}).id === 'rain';
+    ent.napUntil = performance.now() +
+      (MOTION.NAP_MIN_MS + _rng() * (MOTION.NAP_MAX_MS - MOTION.NAP_MIN_MS)) * (ent.mods.napLenFactor || 1);
+    ent.emoteNext = performance.now() + BEHAVIOR.EMOTE_INTERVAL_MS;
+    _setState(ent, STATE.NAPPING);
+    _emote(ent, shelter && rain ? '☔' : '💤');
+  }
+
+  function _beginRest(ent) {
+    ent.restUntil = performance.now() + (BEHAVIOR.REST_MIN_MS + _rng() * (BEHAVIOR.REST_MAX_MS - BEHAVIOR.REST_MIN_MS));
+    ent.emoteNext = performance.now() + BEHAVIOR.EMOTE_INTERVAL_MS;
+    _setState(ent, STATE.RESTING);
+  }
+
+  // ── 사회 행동 ──────────────────────────────────────────
+
+  function _startSocialize(ent, peers) {
+    let best = null, bd = Infinity;
+    peers.forEach(function (p) {
+      const d = Math.hypot(p.x - ent.x, p.y - ent.y);
+      if (d < bd) { bd = d; best = p; }
+    });
+    if (!best) { _startWander(ent); return; }
+    ent.socialTarget = best.id;
+    ent.target = { x: best.x + (ent.x < best.x ? -34 : 34), y: best.y };
+    ent.pending = 'socialize';
+    ent.socialUntil = performance.now() + BEHAVIOR.SOCIAL_COOLDOWN_MS;
+    _setState(ent, STATE.WANDERING);
+  }
+
+  function _beginGreet(ent) {
+    const target = _ents.find(function (e) { return e.id === ent.socialTarget; });
+    if (!target || target.state === STATE.EATING) { _setState(ent, STATE.IDLE); return; }
+    _setState(ent, STATE.SOCIALIZING);
+    ent.greetUntil = performance.now() + BEHAVIOR.GREET_MS;
+    _emote(ent, '💕');
+    _emote(target, '💕');
+  }
+
+  function _startWatch(ent, eatingPeer) {
+    if (!eatingPeer) { _startWander(ent); return; }
+    ent.watchTarget = eatingPeer.id;
+    ent.target = { x: eatingPeer.x + (ent.x < eatingPeer.x ? -30 : 30), y: eatingPeer.y };
+    ent.pending = 'watch';
+    ent.socialUntil = performance.now() + BEHAVIOR.SOCIAL_COOLDOWN_MS;
+    _setState(ent, STATE.WANDERING);
+  }
+
+  function _beginWatch(ent) {
+    const t = _ents.find(function (e) { return e.id === ent.watchTarget; });
+    if (!t || t.state !== STATE.EATING) { _setState(ent, STATE.IDLE); return; }
+    _setState(ent, STATE.WATCHING);
+    _emote(ent, '👀');
   }
 
   function _setFacing(ent, dir) {
@@ -297,19 +479,50 @@ const HabitatModule = (function () {
     return false;
   }
 
+  function _emoteTick(ent, nowTs, text, chance) {
+    if (nowTs >= (ent.emoteNext || 0)) {
+      ent.emoteNext = nowTs + BEHAVIOR.EMOTE_INTERVAL_MS;
+      if (_rng() < chance) _emote(ent, text);
+    }
+  }
+
   function _updateEnt(ent, dt, nowTs) {
     switch (ent.state) {
       case STATE.IDLE:
-        if (nowTs >= ent.idleUntil) {
-          if (Math.random() < ent.mods.napChance) _startNap(ent);
-          else _startWander(ent);
-        }
+        if (nowTs >= ent.idleUntil) _chooseBehavior(ent);
         break;
       case STATE.NAPPING:
         if (nowTs >= ent.napUntil) _setState(ent, STATE.IDLE);
+        else _emoteTick(ent, nowTs, '💤', 0.5);
         break;
+      case STATE.RESTING:
+        if (nowTs >= ent.restUntil) _setState(ent, STATE.IDLE);
+        else _emoteTick(ent, nowTs, '🎵', 0.4);
+        break;
+      case STATE.SOCIALIZING:
+        if (nowTs >= ent.greetUntil) {
+          if (_rng() < 0.6) _startRest(ent, false); // 60% 같이 쉬기
+          else _setState(ent, STATE.IDLE);
+        }
+        break;
+      case STATE.WATCHING: {
+        const wt = _ents.find(function (e) { return e.id === ent.watchTarget; });
+        if (!wt || wt.state !== STATE.EATING) { // 대상 식사 끝
+          if (_rng() < 0.5) _startRest(ent, false);
+          else _setState(ent, STATE.IDLE);
+        }
+        break;
+      }
       case STATE.WANDERING:
-        if (_moveToward(ent, ent.mods.wanderSpeed, dt)) _setState(ent, STATE.IDLE);
+        if (_moveToward(ent, ent.mods.wanderSpeed, dt)) {
+          const pend = ent.pending;
+          ent.pending = null;
+          if (pend === 'nap') _beginNap(ent, ent.pendingShelter);
+          else if (pend === 'rest') _beginRest(ent);
+          else if (pend === 'socialize') _beginGreet(ent);
+          else if (pend === 'watch') _beginWatch(ent);
+          else _setState(ent, STATE.IDLE);
+        }
         break;
       case STATE.SEEKING:
         if (!ent.food) {
@@ -509,6 +722,19 @@ const HabitatModule = (function () {
     _floatAt(ent.x, ent.y - _edge(ent), text);
   }
 
+  /** 복귀 장면 배치 — 생활 시뮬 문장과 화면을 일치시킨다 (11차 §5.2) */
+  function applyScene(scene) {
+    (scene || []).forEach(function (item) {
+      const ent = _ents.find(function (e) { return e.id === item.id; });
+      if (!ent) return;
+      const shelter = item.anchor === 'mossrock' || item.anchor === 'mushroom';
+      const a = _nearestAnchor(ent, shelter);
+      if (a) { ent.x = a.x; ent.y = a.y; _renderPosition(ent); }
+      if (item.state === 'napping') _beginNap(ent, shelter);
+      else _beginRest(ent);
+    });
+  }
+
   // ── 게임 루프 ─────────────────────────────────────────
 
   function _loop(ts) {
@@ -594,6 +820,8 @@ const HabitatModule = (function () {
     dropFoodNear: dropFoodNear,
     effect: effect,
     renderDecorations: renderDecorations,
+    setBehaviorRng: setBehaviorRng,
+    applyScene: applyScene,
     /** QA/디버그용 현재 상태 */
     debugState: function () {
       return {
