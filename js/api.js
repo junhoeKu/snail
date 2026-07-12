@@ -33,8 +33,19 @@ const Api = (function () {
 
   const BASE = _resolveBase().replace(/\/+$/, '');
 
+  // 부팅 시 서버 연결 실패 → 이번 세션은 로컬 모드로 폴백
+  let _sessionDisabled = false;
+
   function enabled() {
-    return BASE.length > 0;
+    return BASE.length > 0 && !_sessionDisabled;
+  }
+
+  function base() {
+    return BASE;
+  }
+
+  function disableForSession() {
+    _sessionDisabled = true;
   }
 
   function requestId() {
@@ -313,6 +324,8 @@ const Api = (function () {
 
   return {
     enabled: enabled,
+    base: base,
+    disableForSession: disableForSession,
     ensureAuth: ensureAuth,
     requestId: requestId,
     state: endpoints.state,

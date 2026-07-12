@@ -254,6 +254,7 @@ const App = (function () {
     SettingsModule.bind();
     SettingsModule.render();
 
+    let serverReady = false;
     if (Api.enabled()) {
       // 서버 모드: 정산/보상/판정은 전부 서버 — 로컬 정산 경로를 타지 않는다
       try {
@@ -265,10 +266,14 @@ const App = (function () {
         document.addEventListener('visibilitychange', function () {
           if (!document.hidden) Api.state().then(Api.Net.apply).catch(function () { /* 무시 */ });
         });
+        serverReady = true;
       } catch (e) {
-        Toast.show('서버에 연결할 수 없어요. 연결되면 자동으로 이어집니다.', 'warn');
+        // 죽은 주소/오프라인 → 이번 세션은 로컬 모드로 완전 폴백 (반쪽 상태 방지)
+        Api.disableForSession();
+        Toast.show('서버(' + Api.base() + ')에 연결할 수 없어 로컬 모드로 실행해요. 이 동안의 진행은 서버에 저장되지 않아요.', 'warn');
       }
-    } else {
+    }
+    if (!serverReady) {
       _applyAdminFromURL();
       _ensurePersonality();
       _settleAway();

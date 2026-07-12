@@ -1,12 +1,12 @@
 /**
  * 배포 설정 — 정적 호스팅의 .env 역할.
  *
- * 백엔드 API 주소를 넣으면 서버 모드(계정/서버 저장)로 동작한다.
+ * ⚠️ 실제로 배포된 본인의 백엔드 주소만 넣을 것 (아래는 형식 예시일 뿐, 실존 주소 아님).
  * 비워두면 기존 LocalStorage 로컬 모드.
  *
- * 예) window.SNAIL_API_BASE = 'https://snail-api.fly.dev';
+ * 예) window.SNAIL_API_BASE = 'https://<내가-배포한-API-주소>';
  *
- * 개발 중 임시 전환은 URL 파라미터가 더 편하다 (이 파일 수정 불필요):
+ * 로컬 개발(uvicorn --port 8000)은 이 파일 대신 URL 파라미터가 편하다:
  *   http://localhost:31111/?api=http://localhost:8000   ← 켜기(기억됨)
  *   http://localhost:31111/?api=                        ← 끄기
  */
