@@ -114,6 +114,25 @@
   flex-shrink: 0;
 }
 
+.rarity-badge {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(120, 130, 115, 0.18);
+  color: var(--color-text-sub);
+}
+
+.rarity-badge.rarity-rare {
+  background: rgba(111, 141, 219, 0.2);
+  color: #4a67b5;
+}
+
+.rarity-badge.rarity-epic {
+  background: rgba(210, 164, 55, 0.22);
+  color: #9a7413;
+}
+
 .dex-img {
   width: 36px;
   height: 36px;

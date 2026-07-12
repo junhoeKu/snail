@@ -206,16 +206,19 @@ const Api = (function () {
               message: e.stage === 'junior' ? '껍질이 커졌습니다!' : '어엿한 성체가 되었습니다!'
             });
             break;
-          case 'hatched':
+          case 'hatched': {
             Sound.play('fanfare');
             Sound.vibrate(30);
             FX.confetti(16);
+            const variant = GAME.VARIANTS[e.color] || GAME.VARIANTS.brown;
             Toast.celebrate({
-              emoji: e.color === 'golden' ? '✨' : '🐌',
-              title: '부화 성공!',
+              emoji: variant.rarity === 'epic' ? '✨' : (variant.rarity === 'rare' ? '💠' : '🐌'),
+              title: variant.rarity === 'epic' ? '에픽 달팽이 부화!!'
+                : (variant.rarity === 'rare' ? '레어 달팽이 부화!' : '부화 성공!'),
               message: findSnail(e.snailId).name + '(이)가 태어났어요. 잘 돌봐주세요!'
             });
             break;
+          }
           case 'dex_new':
             Toast.show('📖 도감에 새 변이가 등록됐어요!');
             break;

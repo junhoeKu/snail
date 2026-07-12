@@ -196,13 +196,22 @@ const GAME = (function () {
     }
   };
 
-  /** 껍질 변이 (부화 시 랜덤) — chance는 1세대 기준, 세대 보정은 variantTableFor */
+  /**
+   * 껍질 변이 (부화 시 랜덤) — chance는 1세대 기준, 세대 보정은 variantTableFor.
+   * 등급: 갈색/적갈색/회갈색 = 기본, 올리브 = 레어, 황금 = 에픽
+   */
+  const RARITIES = {
+    common: { id: 'common', label: '기본' },
+    rare: { id: 'rare', label: '레어' },
+    epic: { id: 'epic', label: '에픽' }
+  };
+
   const VARIANTS = {
-    brown: { id: 'brown', label: '갈색', chance: 0.55 },
-    gray: { id: 'gray', label: '회갈색', chance: 0.18 },
-    russet: { id: 'russet', label: '적갈색', chance: 0.15 },
-    olive: { id: 'olive', label: '올리브', chance: 0.10 },
-    golden: { id: 'golden', label: '황금', chance: 0.02 }
+    brown: { id: 'brown', label: '갈색', chance: 0.55, rarity: 'common' },
+    gray: { id: 'gray', label: '회갈색', chance: 0.18, rarity: 'common' },
+    russet: { id: 'russet', label: '적갈색', chance: 0.15, rarity: 'common' },
+    olive: { id: 'olive', label: '올리브', chance: 0.10, rarity: 'rare' },
+    golden: { id: 'golden', label: '황금', chance: 0.02, rarity: 'epic' }
   };
 
   /** 세대당 변이 확률 변화 (%p) — 합계 0이라 항상 총합 100% 유지 */
@@ -978,6 +987,7 @@ const GAME = (function () {
     WEATHER: WEATHER,
     PERSONALITIES: PERSONALITIES,
     VARIANTS: VARIANTS,
+    RARITIES: RARITIES,
     DECORATIONS: DECORATIONS,
     decorationEffects: decorationEffects,
     MISSION_DEFS: MISSION_DEFS,

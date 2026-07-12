@@ -151,10 +151,16 @@ const DB = (function () {
       }
 
       // 필드 치유 (기본값 병합 + id/버전 보장). 치유가 일어나면 영속화해 id를 고정한다
+      const VALID_COLORS = ['brown', 'gray', 'russet', 'olive', 'golden'];
       const healed = list.map(function (record) {
         if (!record.id || record.schema_version !== SCHEMA_VERSION) dirty = true;
         const merged = Object.assign(_defaultSnail(), record);
         merged.schema_version = SCHEMA_VERSION;
+        // 구버전(v1~v3)의 color:'default' 등 무효 변이 치유 — 스프라이트 404 방지
+        if (VALID_COLORS.indexOf(merged.color) === -1) {
+          merged.color = 'brown';
+          dirty = true;
+        }
         return merged;
       });
       if (dirty) _write(KEYS.SNAILS, healed);

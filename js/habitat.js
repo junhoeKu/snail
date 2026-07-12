@@ -176,12 +176,13 @@ const HabitatModule = (function () {
   /** 변이/단계/컨디션 반영 (일러스트 스프라이트 교체) */
   function _applyLook(ent, rec) {
     const condition = GAME.conditionOf(rec);
+    const color = GAME.VARIANTS[rec.color] ? rec.color : 'brown'; // 무효 변이 방어
     ent.spriteEl.className = 'snail-sprite stage-' + rec.stage +
-      ' variant-' + (rec.color || 'brown') +
+      ' variant-' + color +
       (condition.id !== 'normal' ? ' cond-' + condition.id : '');
 
     const img = ent.spriteEl.querySelector('.snail-img');
-    const src = 'assets/characters/snail_' + (rec.color || 'brown') + '_' + rec.stage + '.png';
+    const src = 'assets/characters/snail_' + color + '_' + rec.stage + '.png';
     if (img && img.getAttribute('src') !== src) img.setAttribute('src', src);
 
     // 머리 위 배지 갱신

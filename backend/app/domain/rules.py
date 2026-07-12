@@ -68,12 +68,13 @@ FOOD_DEFS = {
     "salad": {"id": "salad", "label": "특제 샐러드", "emoji": "🥗", "price": 60, "hunger": 100, "exp": 30, "happiness": 15, "unlockLevel": 6},
 }
 
+# 등급: 갈색/적갈색/회갈색 = 기본(common), 올리브 = 레어(rare), 황금 = 에픽(epic)
 VARIANTS = {
-    "brown": {"label": "갈색", "chance": 0.55},
-    "gray": {"label": "회갈색", "chance": 0.18},
-    "russet": {"label": "적갈색", "chance": 0.15},
-    "olive": {"label": "올리브", "chance": 0.10},
-    "golden": {"label": "황금", "chance": 0.02},
+    "brown": {"label": "갈색", "chance": 0.55, "rarity": "common"},
+    "gray": {"label": "회갈색", "chance": 0.18, "rarity": "common"},
+    "russet": {"label": "적갈색", "chance": 0.15, "rarity": "common"},
+    "olive": {"label": "올리브", "chance": 0.10, "rarity": "rare"},
+    "golden": {"label": "황금", "chance": 0.02, "rarity": "epic"},
 }
 VARIANT_GEN_DELTA = {"brown": -6, "gray": 1, "russet": 1.5, "olive": 2, "golden": 1.5}
 

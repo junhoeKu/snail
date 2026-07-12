@@ -283,9 +283,9 @@ const HomeModule = (function () {
     DB.Journal.add('hatch', result.snail.name +
       (generation > 1 ? ' (' + generation + '세대)' : '') + '(이)가 알을 깨고 태어났어요!');
     const variant = GAME.VARIANTS[result.snail.color];
-    if (variant && variant.id !== 'brown') {
-      DB.Journal.add('variant', result.snail.name + '(이)는 ' +
-        (variant.id === 'golden' ? '반짝이는 황금빛' : variant.label) + ' 껍질을 가졌어요!');
+    if (variant && variant.rarity !== 'common') {
+      DB.Journal.add('variant', result.snail.name + '(이)는 ' + variant.label + '(' +
+        GAME.RARITIES[variant.rarity].label + ') 껍질을 가지고 태어났어요!');
     }
     DB.Journal.add('personality',
       result.snail.name + '의 성격은 "' + GAME.PERSONALITIES[result.snail.personality].label + '"인 것 같아요.');
@@ -296,9 +296,10 @@ const HomeModule = (function () {
     Sound.play('fanfare');
     Sound.vibrate(30);
     FX.confetti(16);
+    const rarity = variant ? variant.rarity : 'common';
     Toast.celebrate({
-      emoji: variant && variant.id === 'golden' ? '✨' : '🐌',
-      title: '부화 성공!',
+      emoji: rarity === 'epic' ? '✨' : (rarity === 'rare' ? '💠' : '🐌'),
+      title: rarity === 'epic' ? '에픽 달팽이 부화!!' : (rarity === 'rare' ? '레어 달팽이 부화!' : '부화 성공!'),
       message: result.snail.name + '(이)가 태어났어요. 잘 돌봐주세요!'
     });
   }
@@ -369,9 +370,10 @@ const HomeModule = (function () {
     const box = document.createElement('div');
     box.className = 'modal-box snail-popup';
 
+    const safeColor = GAME.VARIANTS[rec.color] ? rec.color : 'brown';
     const img = document.createElement('img');
-    img.className = 'popup-img' + (rec.color === 'golden' ? ' popup-golden' : '');
-    img.src = 'assets/characters/snail_' + (rec.color || 'brown') + '_' + rec.stage + '.png';
+    img.className = 'popup-img' + (safeColor === 'golden' ? ' popup-golden' : '');
+    img.src = 'assets/characters/snail_' + safeColor + '_' + rec.stage + '.png';
     img.alt = rec.name;
     box.appendChild(img);
 
@@ -380,11 +382,13 @@ const HomeModule = (function () {
     box.appendChild(title);
 
     const personality = GAME.PERSONALITIES[rec.personality];
-    const variant = GAME.VARIANTS[rec.color || 'brown'];
+    const variant = GAME.VARIANTS[rec.color] || GAME.VARIANTS.brown;
+    const rarityTag = variant.rarity !== 'common'
+      ? ' (' + GAME.RARITIES[variant.rarity].label + ')' : '';
     const sub = document.createElement('p');
     sub.className = 'popup-sub';
     sub.textContent = 'Lv.' + rec.level + ' ' + GAME.STAGES[rec.stage].label + ' · ' +
-      (variant ? variant.label : '갈색') + ' 껍질 · ' + (personality ? personality.label : '?');
+      variant.label + ' 껍질' + rarityTag + ' · ' + (personality ? personality.label : '?');
     box.appendChild(sub);
 
     if (personality && personality.desc) {

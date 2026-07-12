@@ -73,6 +73,12 @@ const StatsModule = (function () {
       const label = document.createElement('span');
       label.textContent = found ? GAME.VARIANTS[key].label : '???';
       cell.appendChild(label);
+
+      const rarity = GAME.VARIANTS[key].rarity;
+      const badge = document.createElement('span');
+      badge.className = 'rarity-badge rarity-' + rarity;
+      badge.textContent = GAME.RARITIES[rarity].label;
+      cell.appendChild(badge);
       grid.appendChild(cell);
     });
 
@@ -116,7 +122,9 @@ const StatsModule = (function () {
       title.textContent = record.name + ' · ' + record.generation + '세대';
       const desc = document.createElement('div');
       desc.className = 'album-desc';
-      desc.textContent = (variant ? variant.label : '갈색') + ' 껍질 · ' +
+      const rarityTag = variant && variant.rarity !== 'common'
+        ? '(' + GAME.RARITIES[variant.rarity].label + ') ' : '';
+      desc.textContent = (variant ? variant.label : '갈색') + ' 껍질 ' + rarityTag + '· ' +
         (personality ? personality.label : '?') + ' · Lv.' + record.level +
         ' · ' + days + '일 동안 함께함';
       info.appendChild(title);
