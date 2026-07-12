@@ -32,11 +32,16 @@ jobs:
       - name: pytest (인메모리 SQLite)
         working-directory: backend
         run: pytest -q
-      - name: 마이그레이션 검증 (빈 PostgreSQL → head)
+      - name: 마이그레이션 검증 (운영 경로 — create_all → alembic idempotent)
         working-directory: backend
         env:
           DATABASE_URL: postgresql+psycopg2://postgres:postgres@localhost:5432/snail_test
-        run: alembic upgrade head
+        run: |
+          # 운영은 create_all이 스키마를 만들고 alembic이 그 위에 얹힌다(하이브리드).
+          # alembic을 두 번 실행해 재실행 안전성(idempotent)까지 검증한다.
+          python -c "from app.core.database import Base, engine; import app.models; Base.metadata.create_all(engine)"
+          alembic upgrade head
+          alembic upgrade head
 
   frontend:
     name: 프론트 (문법 + jsdom 회귀 + sw-guard)
