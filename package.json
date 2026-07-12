@@ -1,0 +1,15 @@
+{
+  "name": "snail",
+  "version": "1.0.0",
+  "private": true,
+  "description": "달팽이 키우기 — 테스트/CI 전용 매니페스트 (런타임은 무빌드 정적 SPA)",
+  "scripts": {
+    "check": "for f in js/*.js; do node --check \"$f\"; done",
+    "test:game": "node tests/game.test.js",
+    "test:integration": "node tests/integration.test.js",
+    "test": "node tests/game.test.js && node tests/integration.test.js"
+  },
+  "devDependencies": {
+    "jsdom": "^24.1.0"
+  }
+}
