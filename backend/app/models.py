@@ -34,6 +34,7 @@ class User(Base):
     coins: Mapped[int] = mapped_column(Integer, default=30)
     generation: Mapped[int] = mapped_column(Integer, default=1)
     snail_slots: Mapped[int] = mapped_column(Integer, default=1)
+    revision: Mapped[int] = mapped_column(Integer, default=0)  # 상태 변경 단조 카운터 (기기 간 동기화)
     sound_on: Mapped[bool] = mapped_column(Boolean, default=True)
     selected_food: Mapped[str] = mapped_column(String(16), default="lettuce")
     background: Mapped[str] = mapped_column(String(16), default="default")
@@ -136,6 +137,7 @@ class GameAction(Base):
     action_type: Mapped[str] = mapped_column(String(32))
     target_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
     request_id: Mapped[str] = mapped_column(String(64))
+    payload_hash: Mapped[str] = mapped_column(String(64), default="")  # 같은 request_id·다른 payload 탐지
     payload: Mapped[dict] = mapped_column(JSON, default=dict)
     result: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
@@ -152,6 +154,31 @@ class CurrencyLedger(Base):
     balance_after: Mapped[int] = mapped_column(Integer)
     reason: Mapped[str] = mapped_column(String(48))
     reference_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class InventoryLedger(Base):
+    """아이템 원장 — 먹이·장식 증감 추적 (currency_ledger와 대칭)."""
+    __tablename__ = "inventory_ledger"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(String(32), ForeignKey("users.id"), index=True)
+    item_id: Mapped[str] = mapped_column(String(24))
+    delta: Mapped[int] = mapped_column(Integer)
+    quantity_after: Mapped[int] = mapped_column(Integer)
+    reason: Mapped[str] = mapped_column(String(48))
+    reference_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class SecurityEvent(Base):
+    """부정행위 의심 이벤트 — 자동 제재 없이 누적 기록(운영자 검토용)."""
+    __tablename__ = "security_events"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    user_id: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
+    kind: Mapped[str] = mapped_column(String(32))  # idempotency_conflict | rate_limited | ...
+    detail: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 

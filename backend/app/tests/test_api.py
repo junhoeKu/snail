@@ -7,6 +7,8 @@ import uuid
 
 os.environ["DATABASE_URL"] = "sqlite://"  # 인메모리
 os.environ["JWT_SECRET"] = "test-secret"
+os.environ.setdefault("RATE_LIMIT_PER_MIN", "100000")       # 기능 테스트는 무제한
+os.environ.setdefault("RATE_LIMIT_AUTH_PER_MIN", "100000")
 
 import pytest
 from fastapi.testclient import TestClient

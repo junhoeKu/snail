@@ -123,11 +123,11 @@ const Api = (function () {
   const endpoints = {
     state: function () { return _request('GET', '/v1/game/state'); },
     config: function () { return _request('GET', '/v1/game/config'); },
-    feed: function (snailId, foodId) {
-      return _request('POST', '/v1/snails/' + snailId + '/feed', { foodId: foodId, requestId: requestId() });
+    feed: function (snailId, foodId, reqId) {
+      return _request('POST', '/v1/snails/' + snailId + '/feed', { foodId: foodId, requestId: reqId || requestId() });
     },
-    pet: function (snailId) {
-      return _request('POST', '/v1/snails/' + snailId + '/pet', { requestId: requestId() });
+    pet: function (snailId, reqId) {
+      return _request('POST', '/v1/snails/' + snailId + '/pet', { requestId: reqId || requestId() });
     },
     hatch: function (snailId, name) {
       return _request('POST', '/v1/snails/' + snailId + '/hatch', { name: name, requestId: requestId() });
@@ -167,6 +167,9 @@ const Api = (function () {
       if (result.album) localStorage.setItem('sn_album', JSON.stringify(result.album));
       if (result.journal) localStorage.setItem('sn_journal', JSON.stringify(result.journal));
 
+      if (typeof result.revision === 'number') {
+        localStorage.setItem('sn_revision', String(result.revision));
+      }
       App.refreshHeader();
       App.applyBackground();
       HomeModule.render();
@@ -325,12 +328,93 @@ const Api = (function () {
     }
   };
 
+  // ── 오프라인 큐 ───────────────────────────────────────
+  // 네트워크 단절 중 feed/pet만 로컬에 낙관 반영 + 큐 저장. 온라인 복귀 시
+  // 저장해둔 request_id로 재전송(서버 멱등) 후 서버 상태로 교정한다.
+  // 서버 전용 행동(부화/여행/탐험/구매)은 큐에 넣지 않는다(서버 RNG·원자 처리).
+
+  function _optimisticFeed(snailId, foodId) {
+    const snail = DB.Snails.getById(snailId);
+    const player = DB.Player.get();
+    if (!snail || !player) return;
+    try {
+      const r = GAME.feed(snail, player, foodId);
+      DB.Snails.saveOne(r.snail);
+      DB.Player.save(r.player);
+    } catch (e) { /* 먹이 부족 등 — 큐 재전송 시 서버가 최종 판정 */ }
+    App.refreshHeader();
+    HomeModule.render();
+  }
+
+  function _optimisticPet(snailId) {
+    const snail = DB.Snails.getById(snailId);
+    const player = DB.Player.get();
+    if (!snail || !player) return;
+    try {
+      const r = GAME.pet(snail, player, new Date().toISOString());
+      DB.Snails.saveOne(r.snail);
+    } catch (e) { /* 무시 */ }
+    HomeModule.render();
+  }
+
+  function queueFeed(snailId, foodId) {
+    DB.Pending.add({ type: 'feed', snailId: snailId, foodId: foodId, requestId: requestId() });
+    _optimisticFeed(snailId, foodId);
+    Toast.show('📴 오프라인이에요. 온라인이 되면 반영돼요.', 'warn');
+  }
+
+  function queuePet(snailId) {
+    DB.Pending.add({ type: 'pet', snailId: snailId, requestId: requestId() });
+    _optimisticPet(snailId);
+  }
+
+  let _flushing = false;
+
+  async function flushQueue() {
+    if (!enabled() || _flushing) return;
+    if (!DB.Pending.get().length) return;
+    _flushing = true;
+    try {
+      for (const action of DB.Pending.get()) {
+        try {
+          if (action.type === 'feed') await endpoints.feed(action.snailId, action.foodId, action.requestId);
+          else if (action.type === 'pet') await endpoints.pet(action.snailId, action.requestId);
+          DB.Pending.remove(action.requestId);
+        } catch (err) {
+          if (err && err.code === 'network') return; // 여전히 오프라인 — 다음 기회에
+          // 도메인 거절(먹이 부족 등): 큐에서 제거 + 보정 안내
+          DB.Pending.remove(action.requestId);
+          Toast.show('오프라인에서 시도한 행동 하나가 반영되지 않았어요.', 'warn');
+        }
+      }
+    } finally {
+      _flushing = false;
+    }
+    // 남은 낙관 상태를 서버 진실로 교정
+    try { Net.apply(await endpoints.state()); } catch (e) { /* 무시 */ }
+  }
+
+  /** 백그라운드 복귀용: 서버 revision이 오른 경우(=다른 기기 활동) 안내 후 리싱크. */
+  function refreshFromServer() {
+    const prev = Number(localStorage.getItem('sn_revision') || '0');
+    return endpoints.state().then(function (s) {
+      if (prev && typeof s.revision === 'number' && s.revision > prev) {
+        Toast.show('📱 다른 기기에서 플레이했어요. 최신 상태로 맞췄어요.');
+      }
+      Net.apply(s);
+    });
+  }
+
   return {
     enabled: enabled,
     base: base,
     disableForSession: disableForSession,
     ensureAuth: ensureAuth,
     requestId: requestId,
+    flushQueue: flushQueue,
+    refreshFromServer: refreshFromServer,
+    queueFeed: queueFeed,
+    queuePet: queuePet,
     state: endpoints.state,
     config: endpoints.config,
     feed: endpoints.feed,

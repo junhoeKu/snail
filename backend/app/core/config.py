@@ -24,6 +24,9 @@ class Settings:
     # 마이그레이션 검증 상한 — 하드코딩 금지 (9차 생태계에서 8로 상향 예정)
     max_snails: int = int(os.environ.get("MAX_SNAILS", "3"))
     migration_coin_cap: int = int(os.environ.get("MIGRATION_COIN_CAP", "100000"))
+    # Rate Limit (분당) — 행동 API는 사용자별, 인증 API는 IP별
+    rate_limit_per_min: int = int(os.environ.get("RATE_LIMIT_PER_MIN", "60"))
+    rate_limit_auth_per_min: int = int(os.environ.get("RATE_LIMIT_AUTH_PER_MIN", "20"))
 
 
 settings = Settings()

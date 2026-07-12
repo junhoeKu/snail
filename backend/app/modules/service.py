@@ -1,4 +1,6 @@
 """공용 서비스 — 정산(감쇠/접속 보상/부재 발견), 원장, 직렬화(클라이언트 v6 형태)."""
+import hashlib
+import json
 import random
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -46,9 +48,17 @@ def set_item(db: Session, user: models.User, item_id: str, quantity: int) -> Non
         row.quantity = quantity
 
 
-def add_item(db: Session, user: models.User, item_id: str, delta: int) -> None:
-    inv = get_inventory(db, user)
-    set_item(db, user, item_id, inv.get(item_id, 0) + delta)
+def add_item(db: Session, user: models.User, item_id: str, delta: int,
+             reason: str = "adjust", reference_id: str | None = None) -> None:
+    """아이템 증감은 이 함수(원장 기록 포함)를 거친다 (add_coins와 대칭)."""
+    if delta == 0:
+        return
+    quantity_after = get_inventory(db, user).get(item_id, 0) + delta
+    set_item(db, user, item_id, quantity_after)  # 음수면 여기서 invariant 방어
+    db.add(models.InventoryLedger(
+        user_id=user.id, item_id=item_id, delta=delta,
+        quantity_after=quantity_after, reason=reason, reference_id=reference_id,
+    ))
 
 
 def add_coins(db: Session, user: models.User, amount: int, reason: str, reference_id: str | None = None) -> None:
@@ -67,6 +77,26 @@ def add_coins(db: Session, user: models.User, amount: int, reason: str, referenc
 
 def add_journal(db: Session, user: models.User, type_: str, text: str) -> None:
     db.add(models.JournalEntry(user_id=user.id, type=type_, text=text))
+
+
+# ── 동시성/멱등/보안 ────────────────────────────────────
+
+def lock_user(db: Session, user: models.User) -> None:
+    """같은 사용자의 동시 재화 변경을 직렬화한다 (PostgreSQL row lock; SQLite는 파일 락으로 대체)."""
+    db.execute(select(models.User.id).where(models.User.id == user.id).with_for_update()).first()
+
+
+def bump_revision(user: models.User) -> None:
+    user.revision = (user.revision or 0) + 1
+
+
+def payload_fingerprint(payload: dict) -> str:
+    """멱등키 재사용 시 payload 동일성 검증용 해시 (같은 request_id·다른 내용 탐지)."""
+    return hashlib.sha256(json.dumps(payload, sort_keys=True, default=str).encode()).hexdigest()
+
+
+def record_security_event(db: Session, user_id: str | None, kind: str, detail: dict) -> None:
+    db.add(models.SecurityEvent(user_id=user_id, kind=kind, detail=detail))
 
 
 # ── 도감 파생 ───────────────────────────────────────────
@@ -113,7 +143,7 @@ def settle(db: Session, user: models.User) -> list[dict]:
                 add_coins(db, user, find["amount"], "away_find")
                 add_journal(db, user, "find", f"돌아다니다 코인 {find['amount']}개를 주워왔어요!")
             else:
-                add_item(db, user, "lettuce", find["amount"])
+                add_item(db, user, "lettuce", find["amount"], "away_find")
                 add_journal(db, user, "find", "어디선가 상추를 하나 물어왔어요!")
             events.append({"type": "found_item", **find})
     user.last_seen_at = now
@@ -210,6 +240,7 @@ def snail_payload(s: models.Snail) -> dict:
         "hunger": int(round(s.hunger)), "happiness": int(round(s.happiness)),
         "color": s.color, "personality": s.personality, "wild_variant": s.wild_variant,
         "pos": {"rx": s.pos_x, "ry": s.pos_y},
+        "version": s.version,
         "created_at": _aware(s.created_at).isoformat() if s.created_at else None,
     }
 
@@ -217,7 +248,7 @@ def snail_payload(s: models.Snail) -> dict:
 def state_payload(db: Session, user: models.User, events: list[dict]) -> dict:
     db.flush()  # autoflush=False — pending 객체(새 알/앨범/일지)를 조회에 반영
     return {
-        "revision": int(utcnow().timestamp()),
+        "revision": user.revision or 0,
         "serverTime": utcnow().isoformat(),
         "changes": {
             "player": player_payload(db, user),
@@ -260,8 +291,8 @@ def find_action(db: Session, user: models.User, request_id: str) -> models.GameA
 
 
 def record_action(db: Session, user: models.User, action_type: str, request_id: str,
-                  target_id: str | None, payload: dict, result: dict) -> None:
+                  target_id: str | None, payload: dict, result: dict, payload_hash: str = "") -> None:
     db.add(models.GameAction(
         user_id=user.id, action_type=action_type, request_id=request_id or models._uuid(),
-        target_id=target_id, payload=payload, result=result,
+        target_id=target_id, payload=payload, result=result, payload_hash=payload_hash,
     ))

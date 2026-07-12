@@ -15,7 +15,8 @@ const DB = (function () {
     SNAIL: 'sn_snail',   // ~v4 단일 달팽이 (v5에서 sn_snails로 마이그레이션)
     SNAILS: 'sn_snails',
     JOURNAL: 'sn_journal',
-    ALBUM: 'sn_album'
+    ALBUM: 'sn_album',
+    PENDING: 'sn_pending_actions'   // 서버 모드 오프라인 행동 큐
   };
 
   const JOURNAL_MAX = 100; // 성장 일지 최대 보관 건수
@@ -229,6 +230,30 @@ const DB = (function () {
   };
 
   /**
+   * 오프라인 행동 큐 (서버 모드 전용) — 네트워크 단절 중 돌봄 행동을 순서대로 보관하고
+   * 온라인 복귀 시 멱등키(request_id)로 재전송한다. FIFO.
+   */
+  const Pending = {
+    get: function () {
+      const stored = _read(KEYS.PENDING);
+      return Array.isArray(stored) ? stored : [];
+    },
+    add: function (action) {
+      const list = Pending.get();
+      list.push(action);
+      return _write(KEYS.PENDING, list);
+    },
+    remove: function (requestId) {
+      return _write(KEYS.PENDING, Pending.get().filter(function (a) {
+        return a.requestId !== requestId;
+      }));
+    },
+    clear: function () {
+      return _write(KEYS.PENDING, []);
+    }
+  };
+
+  /**
    * 전체 초기화 — 설정 화면의 확인 모달 또는 개발/QA 콘솔에서만 호출한다.
    * (사용자 확인 없는 데이터 삭제 금지)
    */
@@ -238,6 +263,7 @@ const DB = (function () {
     localStorage.removeItem(KEYS.SNAILS);
     localStorage.removeItem(KEYS.JOURNAL);
     localStorage.removeItem(KEYS.ALBUM);
+    localStorage.removeItem(KEYS.PENDING);
     console.warn('[DB] 초기화 완료. 새로고침하면 온보딩부터 시작합니다.');
   }
 
@@ -270,6 +296,7 @@ const DB = (function () {
     Snails: Snails,
     Journal: Journal,
     Album: Album,
+    Pending: Pending,
     exportAll: exportAll,
     importAll: importAll,
     reset: reset,

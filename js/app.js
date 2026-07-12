@@ -262,10 +262,15 @@ const App = (function () {
         let state = await Api.state();
         state = await Api.Net.maybeOfferMigration(state);
         Api.Net.apply(state);
+        Api.flushQueue(); // 지난 세션에 밀린 오프라인 행동 재전송
         _startPositionSync();
         document.addEventListener('visibilitychange', function () {
-          if (!document.hidden) Api.state().then(Api.Net.apply).catch(function () { /* 무시 */ });
+          if (!document.hidden) {
+            Api.flushQueue();
+            Api.refreshFromServer().catch(function () { /* 무시 */ });
+          }
         });
+        window.addEventListener('online', function () { Api.flushQueue(); });
         serverReady = true;
       } catch (e) {
         // 죽은 주소/오프라인 → 이번 세션은 로컬 모드로 완전 폴백 (반쪽 상태 방지)
