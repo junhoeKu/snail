@@ -20,6 +20,7 @@ class Settings:
     refresh_ttl_days: int = int(os.environ.get("REFRESH_TTL_DAYS", "30"))
     cors_origins: list[str] = field(default_factory=_origins)
     google_client_id: str = os.environ.get("GOOGLE_CLIENT_ID", "")
+    admin_token: str = os.environ.get("ADMIN_TOKEN", "")  # 비면 어드민 API 비활성(운영에서만 설정)
     default_timezone: str = os.environ.get("DEFAULT_TZ", "Asia/Seoul")
     # 마이그레이션 검증 상한 — 하드코딩 금지 (9차 생태계에서 8로 상향 예정)
     max_snails: int = int(os.environ.get("MAX_SNAILS", "3"))

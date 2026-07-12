@@ -42,6 +42,7 @@ class User(Base):
     streak_count: Mapped[int] = mapped_column(Integer, default=0)
     streak_last_date: Mapped[str | None] = mapped_column(String(10), nullable=True)  # YYYY-MM-DD (user tz)
     last_daily_reward: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    last_letter_date: Mapped[str | None] = mapped_column(String(10), nullable=True)  # 졸업 엽서 daily 판정 가드
 
     # 미션/탐험/장식 상태 (실용적 절충: 조인 없이 JSON 컬럼 — 계획서 §4.4 분리안 대비 단순화)
     missions: Mapped[dict] = mapped_column(JSON, default=dict)          # {date, feed, pet, explore, bonus_given}
@@ -180,6 +181,48 @@ class SecurityEvent(Base):
     kind: Mapped[str] = mapped_column(String(32))  # idempotency_conflict | rate_limited | ...
     detail: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class GameConfigVersion(Base):
+    """원격 게임 설정 버전 — rules.py 기본값 위에 얹는 JSON 오버라이드."""
+    __tablename__ = "game_config_versions"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    version: Mapped[int] = mapped_column(Integer, unique=True)
+    status: Mapped[str] = mapped_column(String(12), default="draft")  # draft | active | archived
+    config: Mapped[dict] = mapped_column(JSON, default=dict)
+    note: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class AdminAuditLog(Base):
+    """어드민 쓰기 작업 감사 로그 — 사유·전후 값 기록."""
+    __tablename__ = "admin_audit_logs"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    action: Mapped[str] = mapped_column(String(48))
+    target_type: Mapped[str] = mapped_column(String(32), default="")
+    target_id: Mapped[str] = mapped_column(String(48), default="")
+    before: Mapped[dict] = mapped_column(JSON, default=dict)
+    after: Mapped[dict] = mapped_column(JSON, default=dict)
+    reason: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class MailboxMessage(Base):
+    """우편함 — 졸업 달팽이 엽서·운영자 보상. 수령 멱등(claimed_at)."""
+    __tablename__ = "mailbox_messages"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(String(32), ForeignKey("users.id"), index=True)
+    kind: Mapped[str] = mapped_column(String(16), default="letter")  # letter | admin_reward | event
+    title: Mapped[str] = mapped_column(String(48))
+    body: Mapped[str] = mapped_column(Text, default="")
+    rewards: Mapped[dict] = mapped_column(JSON, default=dict)  # {coins: 10}
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class AuthSession(Base):

@@ -177,6 +177,7 @@ snail/
 
 - 계층: `router → service → domain rule(app/domain/rules.py) → repository → DB`. **라우터에서 게임 수치를 계산하지 않는다**
 - 게임 판정의 단일 소스는 `backend/app/domain/rules.py` — 수치 변경 절차: 계획서 → rules.py → 클라 표시 수치는 `GET /v1/game/config`. 클라 `js/game.js`와 어긋나면 안 된다 (로컬 모드/연출용으로 유지됨)
+- 원격 게임 설정: `config_service`가 활성 오버라이드를 rules 전역(CONFIG/VARIANTS/FOOD_DEFS/STAGE_LEVELS)에 병합 반영한다(판정 함수 시그니처 무변경). 어드민 API(`ADMIN_TOKEN` + `X-Admin-Token` 헤더)로 버전 생성·검증·활성화·롤백하며 모든 쓰기는 `AdminAuditLog`에 사유·전후 값을 남긴다. 오버라이드는 기존 키만 덮고, 활성화 전 검증(확률 합=1·음수 금지·단조·ID 존재) 필수
 - 코인 증감은 반드시 `service.add_coins`, 아이템 증감은 `service.add_item`(각각 currency_ledger·inventory_ledger 원장)을 경유한다
 - 행동 API는 `request_id` 멱등키 필수, 클라이언트는 결과 수치(경험치/코인/당첨)를 절대 보내지 않는다. 같은 request_id·다른 payload는 `payload_hash`로 거부(보안 이벤트 기록). 재화 변동 행동은 `service.lock_user`(row lock)로 직렬화한다
 - 시간 판정(감쇠/일일 리셋/쿨다운)은 서버 시각 + 사용자 타임존 기준 — 배치 없이 lazy 계산

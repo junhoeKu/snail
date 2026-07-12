@@ -26,11 +26,83 @@ const SettingsModule = (function () {
     });
 
     _renderSoundToggle();
+    _renderMailbox();
 
     // 관리자 모드 표시
     const versionEl = document.querySelector('.settings-version');
     const base = versionEl.textContent.replace(' · 🛠️ ADMIN', '');
     versionEl.textContent = base + (DB.Player.get().admin ? ' · 🛠️ ADMIN' : '');
+  }
+
+  /** 우편함 — 서버 모드 전용 (졸업 달팽이 엽서 / 보상) */
+  function _renderMailbox() {
+    const section = document.getElementById('mailbox-section');
+    if (!Api.enabled()) { section.classList.add('hidden'); return; }
+    section.classList.remove('hidden');
+
+    Api.mailbox().then(function (res) {
+      const list = document.getElementById('mailbox-list');
+      const badge = document.getElementById('mailbox-badge');
+      const messages = res.messages || [];
+      const unread = messages.filter(function (m) { return !m.claimed; }).length;
+      badge.textContent = unread;
+      badge.classList.toggle('hidden', unread === 0);
+
+      list.innerHTML = '';
+      if (messages.length === 0) {
+        const li = document.createElement('li');
+        li.className = 'mailbox-empty';
+        li.textContent = '아직 도착한 편지가 없어요. 여행 간 달팽이가 가끔 소식을 전해요.';
+        list.appendChild(li);
+        return;
+      }
+      messages.forEach(function (m) {
+        list.appendChild(_mailCard(m));
+      });
+    }).catch(function () { /* 오프라인 등 무시 */ });
+  }
+
+  function _mailCard(m) {
+    const li = document.createElement('li');
+    li.className = 'mailbox-card' + (m.claimed ? ' claimed' : '');
+
+    const info = document.createElement('div');
+    info.className = 'mailbox-info';
+    const title = document.createElement('div');
+    title.className = 'mailbox-title';
+    title.textContent = '✉️ ' + m.title;
+    const body = document.createElement('div');
+    body.className = 'mailbox-body';
+    body.textContent = m.body;
+    info.appendChild(title);
+    info.appendChild(body);
+    li.appendChild(info);
+
+    const coins = (m.rewards && m.rewards.coins) || 0;
+    if (m.claimed) {
+      const done = document.createElement('span');
+      done.className = 'mailbox-done';
+      done.textContent = '수령 완료';
+      li.appendChild(done);
+    } else {
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-primary mailbox-claim';
+      btn.textContent = coins ? '🪙 ' + coins + ' 받기' : '받기';
+      btn.addEventListener('click', function () {
+        btn.disabled = true;
+        Api.claimMail(m.id).then(function () {
+          Sound.play('coin');
+          Toast.show('🪙 편지 속 용돈 +' + coins + ' 코인!');
+          App.refreshHeader();
+          _renderMailbox();
+        }).catch(function (err) {
+          btn.disabled = false;
+          Api.Net.fail(err);
+        });
+      });
+      li.appendChild(btn);
+    }
+    return li;
   }
 
   function _renderSoundToggle() {

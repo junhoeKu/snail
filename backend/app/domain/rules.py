@@ -34,6 +34,10 @@ CONFIG = {
     "GRADUATE_MIN_LEVEL": 20,
     "GRADUATE_COINS": 100,
     "GENERATION_BOOST_CAP": 5,
+    # 졸업 달팽이 엽서 이벤트 (하루 1회, 마리당 독립 확률)
+    "LETTER_CHANCE": 0.01,
+    "LETTER_COINS": 10,
+    "LETTER_MAX_PER_DAY": 3,       # 하루 최대 편지 수(스팸 가드)
     # 슬롯 (9차에서 8마리로 확장 예정 — MAX는 config/env)
     "EGG_SLOT_PRICES": [0, 500, 1500],
     # 부재 중 발견
@@ -385,6 +389,29 @@ def away_finds(away_minutes: float, rng=random.random) -> list[dict]:
             amount = CONFIG["FIND_COIN_MIN"] + int(rng() * (CONFIG["FIND_COIN_MAX"] - CONFIG["FIND_COIN_MIN"] + 1))
             finds.append({"type": "coins", "amount": amount})
     return finds
+
+
+# ── 졸업 달팽이 엽서 이벤트 ─────────────────────────────
+
+LETTER_PLACES = ["이끼 계곡", "햇살 들판 너머", "이슬 연못가", "바람 부는 언덕", "버섯 숲", "달빛 호숫가"]
+LETTER_TEMPLATES = [
+    "{place}에서 잘 지내요! 여비에 보태라고 조금 부쳐요.",
+    "여긴 {place}. 낯선 길도 이제 익숙해요. 걱정 말아요!",
+    "{place}에서 반짝이는 걸 주웠어요. 절반은 보낼게요.",
+]
+
+
+def roll_letter(name: str, rng=random.random) -> dict | None:
+    """졸업 달팽이 1마리의 엽서 판정(독립 확률). 편지 dict 또는 None."""
+    if rng() >= CONFIG["LETTER_CHANCE"]:
+        return None
+    place = LETTER_PLACES[int(rng() * len(LETTER_PLACES))]
+    tmpl = LETTER_TEMPLATES[int(rng() * len(LETTER_TEMPLATES))]
+    return {
+        "title": f"{name}의 여행 엽서 · {place}",
+        "body": tmpl.format(place=place),
+        "coins": CONFIG["LETTER_COINS"],
+    }
 
 
 def map_available(map_id: str, generation: int, unlocked: list) -> bool:
