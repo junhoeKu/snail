@@ -441,7 +441,15 @@ const HabitatModule = (function () {
         if (fed) _floatAt(entX, entY - edge, '+' + fed.exp + ' EXP');
         const fresh = DB.Snails.getById(ent.id);
         ent.hungry = !!fresh && fresh.hunger > 0;
-      }).catch(Api.Net.fail);
+      }).catch(function (err) {
+        if (err && err.code === 'network') {
+          Api.queueFeed(ent.id, foodId);
+          const fresh = DB.Snails.getById(ent.id);
+          ent.hungry = !!fresh && fresh.hunger > 0;
+        } else {
+          Api.Net.fail(err);
+        }
+      });
       _setState(ent, STATE.IDLE);
       _assignFoods();
       return;

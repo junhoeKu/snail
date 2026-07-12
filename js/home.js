@@ -423,7 +423,16 @@ const HomeModule = (function () {
           Sound.play('heart');
           HabitatModule.effect('💗', snailId);
           _renderSnailPopup(snailId);
-        }).catch(Api.Net.fail);
+        }).catch(function (err) {
+          if (err && err.code === 'network') {
+            Api.queuePet(snailId);
+            Sound.play('heart');
+            HabitatModule.effect('💗', snailId);
+            _renderSnailPopup(snailId);
+          } else {
+            Api.Net.fail(err);
+          }
+        });
         return;
       }
       _petById(snailId);
