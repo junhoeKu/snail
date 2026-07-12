@@ -1,4 +1,6 @@
-"""어드민 API — 원격 게임 설정 관리(버전/검증/활성화/롤백). 모든 쓰기는 감사 로그."""
+"""어드민 API — 원격 게임 설정/라이브 이벤트/공지 관리. 모든 쓰기는 감사 로그."""
+from datetime import datetime
+
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy import func, select
@@ -81,6 +83,87 @@ def activate_version(version: int, body: ReasonIn, db: Session = Depends(get_db)
     db.commit()
     config_service.apply_active(db)  # 즉시 반영
     return {"ok": True, "active_version": version, "effective": config_service.effective()}
+
+
+# ── 라이브 이벤트 ───────────────────────────────────────
+
+class EventIn(BaseModel):
+    title: str
+    config: dict            # 설정 오버라이드 동형
+    starts_at: datetime
+    ends_at: datetime
+    reason: str = ""
+
+
+@router.get("/events")
+def list_events(db: Session = Depends(get_db)):
+    rows = db.execute(select(models.LiveEvent)
+                      .order_by(models.LiveEvent.starts_at.desc())).scalars().all()
+    return {"events": [{"id": e.id, "title": e.title, "status": e.status,
+                        "config": e.config,
+                        "starts_at": service._aware(e.starts_at).isoformat(),
+                        "ends_at": service._aware(e.ends_at).isoformat()} for e in rows]}
+
+
+@router.post("/events")
+def create_event(body: EventIn, db: Session = Depends(get_db)):
+    """이벤트 생성 — config는 활성 설정 위에 겹쳐도 검증(확률 합 등) 통과해야 한다."""
+    if body.ends_at <= body.starts_at:
+        raise ApiError(422, "bad_range", "종료가 시작보다 빨라요.")
+    errors = config_service.validate(body.config)
+    if errors:
+        raise ApiError(422, "event_invalid", "; ".join(errors))
+    ev = models.LiveEvent(title=body.title, config=body.config,
+                          starts_at=body.starts_at, ends_at=body.ends_at, status="active")
+    db.add(ev)
+    _audit(db, "event_create", body.title, {}, {"config": body.config}, body.reason)
+    db.commit()
+    return {"ok": True, "id": ev.id}
+
+
+@router.post("/events/{event_id}/cancel")
+def cancel_event(event_id: str, body: ReasonIn, db: Session = Depends(get_db)):
+    ev = db.get(models.LiveEvent, event_id)
+    if ev is None:
+        raise ApiError(404, "not_found", "이벤트를 찾을 수 없습니다.")
+    ev.status = "cancelled"
+    _audit(db, "event_cancel", event_id, {"status": "active"}, {"status": "cancelled"}, body.reason)
+    db.commit()
+    config_service.refresh_for_request(db)  # 즉시 무효화
+    return {"ok": True}
+
+
+# ── 공지 ────────────────────────────────────────────────
+
+class NoticeIn(BaseModel):
+    title: str
+    body: str = ""
+    priority: str = "normal"     # normal | urgent
+    starts_at: datetime | None = None
+    ends_at: datetime | None = None
+    reason: str = ""
+
+
+@router.post("/notices")
+def create_notice(body: NoticeIn, db: Session = Depends(get_db)):
+    n = models.Notice(title=body.title, body=body.body,
+                      priority=("urgent" if body.priority == "urgent" else "normal"),
+                      starts_at=body.starts_at or service.utcnow(), ends_at=body.ends_at)
+    db.add(n)
+    _audit(db, "notice_create", body.title, {}, {"priority": n.priority}, body.reason)
+    db.commit()
+    return {"ok": True, "id": n.id}
+
+
+@router.post("/notices/{notice_id}/end")
+def end_notice(notice_id: str, body: ReasonIn, db: Session = Depends(get_db)):
+    n = db.get(models.Notice, notice_id)
+    if n is None:
+        raise ApiError(404, "not_found", "공지를 찾을 수 없습니다.")
+    n.ends_at = service.utcnow()
+    _audit(db, "notice_end", notice_id, {}, {}, body.reason)
+    db.commit()
+    return {"ok": True}
 
 
 @router.get("/audit")

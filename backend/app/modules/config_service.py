@@ -5,12 +5,21 @@
 기본값 스냅샷을 보관해 활성화/롤백 때마다 DEFAULTS ⊕ overrides 로 재구성한다.
 """
 import copy
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .. import models
 from ..domain import rules
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _aware(dt: datetime) -> datetime:
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 # 오버라이드가 덮을 수 있는 rules 전역의 원본 스냅샷 (프로세스 시작 시 1회 캡처)
 _DEFAULTS = {
@@ -27,26 +36,36 @@ def defaults() -> dict:
     return copy.deepcopy(_DEFAULTS)
 
 
-def _merge(overrides: dict) -> dict:
-    """DEFAULTS ⊕ overrides — 기존 키만 덮는다(새 키/ID 추가 금지)."""
-    merged = defaults()
+def _apply_into(merged: dict, overrides: dict) -> None:
+    """merged 를 overrides 로 덮는다 — 기존 키만(새 키/ID 추가 금지)."""
     ov = overrides or {}
-    # config: 스칼라 키만
     for k, v in (ov.get("config") or {}).items():
         if k in merged["config"]:
             merged["config"][k] = v
-    # variants/foods: 기존 변이/먹이의 기존 속성만
     for section in ("variants", "foods"):
         for item_id, patch in (ov.get(section) or {}).items():
             if item_id in merged[section] and isinstance(patch, dict):
                 for pk, pv in patch.items():
                     if pk in merged[section][item_id]:
                         merged[section][item_id][pk] = pv
-    # stages: 기존 경계만
     for k, v in (ov.get("stages") or {}).items():
         if k in merged["stages"]:
             merged["stages"][k] = v
+
+
+def _merge(*override_list: dict) -> dict:
+    """DEFAULTS ⊕ overrides들(순차)."""
+    merged = defaults()
+    for ov in override_list:
+        _apply_into(merged, ov)
     return merged
+
+
+def _write_globals(merged: dict) -> None:
+    for target, key in ((rules.CONFIG, "config"), (rules.VARIANTS, "variants"),
+                        (rules.FOOD_DEFS, "foods"), (rules.STAGE_LEVELS, "stages")):
+        target.clear()
+        target.update(merged[key])
 
 
 def validate(overrides: dict) -> list[str]:
@@ -97,11 +116,7 @@ def validate(overrides: dict) -> list[str]:
 def apply_overrides(overrides: dict, version: int = 0) -> None:
     """rules 전역을 DEFAULTS ⊕ overrides 로 갱신 (기존 키만)."""
     global _active_version
-    merged = _merge(overrides)
-    for target, key in ((rules.CONFIG, "config"), (rules.VARIANTS, "variants"),
-                        (rules.FOOD_DEFS, "foods"), (rules.STAGE_LEVELS, "stages")):
-        target.clear()
-        target.update(merged[key])
+    _write_globals(_merge(overrides))
     _active_version = version
 
 
@@ -114,6 +129,34 @@ def apply_active(db: Session) -> None:
     """DB의 활성 설정을 반영 (앱 시작·활성화 시 호출). 없으면 기본값 복원."""
     row = active_overrides(db)
     apply_overrides(row.config if row else {}, row.version if row else 0)
+
+
+# ── 라이브 이벤트 오버레이 (기간 lazy) ──────────────────
+
+_last_event_ids: set[str] = set()
+
+
+def active_events(db: Session, now: datetime | None = None) -> list[models.LiveEvent]:
+    now = now or _utcnow()
+    rows = db.execute(select(models.LiveEvent)
+                      .where(models.LiveEvent.status == "active")).scalars().all()
+    return [e for e in rows if _aware(e.starts_at) <= now < _aware(e.ends_at)]
+
+
+def effective_with_events(db: Session, now: datetime | None = None) -> dict:
+    active = active_overrides(db)
+    events = active_events(db, now)
+    return _merge(active.config if active else {}, *[e.config for e in events])
+
+
+def refresh_for_request(db: Session) -> None:
+    """행동/정산 시작 시 호출 — 활성 이벤트 경계에서만 rules 전역을 재구성한다.
+    평시(이벤트 없음)엔 활성 설정만 반영된 전역을 그대로 두어 오버헤드가 없다."""
+    global _last_event_ids
+    ids = {e.id for e in active_events(db)}
+    if ids or _last_event_ids:
+        _write_globals(effective_with_events(db))
+        _last_event_ids = ids
 
 
 def effective() -> dict:

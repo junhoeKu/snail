@@ -196,6 +196,32 @@ class GameConfigVersion(Base):
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class LiveEvent(Base):
+    """기간 한정 이벤트 — config는 설정 오버라이드와 동형(기간에만 유효 설정 위에 겹침)."""
+    __tablename__ = "live_events"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    title: Mapped[str] = mapped_column(String(48))
+    config: Mapped[dict] = mapped_column(JSON, default=dict)  # {config:{}, variants:{}, ...}
+    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    status: Mapped[str] = mapped_column(String(12), default="active")  # active | cancelled
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class Notice(Base):
+    """앱 내 공지 — 기간·우선순위. 읽음 상태는 클라 로컬 저장."""
+    __tablename__ = "notices"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    title: Mapped[str] = mapped_column(String(80))
+    body: Mapped[str] = mapped_column(Text, default="")
+    priority: Mapped[str] = mapped_column(String(12), default="normal")  # normal | urgent
+    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 class AdminAuditLog(Base):
     """어드민 쓰기 작업 감사 로그 — 사유·전후 값 기록."""
     __tablename__ = "admin_audit_logs"
