@@ -33,6 +33,7 @@
           <img class="egg-onboard-img" src="assets/characters/egg.png" alt="알">
 
           <p class="egg-guide">알이 도착했어요!<br>달팽이의 이름을 지어주세요.</p>
+          <p class="egg-intro">🐌 하루 두 번쯤 들러 먹이를 주고 쓰다듬으면<br>달팽이가 무럭무럭 자라 여행을 떠나요.</p>
           <input id="snail-name-input" class="text-input" type="text" maxlength="12" placeholder="이름 (최대 12자)">
           <button id="btn-hatch" class="btn btn-primary btn-wide">부화시키기</button>
         </div>
@@ -223,6 +224,7 @@
             <button class="settings-menu-item" data-sub="bg"><span><i class="fa-solid fa-image"></i> 배경</span><i class="fa-solid fa-chevron-right"></i></button>
             <button class="settings-menu-item" data-sub="sound"><span><i class="fa-solid fa-volume-high"></i> 사운드</span><i class="fa-solid fa-chevron-right"></i></button>
             <button class="settings-menu-item" data-sub="data"><span><i class="fa-solid fa-database"></i> 데이터</span><i class="fa-solid fa-chevron-right"></i></button>
+            <button class="settings-menu-item" data-sub="info"><span><i class="fa-solid fa-circle-info"></i> 정보</span><i class="fa-solid fa-chevron-right"></i></button>
           </div>
 
           <!-- 하위: 규칙 -->
@@ -255,7 +257,26 @@
               <i class="fa-solid fa-file-import"></i> 백업 코드로 복구
             </button>
             <button id="btn-reset" class="btn btn-danger btn-wide">데이터 초기화</button>
-            <p class="settings-version">Snail v1.4.2</p>
+          </div>
+
+          <!-- 하위: 정보 -->
+          <div id="sub-info" class="settings-panel hidden">
+            <button id="btn-install" class="btn btn-primary btn-wide hidden">
+              <i class="fa-solid fa-download"></i> 앱 설치하기
+            </button>
+            <p id="install-hint" class="screen-desc hidden">
+              iOS는 공유 <i class="fa-solid fa-arrow-up-from-bracket"></i> → "홈 화면에 추가"로 설치할 수 있어요.
+            </p>
+            <ul class="info-list">
+              <li><b>버전</b> <span class="settings-version">Snail v1.5.0</span></li>
+              <li><b>만든 곳</b> junhoeKu · 달팽이 키우기</li>
+              <li><b>문의</b> <a href="mailto:kujoon13413@gmail.com">kujoon13413@gmail.com</a></li>
+              <li><b>아트</b> 일러스트 · CSS 애니메이션</li>
+            </ul>
+            <h3 class="settings-subtitle">개인정보 처리방침</h3>
+            <p class="info-legal">이 게임은 닉네임과 기기별 인증 토큰만 저장합니다(서버 모드). 위치·연락처 등 민감정보를 수집하지 않으며, 데이터는 게임 진행 복원 목적에만 쓰입니다. 로컬 모드는 이 기기에만 저장됩니다.</p>
+            <h3 class="settings-subtitle">이용약관</h3>
+            <p class="info-legal">달팽이 키우기는 개인 프로젝트로, 서비스는 "있는 그대로" 제공됩니다. 게임 내 재화(코인 등)는 현금 가치가 없으며 환불되지 않습니다. 부정한 방법으로 재화를 조작하는 경우 이용이 제한될 수 있습니다.</p>
           </div>
         </div>
       </section>

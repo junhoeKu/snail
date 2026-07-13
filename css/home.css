@@ -516,3 +516,12 @@ body[data-daytime="night"] #snail-habitat::after {
   border-radius: inherit;
   z-index: 3;
 }
+
+/* 온보딩 안내 (13차) */
+.egg-intro {
+  font-size: 13px;
+  color: var(--color-text-sub);
+  line-height: 1.6;
+  margin-top: -4px;
+  margin-bottom: 6px;
+}

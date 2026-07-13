@@ -20,7 +20,7 @@ const DB = (function () {
   };
 
   const JOURNAL_MAX = 100; // 성장 일지 최대 보관 건수
-  const VALID_COLORS = ['brown', 'gray', 'red', 'yellow', 'bluegray', 'lavender', 'herb', 'black', 'lime', 'sky', 'pond']; // GAME.VARIANTS 키와 일치
+  const VALID_COLORS = ['brown', 'gray', 'red', 'yellow', 'bluegray', 'lavender', 'herb', 'black', 'lime', 'sky', 'pond', 'bee', 'devil', 'angel']; // GAME.VARIANTS 키와 일치
   // 은퇴한 변이 → 후속 변이 매핑 (황금→노란색, 적갈색→붉은색, 올리브→라임)
   const RETIRED_COLORS = { golden: 'yellow', russet: 'red', olive: 'lime' };
 
