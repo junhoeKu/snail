@@ -18,7 +18,7 @@ const ExploreModule = (function () {
   function _staminaText() {
     const player = DB.Player.get();
     const left = GAME.exploreStamina(player, DB.today());
-    return '오늘 남은 뒤지기: ' + left + '/' + GAME.exploreMaxSearches(player);
+    return '오늘 남은 탐색: ' + left + '/' + GAME.exploreMaxSearches(player);
   }
 
   /** 맵 선택 화면 */
@@ -97,6 +97,7 @@ const ExploreModule = (function () {
     document.getElementById('minigame-hub').classList.remove('hidden');
     document.getElementById('explore-select').classList.add('hidden');
     document.getElementById('explore-map').classList.add('hidden');
+    document.getElementById('race-view').classList.add('hidden');
     _currentMap = null;
   }
 
@@ -193,6 +194,8 @@ const ExploreModule = (function () {
         if (card.dataset.game === 'explore') {
           _showSelect();
           document.getElementById('explore-stamina').textContent = _staminaText();
+        } else if (card.dataset.game === 'race') {
+          RaceModule.start();
         } else {
           Toast.show('🚧 준비 중이에요! 곧 만나요.');
         }

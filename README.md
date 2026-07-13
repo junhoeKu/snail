@@ -86,8 +86,65 @@ python3 -m http.server 31111
 - [10차 MVP 구현 계획](docs/10차_MVP_구현계획.md) — 어드민 · 원격 설정 · 라이브 이벤트 · CI/CD (예정)
 - [11차 MVP 구현 계획](docs/11차_MVP_구현계획.md) — 살아있는 생태계 & 슬롯 8마리
 - [12차 MVP 구현 계획](docs/12차_MVP_구현계획.md) — 탭 개편 · 설정 분리 · 도감 등급 · 미니게임 전환
-- [13차 MVP 구현 계획](docs/13차_MVP_구현계획.md) — 공유 카드 · 히든 변이 · 도감 심화 (계획만)
+- [13차 MVP 구현 계획](docs/13차_MVP_구현계획.md) — 진짜 앱 배포 · 공유 카드 · 히든 변이 (계획만)
 - [CLAUDE.md](CLAUDE.md) — 아키텍처 규칙 및 작업 원칙
+
+## 코드 지도 — 파일별 역할 & "이 오류면 여기"
+
+> 문제가 생겼을 때 **어디를 열어야 하는지** 한눈에 찾기 위한 지도. 계층은 `클라(js/) ↔ 서버(backend/)`이고, 게임 판정의 진실은 **서버 `rules.py`**, 클라 `game.js`는 그 미러(로컬 모드·연출용)다.
+
+### 프론트엔드 `js/` (Vanilla, IIFE 모듈 — 각 파일 1 전역 네임스페이스)
+
+| 파일 | 역할 | 이런 증상이면 여기 |
+|------|------|------------------|
+| `db.js` | LocalStorage 데이터 계층(Player/Snails/Album/Journal/Pending). 스키마 치유·마이그레이션 | 저장/불러오기 이상, 색·필드가 리셋됨, 은퇴 변이(olive→lime 등) 이전 |
+| `game.js` | **게임 도메인 로직(순수 함수)**: CONFIG 수치, feed/hatch/pet/explore/raceRoll, VARIANTS, spritePath | 수치·확률·성장 곡선, 변이 목록, 스프라이트 경로 |
+| `api.js` | 서버 어댑터(듀얼 모드): 인증·토큰·엔드포인트·이벤트 재생·오프라인 큐·마이그레이션 제안 | 서버 모드 안 붙음, 로그인/토큰, 오프라인 동기화, `?api=` |
+| `app.js` | 앱 컨트롤러: 부팅·라우팅(navigate)·헤더·밤낮·복귀 리포트·파비콘 | 탭 전환, 헤더 코인/먹이, 부팅 흐름, 설정 아이콘 |
+| `home.js` | 홈 화면·개체 팝업·먹이 시트·미션·부화 연출 | 홈 UI, 달팽이 클릭 팝업, 먹이 주기 |
+| `habitat.js` | 서식지 애니메이션·행동 선택기(11차 생태계)·먹이 드롭 | 달팽이 안 움직임/이상 행동, 이모트, 밤 오버레이 |
+| `stats.js` | 유저 탭(양육자·앨범·일지) | 유저 화면, 앨범/일지 |
+| `dex.js` | 도감 탭(등급별 섹션) | 도감, 변이 진열/배지 |
+| `shop.js` `deco.js` | 상점(먹이·알슬롯·장식) / 배경·장식 렌더 | 구매, 슬롯 레벨 게이트, 배경 |
+| `explore.js` `race.js` | 미니게임 허브·탐험 / 달팽이 경주 | 미니게임 탭, 탐색·경주 |
+| `settings.js` | 설정(메뉴+하위: 규칙/배경/사운드/데이터)·우편함 | 설정 화면, 백업/복구, 우편함 |
+| `toast.js` `sound.js` `fx.js` | 토스트/모달·연출 / 사운드 / 코인·컨페티 FX | 알림·모달·소리·이펙트 |
+| `config.js` | 서버 주소(.env 역할) | 서버 연결 대상 변경 |
+
+### 백엔드 `backend/app/` (FastAPI, 계층 router→service→rules→repository)
+
+| 파일 | 역할 | 이런 증상이면 여기 |
+|------|------|------------------|
+| `main.py` | 앱 조립·라우터 등록·미들웨어·startup(create_all+활성 설정) | 라우트 404, 부팅, 미들웨어 순서 |
+| `domain/rules.py` | **게임 판정 단일 소스**: CONFIG·VARIANTS·FOOD·explore/race/letter 판정 | 서버 수치·확률·변이(클라 game.js와 일치해야) |
+| `models.py` | DB 스키마(users/snails/inventory/ledger/mailbox/events/…) | 컬럼·테이블, 마이그레이션 대상 |
+| `modules/service.py` | 정산(감쇠·보상·엽서)·원장·직렬화·동시성/멱등 헬퍼 | 코인/아이템 원장, lazy 정산, revision |
+| `modules/actions.py` | 서버 권위 행동(feed/hatch/graduate/purchase/explore) + `_run` 멱등·락 | 행동 API 오류, 정지 계정 403, 동시성 |
+| `modules/auth.py` `core/security.py` `core/deps.py` | 게스트/소셜 인증·토큰 회전 / JWT / 의존성(사용자·어드민) | 로그인, 401/403, 어드민 인증 |
+| `modules/config_service.py` `admin.py` | 원격 게임 설정 병합/검증 / 어드민 API(설정·이벤트·공지·사용자·`/admin/ui`) | 재배포 없는 밸런스 변경, 어드민 조작 |
+| `modules/mailbox.py` `minigame.py` `notices.py` | 우편함·졸업 엽서 / 경주 / 공지 | 편지·보상, 경주 판정, 공지 |
+| `modules/migration.py` `game.py` | LocalStorage v6 이전 / 상태 조회·설정·위치 동기화 | 기존 데이터 이전, `/v1/game/*` |
+| `core/config.py` `database.py` `middleware.py` `errors.py` | 환경변수 / DB 엔진 / 로그·RateLimit / 오류 포맷 | 환경설정, DB 연결, 429·로그, 에러 응답 |
+| `alembic/versions/` | 스키마 마이그레이션(0001~) — 배포 시 `alembic upgrade head` | 스키마 변경 반영, 운영 컬럼 추가 |
+
+### 그 외
+
+| 경로 | 역할 |
+|------|------|
+| `css/` | `theme`(색변수) · `components`(버튼/모달/토스트) · 화면별(`home/stats/shop/settings/explore`) |
+| `sw.js` `manifest.json` | 서비스 워커(캐시, 자산 변경 시 **CACHE_VERSION 필수 범프**) / PWA 매니페스트 |
+| `assets/characters` · `backgrounds` · `icon-*` | 달팽이 스프라이트(색_단계) · 배경 · 앱 아이콘 |
+| `tests/` | `integration.test.js`(jsdom 통합) · `game.test.js`(순수함수) — `npm test` |
+| `backend/app/tests/` | pytest(행동/멱등/원장/원격설정/우편함/경주) |
+| `.github/workflows/` | `ci.yml`(pytest·jsdom·sw-guard·마이그레이션) · `deploy-smoke.yml`(배포 후 운영 검증) |
+| `docs/` | N차 계획서 · `art/`(원본 아트) · 밸런스 문서 |
+
+### 자주 겪는 문제 → 확인 순서
+- **핫픽스가 반영 안 됨**: `sw.js` CACHE_VERSION 범프 여부 → 새로고침 2번(SW 설치→적용).
+- **달팽이 아이콘이 색·단계 안 맞음**: `GAME.spritePath` / `habitat.js _applyLook` / `assets/characters` 존재.
+- **서버 모드인데 값이 안 바뀜**: 서버가 판정(actions/rules). admin·클라 수치는 서버 모드에서 무시됨(로컬 모드는 `?api=`).
+- **수치·확률이 클라/서버 불일치**: `js/game.js` ↔ `backend/app/domain/rules.py` 미러 확인(CI가 교차 대조).
+- **배포 스키마 오류**: `alembic upgrade head`(Dockerfile) 실행·마이그레이션 방어성 확인.
 
 ## 개발자 콘솔 (QA)
 

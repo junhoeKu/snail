@@ -155,7 +155,8 @@ const Api = (function () {
     },
     mailbox: function () { return _request('GET', '/v1/mailbox'); },
     claimMail: function (id) { return _request('POST', '/v1/mailbox/' + id + '/claim'); },
-    notices: function () { return _request('GET', '/v1/notices/active'); }
+    notices: function () { return _request('GET', '/v1/notices/active'); },
+    race: function (guess) { return _request('POST', '/v1/minigame/race', { guess: guess }); }
   };
 
   // ── Net — 서버 응답을 로컬 미러/UI에 반영 ─────────────
@@ -447,6 +448,7 @@ const Api = (function () {
     mailbox: endpoints.mailbox,
     claimMail: endpoints.claimMail,
     notices: endpoints.notices,
+    race: endpoints.race,
     Net: Net
   };
 })();

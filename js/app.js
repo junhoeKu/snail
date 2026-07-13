@@ -308,6 +308,7 @@ const App = (function () {
     ShopModule.bind();
     DecoModule.bind();
     ExploreModule.bind();
+    RaceModule.bind();
     SettingsModule.bind();
     SettingsModule.render();
 

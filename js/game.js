@@ -62,6 +62,13 @@ const GAME = (function () {
     DECO_MISSIONS_REQUIRED: 7, // 들꽃: 미션 완주 누적
     DECO_GENERATION_REQUIRED: 2, // 이끼 바위: 세대
 
+    // 미니게임 — 달팽이 경주
+    RACE_LANES: 5,               // 출전 달팽이 수
+    RACE_REWARD: 10,             // 1등 예측 성공 보상 코인
+    RACE_MAX_PER_DAY: 10,        // 하루 경주 횟수 제한
+    RACE_TIME_MIN: 8.0,          // 결승 도착 최소 초 (연출용)
+    RACE_TIME_MAX: 10.5,         // 결승 도착 최대 초
+
     // 탐험 채집
     EXPLORE_SEARCHES_PER_DAY: 10, // 하루 뒤지기 횟수 (맵 공용)
     EXPLORE_COIN_MIN: 3,
@@ -362,6 +369,25 @@ const GAME = (function () {
 
     const count = 1 + Math.floor(rand() * Math.min(3, lines.length));
     return { lines: lines.slice(0, count), scene: scene };
+  }
+
+  /**
+   * 달팽이 경주 판정 (순수 함수, 12차 미니게임).
+   * 각 레인의 결승 도착 시간(초)을 굴리고, 가장 빠른 레인이 1등이다.
+   * 시간 범위가 좁아 2~3마리가 접전하다 한 마리가 이기는 연출이 나온다.
+   * @returns {{winner:number, order:number[], times:number[]}}
+   */
+  function raceRoll(rng) {
+    const rand = rng || Math.random;
+    const times = [];
+    for (let i = 0; i < CONFIG.RACE_LANES; i++) {
+      times.push(CONFIG.RACE_TIME_MIN + rand() * (CONFIG.RACE_TIME_MAX - CONFIG.RACE_TIME_MIN));
+    }
+    const order = times
+      .map(function (t, i) { return { lane: i, time: t }; })
+      .sort(function (a, b) { return a.time - b.time; })
+      .map(function (o) { return o.lane; });
+    return { winner: order[0], order: order, times: times };
   }
 
   /** 스탯 → 컨디션 (표정/속도 배수. 저장하지 않고 파생) */
@@ -1097,6 +1123,7 @@ const GAME = (function () {
     removeDecoration: removeDecoration,
     weatherFor: weatherFor,
     simulateAwayLife: simulateAwayLife,
+    raceRoll: raceRoll,
     conditionOf: conditionOf,
     rollPersonality: rollPersonality,
     rollVariant: rollVariant,

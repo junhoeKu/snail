@@ -48,6 +48,7 @@ class User(Base):
     missions: Mapped[dict] = mapped_column(JSON, default=dict)          # {date, feed, pet, explore, bonus_given}
     mission_completions: Mapped[int] = mapped_column(Integer, default=0)
     explore_state: Mapped[dict] = mapped_column(JSON, default=dict)     # {date, searches}
+    minigame_race: Mapped[dict] = mapped_column(JSON, default=dict)     # {date, count} 경주 하루 제한
     unlocked_maps: Mapped[list] = mapped_column(JSON, default=list)
     decorations_owned: Mapped[list] = mapped_column(JSON, default=list)
     decoration_slots: Mapped[list] = mapped_column(JSON, default=lambda: [None, None, None])
