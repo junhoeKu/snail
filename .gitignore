@@ -1,6 +1,7 @@
 .DS_Store
 Thumbs.db
 backend/.venv/
+scripts/.venv-art/
 backend/**/__pycache__/
 backend/*.db
 backend/.pytest_cache/

@@ -1,0 +1,25 @@
+{
+  "_comment": "아트 파이프라인 단일 소스. scripts/release.py가 이 매핑으로 원본 PNG를 스프라이트로 후처리한다. 새 변이 추가 = 여기에 '한글이름':'영문id' 한 줄 추가 + docs/art/characters/{등급}/에 PNG 3종(아기/주니어/성체) 넣기. 게임 확률/등급은 js/game.js·rules.py의 VARIANTS에서 별도 등록한다(수치는 자동으로 정하지 않음).",
+  "stages": { "아기": "baby", "주니어": "junior", "성체": "adult" },
+  "variants": {
+    "갈색": "brown",
+    "회갈색": "gray",
+    "붉은색": "red",
+    "노란색": "yellow",
+    "블루그레이색": "bluegray",
+    "라벤더그레이색": "lavender",
+    "허브색": "herb",
+    "검정색": "black",
+    "라임색": "lime",
+    "소라색": "sky",
+    "연못": "pond",
+    "꿀벌": "bee",
+    "악마": "devil",
+    "천사": "angel",
+    "단풍": "maple",
+    "바람개비": "pinwheel",
+    "벚꽃": "cherry",
+    "해바라기": "sunflower",
+    "무당벌레": "ladybug"
+  }
+}
