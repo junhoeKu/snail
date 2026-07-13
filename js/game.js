@@ -219,17 +219,20 @@ const GAME = (function () {
   };
 
   const VARIANTS = {
-    brown: { id: 'brown', label: '갈색', chance: 0.098, rarity: 'common' },
-    gray: { id: 'gray', label: '회갈색', chance: 0.098, rarity: 'common' },
-    red: { id: 'red', label: '붉은색', chance: 0.098, rarity: 'common' },
-    yellow: { id: 'yellow', label: '노란색', chance: 0.098, rarity: 'common' },
-    bluegray: { id: 'bluegray', label: '블루그레이', chance: 0.098, rarity: 'common' },
-    lavender: { id: 'lavender', label: '라벤더그레이', chance: 0.098, rarity: 'common' },
-    herb: { id: 'herb', label: '허브', chance: 0.098, rarity: 'common' },
-    black: { id: 'black', label: '검정', chance: 0.098, rarity: 'common' },
-    lime: { id: 'lime', label: '라임', chance: 0.098, rarity: 'common' },
-    sky: { id: 'sky', label: '소라', chance: 0.098, rarity: 'common' },
-    pond: { id: 'pond', label: '연못', chance: 0.02, rarity: 'rare' }
+    brown: { id: 'brown', label: '갈색', chance: 0.0965, rarity: 'common' },
+    gray: { id: 'gray', label: '회갈색', chance: 0.0965, rarity: 'common' },
+    red: { id: 'red', label: '붉은색', chance: 0.0965, rarity: 'common' },
+    yellow: { id: 'yellow', label: '노란색', chance: 0.0965, rarity: 'common' },
+    bluegray: { id: 'bluegray', label: '블루그레이', chance: 0.0965, rarity: 'common' },
+    lavender: { id: 'lavender', label: '라벤더그레이', chance: 0.0965, rarity: 'common' },
+    herb: { id: 'herb', label: '허브', chance: 0.0965, rarity: 'common' },
+    black: { id: 'black', label: '검정', chance: 0.0965, rarity: 'common' },
+    lime: { id: 'lime', label: '라임', chance: 0.0965, rarity: 'common' },
+    sky: { id: 'sky', label: '소라', chance: 0.0965, rarity: 'common' },
+    pond: { id: 'pond', label: '연못', chance: 0.02, rarity: 'rare' },
+    bee: { id: 'bee', label: '꿀벌', chance: 0.005, rarity: 'epic' },
+    devil: { id: 'devil', label: '악마', chance: 0.005, rarity: 'epic' },
+    angel: { id: 'angel', label: '천사', chance: 0.005, rarity: 'epic' }
   };
 
   /**
@@ -245,7 +248,8 @@ const GAME = (function () {
   /** 세대당 변이 확률 변화 (%p) — 연못(레어) 상승, 기본 10종 균등 하락 (합계 0) */
   const VARIANT_GEN_DELTA = {
     brown: -0.1, gray: -0.1, red: -0.1, yellow: -0.1, bluegray: -0.1,
-    lavender: -0.1, herb: -0.1, black: -0.1, lime: -0.1, sky: -0.1, pond: 1.0
+    lavender: -0.1, herb: -0.1, black: -0.1, lime: -0.1, sky: -0.1,
+    pond: 1.0, bee: 0, devil: 0, angel: 0
   };
 
   /** 세대 보정된 변이 확률 테이블 (5차_MVP_구현계획.md §3.2) */

@@ -2,7 +2,7 @@
  * Snail 서비스 워커 — 정적 자산 캐시 우선 (오프라인 실행)
  * CACHE_VERSION을 올리면 다음 방문 시 새 캐시로 교체된다.
  */
-const CACHE_VERSION = 'snail-v1.4.2';
+const CACHE_VERSION = 'snail-v1.5.0';
 
 const PRECACHE = [
   '.',
@@ -67,7 +67,16 @@ const PRECACHE = [
   'assets/characters/snail_sky_adult.png',
   'assets/characters/snail_pond_baby.png',
   'assets/characters/snail_pond_junior.png',
-  'assets/characters/snail_pond_adult.png'
+  'assets/characters/snail_pond_adult.png',
+  'assets/characters/snail_bee_baby.png',
+  'assets/characters/snail_bee_junior.png',
+  'assets/characters/snail_bee_adult.png',
+  'assets/characters/snail_devil_baby.png',
+  'assets/characters/snail_devil_junior.png',
+  'assets/characters/snail_devil_adult.png',
+  'assets/characters/snail_angel_baby.png',
+  'assets/characters/snail_angel_junior.png',
+  'assets/characters/snail_angel_adult.png'
 ];
 
 self.addEventListener('install', function (event) {

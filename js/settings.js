@@ -38,7 +38,24 @@ const SettingsModule = (function () {
 
   // ── 설정 하위 라우팅 (메뉴 ↔ 세부 화면) ─────────────────
 
-  const SUB_TITLES = { rules: '규칙', bg: '배경', sound: '사운드', data: '데이터' };
+  const SUB_TITLES = { rules: '규칙', bg: '배경', sound: '사운드', data: '데이터', info: '정보' };
+
+  // PWA 설치(A2HS) — beforeinstallprompt를 잡아뒀다가 정보 화면 버튼으로 띄운다
+  let _installPrompt = null;
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    _installPrompt = e;
+  });
+
+  function _refreshInstall() {
+    const btn = document.getElementById('btn-install');
+    const hint = document.getElementById('install-hint');
+    if (!btn) return;
+    const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    if (standalone) { btn.classList.add('hidden'); hint.classList.add('hidden'); }
+    else if (_installPrompt) { btn.classList.remove('hidden'); hint.classList.add('hidden'); }
+    else { btn.classList.add('hidden'); hint.classList.remove('hidden'); } // iOS 등 프롬프트 미지원
+  }
 
   function _showMenu() {
     document.getElementById('settings-menu').classList.remove('hidden');
@@ -64,6 +81,7 @@ const SettingsModule = (function () {
     document.getElementById('settings-back').classList.remove('hidden');
     document.getElementById('settings-title-text').textContent = SUB_TITLES[name] || '설정';
     if (name === 'bg' && typeof DecoModule !== 'undefined') DecoModule.render(); // 배경 선택 표시 갱신
+    if (name === 'info') _refreshInstall();
   }
 
   /** 우편함 — 서버 모드 전용 (졸업 달팽이 엽서 / 보상) */
@@ -212,6 +230,11 @@ const SettingsModule = (function () {
       btn.addEventListener('click', function () { _openSub(btn.dataset.sub); });
     });
     document.getElementById('settings-back').addEventListener('click', _back);
+    document.getElementById('btn-install').addEventListener('click', function () {
+      if (!_installPrompt) return;
+      _installPrompt.prompt();
+      _installPrompt.userChoice.finally(function () { _installPrompt = null; _refreshInstall(); });
+    });
     document.getElementById('btn-sound-toggle').addEventListener('click', _toggleSound);
     document.getElementById('btn-backup-export').addEventListener('click', _exportBackup);
     document.getElementById('btn-backup-import').addEventListener('click', _importBackup);
