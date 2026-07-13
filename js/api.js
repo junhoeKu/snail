@@ -205,23 +205,25 @@ const Api = (function () {
             Sound.play('fanfare');
             Toast.show('🎉 ' + findSnail(e.snailId).name + ' 레벨 업! Lv.' + e.level);
             break;
-          case 'stage_up':
+          case 'stage_up': {
             FX.confetti(14);
+            const grown = findSnail(e.snailId);
             Toast.celebrate({
-              emoji: '🐌',
-              title: findSnail(e.snailId).name + ' — 성장!',
+              image: GAME.spritePath(grown.color, e.stage),
+              title: grown.name + ' — 성장!',
               message: e.stage === 'junior' ? '껍질이 커졌습니다!' : '어엿한 성체가 되었습니다!'
             });
             break;
+          }
           case 'hatched': {
             Sound.play('fanfare');
             Sound.vibrate(30);
             FX.confetti(16);
             const variant = GAME.VARIANTS[e.color] || GAME.VARIANTS.brown;
             Toast.celebrate({
-              emoji: variant.rarity === 'epic' ? '✨' : (variant.rarity === 'rare' ? '💠' : '🐌'),
+              image: GAME.spritePath(e.color, 'baby'),
               title: variant.rarity === 'epic' ? '에픽 달팽이 부화!!'
-                : (variant.rarity === 'rare' ? '레어 달팽이 부화!' : '부화 성공!'),
+                : (variant.rarity === 'rare' ? '레어 달팽이 부화!' : variant.label + ' 달팽이 부화!'),
               message: findSnail(e.snailId).name + '(이)가 태어났어요. 잘 돌봐주세요!'
             });
             break;

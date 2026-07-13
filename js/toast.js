@@ -27,7 +27,8 @@ const Toast = (function () {
 
   /**
    * 축하 모달 (부화/레벨업/단계 변화 연출)
-   * @param {{emoji: string, title: string, message: string}} opts
+   * @param {{emoji?: string, image?: string, title: string, message: string}} opts
+   *   image 가 있으면 해당 달팽이 스프라이트를, 없으면 emoji 텍스트를 보여준다.
    */
   function celebrate(opts) {
     const root = document.getElementById('modal-root');
@@ -39,9 +40,17 @@ const Toast = (function () {
     const box = document.createElement('div');
     box.className = 'modal-box celebrate';
 
-    const emoji = document.createElement('div');
-    emoji.className = 'modal-emoji';
-    emoji.textContent = opts.emoji || '🎉';
+    let emoji;
+    if (opts.image) {
+      emoji = document.createElement('img');
+      emoji.className = 'modal-emoji-img';
+      emoji.src = opts.image;
+      emoji.alt = '';
+    } else {
+      emoji = document.createElement('div');
+      emoji.className = 'modal-emoji';
+      emoji.textContent = opts.emoji || '🎉';
+    }
 
     const title = document.createElement('h3');
     title.textContent = opts.title || '';

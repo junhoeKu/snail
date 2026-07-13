@@ -221,7 +221,7 @@ const HomeModule = (function () {
         };
         FX.confetti(14);
         Toast.celebrate({
-          emoji: GAME.STAGES[snail.stage].emoji,
+          image: GAME.spritePath(snail.color, snail.stage),
           title: snail.name + ' — ' + GAME.STAGES[snail.stage].label + ' 달팽이',
           message: messages[snail.stage] || '성장했어요!'
         });
@@ -299,8 +299,9 @@ const HomeModule = (function () {
     FX.confetti(16);
     const rarity = variant ? variant.rarity : 'common';
     Toast.celebrate({
-      emoji: rarity === 'epic' ? '✨' : (rarity === 'rare' ? '💠' : '🐌'),
-      title: rarity === 'epic' ? '에픽 달팽이 부화!!' : (rarity === 'rare' ? '레어 달팽이 부화!' : '부화 성공!'),
+      image: GAME.spritePath(result.snail.color, 'baby'),
+      title: rarity === 'epic' ? '에픽 달팽이 부화!!' : (rarity === 'rare' ? '레어 달팽이 부화!'
+        : (variant ? variant.label : '') + ' 달팽이 부화!'),
       message: result.snail.name + '(이)가 태어났어요. 잘 돌봐주세요!'
     });
   }

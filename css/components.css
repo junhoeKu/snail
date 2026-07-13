@@ -291,6 +291,16 @@
   animation: celebrate-pop 0.6s ease;
 }
 
+.modal-box.celebrate .modal-emoji-img {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  margin: 0 auto;
+  display: block;
+  filter: drop-shadow(0 3px 5px rgba(20, 18, 10, 0.28));
+  animation: celebrate-pop 0.6s ease;
+}
+
 .modal-box h3 {
   font-size: 20px;
   margin: 12px 0 6px;
