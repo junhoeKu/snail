@@ -49,6 +49,12 @@ CONFIG = {
     "FIND_COIN_MAX": 15,
     "FIND_FOOD_CHANCE": 0.3,
     # 탐험
+    # 미니게임 — 달팽이 경주
+    "RACE_LANES": 5,
+    "RACE_REWARD": 10,
+    "RACE_MAX_PER_DAY": 10,
+    "RACE_TIME_MIN": 8.0,
+    "RACE_TIME_MAX": 10.5,
     "EXPLORE_SEARCHES_PER_DAY": 10,
     "EXPLORE_COIN_MIN": 3,
     "EXPLORE_COIN_MAX": 12,
@@ -430,6 +436,14 @@ def map_available(map_id: str, generation: int, unlocked: list) -> bool:
     if not m["locked"]:
         return True
     return generation >= CONFIG["DECO_GENERATION_REQUIRED"] or map_id in (unlocked or [])
+
+
+def race_roll(rng=random.random) -> dict:
+    """달팽이 경주 판정 — 각 레인의 결승 시간(초)을 굴려 가장 빠른 레인이 1등."""
+    times = [CONFIG["RACE_TIME_MIN"] + rng() * (CONFIG["RACE_TIME_MAX"] - CONFIG["RACE_TIME_MIN"])
+             for _ in range(CONFIG["RACE_LANES"])]
+    order = sorted(range(len(times)), key=lambda i: times[i])
+    return {"winner": order[0], "order": order, "times": times}
 
 
 def explore_roll(generation: int, map_id: str, rng=random.random) -> dict:

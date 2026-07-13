@@ -11,7 +11,7 @@ from .core.database import Base, SessionLocal, engine
 from .core.errors import ApiError, api_error_handler
 from .core.middleware import RateLimitMiddleware, StructuredLogMiddleware
 from .domain import rules
-from .modules import actions, admin, auth, config_service, game, mailbox, migration, notices
+from .modules import actions, admin, auth, config_service, game, mailbox, migration, minigame, notices
 
 
 def seed_items() -> None:
@@ -53,6 +53,7 @@ def create_app() -> FastAPI:
     app.include_router(actions.router)
     app.include_router(migration.router)
     app.include_router(mailbox.router)
+    app.include_router(minigame.router)
     app.include_router(notices.router)
     app.include_router(admin.router)
     app.include_router(admin.ui_router)

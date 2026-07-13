@@ -43,9 +43,16 @@ const SettingsModule = (function () {
   function _showMenu() {
     document.getElementById('settings-menu').classList.remove('hidden');
     document.querySelectorAll('.settings-panel').forEach(function (p) { p.classList.add('hidden'); });
-    document.getElementById('settings-back').classList.add('hidden');
+    document.getElementById('settings-back').classList.remove('hidden'); // 메뉴에선 홈으로
     document.getElementById('settings-title-text').textContent = '설정';
     _renderMailbox(); // 메뉴에서만 우편함 노출
+  }
+
+  /** 뒤로가기: 하위 화면이면 메뉴로, 메뉴면 홈으로 */
+  function _back() {
+    const onMenu = !document.getElementById('settings-menu').classList.contains('hidden');
+    if (onMenu) App.navigate('home');
+    else _showMenu();
   }
 
   function _openSub(name) {
@@ -204,7 +211,7 @@ const SettingsModule = (function () {
     document.querySelectorAll('.settings-menu-item').forEach(function (btn) {
       btn.addEventListener('click', function () { _openSub(btn.dataset.sub); });
     });
-    document.getElementById('settings-back').addEventListener('click', _showMenu);
+    document.getElementById('settings-back').addEventListener('click', _back);
     document.getElementById('btn-sound-toggle').addEventListener('click', _toggleSound);
     document.getElementById('btn-backup-export').addEventListener('click', _exportBackup);
     document.getElementById('btn-backup-import').addEventListener('click', _importBackup);

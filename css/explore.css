@@ -124,3 +124,50 @@
 .minigame-info b { font-size: 15px; font-weight: 800; }
 .minigame-info small { font-size: 12px; color: var(--color-text-sub); }
 .minigame-card > i { color: var(--color-text-sub); font-size: 12px; }
+
+/* ── 달팽이 경주 (12차) ───────────────────── */
+.race-card { position: relative; }
+.race-track {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 14px 0;
+  padding: 10px 8px;
+  background: linear-gradient(90deg, rgba(120,145,100,.1), rgba(140,200,170,.12));
+  border-radius: var(--radius-sm);
+  border-right: 3px dashed rgba(200, 80, 80, 0.5); /* 결승선 */
+}
+.race-lane {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 44px;
+}
+.race-num {
+  width: 20px;
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--color-text-sub);
+  flex-shrink: 0;
+}
+.race-snail {
+  position: absolute;
+  left: 24px;
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  transform: translateX(0);
+  transform-origin: center;
+  filter: drop-shadow(0 2px 2px rgba(20,18,10,.25));
+}
+.race-snail.race-winner { animation: race-bounce 0.5s ease infinite alternate; }
+@keyframes race-bounce { to { transform: translateX(calc(100% - 4px)) translateY(-4px); } }
+
+.race-guess {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.race-pick { min-width: 56px; padding: 10px 12px; }
+.race-left { text-align: center; font-size: 12px; color: var(--color-text-sub); margin-top: 10px; }
