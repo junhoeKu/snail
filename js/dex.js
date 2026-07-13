@@ -32,6 +32,8 @@ const DexModule = (function () {
   }
 
   function render() {
+    // 등급 완성 보상 정산 (로컬 모드) — 지급되면 코인/헤더가 갱신된다
+    App.checkDexRewards();
     const discovered = GAME.discoveredVariants(DB.Album.get(), DB.Snails.get());
     const container = document.getElementById('dex-sections');
     if (!container) return;

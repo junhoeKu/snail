@@ -81,7 +81,8 @@ const DB = (function () {
       decorations: { owned: [], slots: [null, null, null] },
       snail_slots: 1,            // 보금자리 수 (최대 3 — 상점에서 확장)
       explore: { date: null, searches: 0 }, // 탐험 스태미나 (하루 리셋)
-      unlocked_maps: []
+      unlocked_maps: [],
+      dex_claimed: []            // 수령한 도감 등급 완성 보상 (common/rare/epic — 로컬 모드)
     };
   }
 

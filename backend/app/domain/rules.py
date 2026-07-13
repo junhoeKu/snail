@@ -58,6 +58,8 @@ CONFIG = {
     # 미니게임 — 달팽이 퀴즈
     "QUIZ_REWARD": 5,
     "QUIZ_MAX_PER_DAY": 3,
+    # 도감 등급 완성 보상 (등급별 1회, 수령 멱등 — 13차 §B.4)
+    "DEX_TIER_REWARDS": {"common": 100, "rare": 30, "epic": 200},
     "EXPLORE_SEARCHES_PER_DAY": 10,
     "EXPLORE_COIN_MIN": 3,
     "EXPLORE_COIN_MAX": 12,
@@ -105,6 +107,20 @@ VARIANT_GEN_DELTA = {
     "lavender": -0.1, "herb": -0.1, "black": -0.1, "lime": -0.1, "sky": -0.1,
     "pond": 1.0, "bee": 0, "devil": 0, "angel": 0,
 }
+
+RARITIES = ("common", "rare", "epic")
+
+
+def dex_completed_tiers(discovered) -> list[str]:
+    """발견 변이 목록으로 '완성된' 등급 id 목록을 반환한다 (순수). 변이 없는 등급은 제외."""
+    found = set(discovered or [])
+    out = []
+    for tier in RARITIES:
+        keys = [k for k, v in VARIANTS.items() if v["rarity"] == tier]
+        if keys and all(k in found for k in keys):
+            out.append(tier)
+    return out
+
 
 PERSONALITIES = {"foodie": 0.40, "explorer": 0.35, "sleepy": 0.25}
 
@@ -163,12 +179,20 @@ def gain_exp(snail: dict, amount: int) -> list[dict]:
 
 # ── 변이/성격 ───────────────────────────────────────────
 
-def variant_table_for(generation: int) -> dict[str, float]:
+def variant_table_for(generation: int, hour: int | None = None) -> dict[str, float]:
     boost = min(max(generation - 1, 0), CONFIG["GENERATION_BOOST_CAP"])
-    return {
+    table = {
         key: (base["chance"] * 100 + VARIANT_GEN_DELTA[key] * boost) / 100
         for key, base in VARIANTS.items()
     }
+    # 히든 변이 시간 조건: 천사=낮(06~18)만, 악마=밤(18~06)만. 안 맞는 시간대의 확률은 갈색으로.
+    if hour is not None:
+        daytime = 6 <= hour < 18
+        blocked = "devil" if daytime else "angel"
+        if table.get(blocked):
+            table["brown"] += table[blocked]
+            table[blocked] = 0
+    return table
 
 
 def _pick_weighted(table: dict[str, float], roll: float) -> str:
@@ -181,8 +205,8 @@ def _pick_weighted(table: dict[str, float], roll: float) -> str:
     return keys[-1]
 
 
-def roll_variant(generation: int, rng=random.random) -> str:
-    return _pick_weighted(variant_table_for(generation), rng())
+def roll_variant(generation: int, rng=random.random, hour: int | None = None) -> str:
+    return _pick_weighted(variant_table_for(generation, hour), rng())
 
 
 def roll_personality(rng=random.random) -> str:
@@ -360,7 +384,7 @@ def pet(snail: dict, deco_slots: list) -> list[dict]:
     return [{"type": "petted", "snailId": snail["id"]}]
 
 
-def hatch(snail: dict, name: str, generation: int, rng=random.random) -> list[dict]:
+def hatch(snail: dict, name: str, generation: int, rng=random.random, hour: int | None = None) -> list[dict]:
     if snail["stage"] != "egg":
         raise ValueError("already_hatched")
     name = (name or "").strip()[:12]
@@ -373,7 +397,7 @@ def hatch(snail: dict, name: str, generation: int, rng=random.random) -> list[di
     snail["hunger"] = CONFIG["HATCH_HUNGER"]
     snail["happiness"] = CONFIG["HATCH_HAPPINESS"]
     snail["personality"] = roll_personality(rng)
-    snail["color"] = snail.get("wild_variant") or roll_variant(generation, rng)
+    snail["color"] = snail.get("wild_variant") or roll_variant(generation, rng, hour)
     snail["wild_variant"] = None
     return [{"type": "hatched", "snailId": snail["id"], "color": snail["color"], "personality": snail["personality"]}]
 

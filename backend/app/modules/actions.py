@@ -180,7 +180,9 @@ def hatch(snail_id: str, body: HatchIn,
         snail = _snail_of(db, user, snail_id)
         before = service.discovered_variants(db, user)
         s = service.snail_dict(snail)
-        events = rules.hatch(s, body.name, user.generation)
+        from zoneinfo import ZoneInfo
+        hour = service.utcnow().astimezone(ZoneInfo(user.timezone or "Asia/Seoul")).hour
+        events = rules.hatch(s, body.name, user.generation, hour=hour)
         service.apply_snail_dict(snail, s)
         snail.hatched_at = service.utcnow()
 
@@ -193,6 +195,7 @@ def hatch(snail_id: str, body: HatchIn,
         if snail.color not in before:
             events.append({"type": "dex_new", "color": snail.color})
             events += _keeper(db, user, "dex_new")
+            events += service.grant_dex_rewards(db, user)
         return events
     return _run(db, user, "hatch", body.requestId, snail_id, body.model_dump(), fn)
 
@@ -220,6 +223,7 @@ def graduate(snail_id: str, body: ActionIn,
         events = [{"type": "graduated", "snailId": snail.id, "name": snail.name}]
         events += _keeper(db, user, "graduate")
         events += _deco_unlocks(db, user)
+        events += service.grant_dex_rewards(db, user)  # 앨범 추가로 등급이 완성될 수 있다
         return events
     return _run(db, user, "graduate", body.requestId, snail_id, body.model_dump(), fn)
 

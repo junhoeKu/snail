@@ -310,6 +310,7 @@ const App = (function () {
     ExploreModule.bind();
     RaceModule.bind();
     QuizModule.bind();
+    ShareModule.bind();
     SettingsModule.bind();
     SettingsModule.render();
 
@@ -435,10 +436,37 @@ const App = (function () {
     });
   }
 
+  /**
+   * 도감 등급 완성 보상 정산 (로컬 모드) — 방금 완성된 등급마다 코인을 1회 지급한다.
+   * 서버 모드는 서버가 부화 시 우편함으로 지급하므로 건너뛴다.
+   * @returns {boolean} 하나라도 지급했는지
+   */
+  function checkDexRewards() {
+    if (Api.enabled()) return false;
+    const player = DB.Player.get();
+    const discovered = GAME.discoveredVariants(DB.Album.get(), DB.Snails.get());
+    const claims = GAME.dexRewardsToClaim(discovered, player.dex_claimed || []);
+    if (claims.length === 0) return false;
+
+    claims.forEach(function (c) {
+      player.coins += c.coins;
+      player.dex_claimed = (player.dex_claimed || []).concat(c.tier);
+      const tierLabel = (GAME.RARITIES[c.tier] || { label: c.tier }).label;
+      Sound.play('fanfare');
+      FX.confetti(16);
+      Toast.show('🏅 ' + tierLabel + ' 도감 완성! (+' + c.coins + ' 코인)');
+      DB.Journal.add('dex', tierLabel + ' 등급 도감을 완성했어요! (+' + c.coins + ' 코인)');
+    });
+    DB.Player.save(player);
+    refreshHeader();
+    return true;
+  }
+
   return {
     navigate: navigate,
     refreshHeader: refreshHeader,
     gainKeeperXp: gainKeeperXp,
+    checkDexRewards: checkDexRewards,
     applyBackground: applyBackground,
     setLiveEvents: setLiveEvents,
     loadNotices: loadNotices,

@@ -111,6 +111,39 @@ def discovered_variants(db: Session, user: models.User) -> set[str]:
     return found
 
 
+def grant_dex_rewards(db: Session, user: models.User) -> list[dict]:
+    """도감 등급 완성 보상 — 완성된 등급마다 우편함 보상을 1회 생성한다 (멱등: 이미 발급된 등급은 건너뜀).
+
+    발견 목록 변화 시(부화/졸업 후)에 호출한다. 코인은 우편함 수령 시 원장을 경유한다.
+    """
+    completed = rules.dex_completed_tiers(discovered_variants(db, user))
+    if not completed:
+        return []
+    granted = set()
+    for m in db.execute(select(models.MailboxMessage).where(
+            models.MailboxMessage.user_id == user.id,
+            models.MailboxMessage.kind == "dex_reward")).scalars():
+        tier = (m.rewards or {}).get("tier")
+        if tier:
+            granted.add(tier)
+
+    events: list[dict] = []
+    labels = {"common": "기본", "rare": "레어", "epic": "에픽"}
+    for tier in completed:
+        if tier in granted:
+            continue
+        coins = rules.CONFIG["DEX_TIER_REWARDS"].get(tier, 0)
+        label = labels.get(tier, tier)
+        db.add(models.MailboxMessage(
+            user_id=user.id, kind="dex_reward",
+            title=f"🏅 {label} 도감 완성",
+            body=f"{label} 등급 달팽이를 모두 모았어요! 보상을 받아보세요.",
+            rewards={"coins": coins, "tier": tier},
+        ))
+        events.append({"type": "dex_tier_complete", "tier": tier, "coins": coins})
+    return events
+
+
 def active_snails(db: Session, user: models.User) -> list[models.Snail]:
     """졸업하지 않은(현재 서식지) 달팽이."""
     return list(db.execute(

@@ -48,7 +48,7 @@ def claim(message_id: str,
 
     coins = (m.rewards or {}).get("coins", 0)
     if coins:
-        service.add_coins(db, user, coins, "graduate_letter", m.id)
+        service.add_coins(db, user, coins, "mail_" + (m.kind or "letter"), m.id)
     for item_id, qty in (m.rewards or {}).get("items", {}).items():
         service.add_item(db, user, item_id, qty, "mail_reward", m.id)
     m.claimed_at = service.utcnow()

@@ -72,6 +72,9 @@ const GAME = (function () {
     QUIZ_REWARD: 5,
     QUIZ_MAX_PER_DAY: 3,
 
+    // 도감 등급 완성 보상 (등급별 1회, 수령 멱등 — 13차 §B.4)
+    DEX_TIER_REWARDS: { common: 100, rare: 30, epic: 200 },
+
     // 탐험 채집
     EXPLORE_SEARCHES_PER_DAY: 10, // 하루 뒤지기 횟수 (맵 공용)
     EXPLORE_COIN_MIN: 3,
@@ -253,7 +256,7 @@ const GAME = (function () {
   };
 
   /** 세대 보정된 변이 확률 테이블 (5차_MVP_구현계획.md §3.2) */
-  function variantTableFor(generation) {
+  function variantTableFor(generation, hour) {
     const boost = Math.min(Math.max((generation || 1) - 1, 0), CONFIG.GENERATION_BOOST_CAP);
     const table = {};
     Object.keys(VARIANTS).forEach(function (key) {
@@ -264,6 +267,15 @@ const GAME = (function () {
         chance: (base.chance * 100 + VARIANT_GEN_DELTA[key] * boost) / 100
       };
     });
+    // 히든 변이 시간 조건: 천사=낮(06~18)만, 악마=밤(18~06)만. 안 맞는 시간대 확률은 갈색으로.
+    if (typeof hour === 'number') {
+      const daytime = hour >= 6 && hour < 18;
+      const blocked = daytime ? 'devil' : 'angel';
+      if (table[blocked] && table[blocked].chance > 0) {
+        table.brown.chance += table[blocked].chance;
+        table[blocked].chance = 0;
+      }
+    }
     return table;
   }
 
@@ -301,9 +313,9 @@ const GAME = (function () {
     return _pickWeighted(PERSONALITIES, (rng || Math.random)());
   }
 
-  /** @param {number} [generation] 세대 보정 (생략 시 1세대 확률) */
-  function rollVariant(rng, generation) {
-    return _pickWeighted(variantTableFor(generation), (rng || Math.random)());
+  /** @param {number} [generation] 세대 보정 @param {number} [hour] 부화 시각(0~23) 시간 조건 */
+  function rollVariant(rng, generation, hour) {
+    return _pickWeighted(variantTableFor(generation, hour), (rng || Math.random)());
   }
 
   /** 날짜 키 → 날씨 id (결정적 해시: 맑음 60% / 비 25% / 안개 15%) */
@@ -471,7 +483,7 @@ const GAME = (function () {
    * @param {number} [generation] 세대 (변이 확률 보정)
    * @returns {{snail: object, events: string[]}}
    */
-  function hatch(snail, name, rng, generation) {
+  function hatch(snail, name, rng, generation, hour) {
     const s = _clone(snail);
     const events = [];
 
@@ -492,8 +504,9 @@ const GAME = (function () {
     s.hunger = CONFIG.HATCH_HUNGER;
     s.happiness = CONFIG.HATCH_HAPPINESS;
     s.personality = rollPersonality(rng);
-    // 야생 알은 발견한 맵에서 예약된 변이를 사용한다
-    s.color = s.wild_variant || rollVariant(rng, generation);
+    // 야생 알은 발견한 맵에서 예약된 변이를 사용한다. hour 생략 시 현재 시각(시간 조건)
+    const h = (typeof hour === 'number') ? hour : new Date().getHours();
+    s.color = s.wild_variant || rollVariant(rng, generation, h);
     s.wild_variant = null;
     events.push('hatched');
     return { snail: s, events: events };
@@ -601,6 +614,28 @@ const GAME = (function () {
       if (s && s.stage !== 'egg' && s.color) found[s.color] = true;
     });
     return Object.keys(VARIANTS).filter(function (key) { return found[key]; });
+  }
+
+  /**
+   * 도감 등급 완성 보상 — 아직 수령하지 않은, 방금 완성된 등급 목록을 반환한다 (순수).
+   * @param {string[]} discovered 발견한 변이 id 목록
+   * @param {string[]} claimedTiers 이미 수령한 등급 id 목록
+   * @returns {{tier: string, coins: number}[]}
+   */
+  function dexRewardsToClaim(discovered, claimedTiers) {
+    const found = {};
+    (discovered || []).forEach(function (k) { found[k] = true; });
+    const claimed = {};
+    (claimedTiers || []).forEach(function (t) { claimed[t] = true; });
+    const out = [];
+    Object.keys(RARITIES).forEach(function (tier) {
+      if (claimed[tier]) return;
+      const keys = Object.keys(VARIANTS).filter(function (k) { return VARIANTS[k].rarity === tier; });
+      if (keys.length === 0) return; // 변이 없는 등급은 완성 판정 제외
+      const complete = keys.every(function (k) { return found[k]; });
+      if (complete) out.push({ tier: tier, coins: CONFIG.DEX_TIER_REWARDS[tier] || 0 });
+    });
+    return out;
   }
 
   // ── 탐험 ──────────────────────────────────────────────
@@ -1147,6 +1182,7 @@ const GAME = (function () {
     rollVariant: rollVariant,
     variantTableFor: variantTableFor,
     discoveredVariants: discoveredVariants,
+    dexRewardsToClaim: dexRewardsToClaim,
     canGraduate: canGraduate,
     graduate: graduate,
     applyStreak: applyStreak,
