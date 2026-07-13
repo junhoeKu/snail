@@ -23,7 +23,7 @@ const ExploreModule = (function () {
 
   /** 맵 선택 화면 */
   function render() {
-    _showSelect();
+    _showHub();
     document.getElementById('explore-stamina').textContent = _staminaText();
 
     const player = DB.Player.get();
@@ -43,8 +43,7 @@ const ExploreModule = (function () {
       name.textContent = map.emoji + ' ' + map.label;
       const desc = document.createElement('div');
       desc.className = 'explore-map-desc';
-      desc.textContent = GAME.VARIANTS[map.variantBoost].label + ' 변이가 자주 나와요' +
-        (map.rareMult ? ' · 레어(연못) 확률 ' + map.rareMult + '배!' : '');
+      desc.textContent = '수풀을 뒤져 코인·상추를 찾아요';
       info.appendChild(name);
       info.appendChild(desc);
       li.appendChild(info);
@@ -94,7 +93,15 @@ const ExploreModule = (function () {
     }
   }
 
+  function _showHub() {
+    document.getElementById('minigame-hub').classList.remove('hidden');
+    document.getElementById('explore-select').classList.add('hidden');
+    document.getElementById('explore-map').classList.add('hidden');
+    _currentMap = null;
+  }
+
   function _showSelect() {
+    document.getElementById('minigame-hub').classList.add('hidden');
     document.getElementById('explore-select').classList.remove('hidden');
     document.getElementById('explore-map').classList.add('hidden');
     _currentMap = null;
@@ -136,8 +143,6 @@ const ExploreModule = (function () {
       FX.flyCoins(rect.left + rect.width / 2, rect.top, 2);
     } else if (result.type === 'food') {
       spotEl.textContent = '+' + result.amount + '🥬';
-    } else if (result.type === 'egg') {
-      spotEl.textContent = '🥚';
     } else {
       spotEl.textContent = '💨';
       Toast.show('이슬만 반짝이고 있었어요.');
@@ -152,12 +157,11 @@ const ExploreModule = (function () {
     Sound.play('tap');
 
     if (Api.enabled()) {
-      // 서버 판정 — 스태미나/확률/야생 알 수용 전부 서버
+      // 서버 판정 — 스태미나/확률 전부 서버
       Api.explore(_currentMap).then(function (res) {
         Api.Net.apply(res);
         const explored = (res.events || []).find(function (e) { return e.type === 'explored'; });
         if (explored) _showSpotResult(spotEl, explored.result);
-        HabitatModule.sync(); // 야생 알 반영
       }).catch(function (error) {
         if (error && error.code === 'no_stamina') Toast.show('오늘은 더 뒤질 힘이 없어요. 내일 다시 와요!', 'warn');
         else Api.Net.fail(error);
@@ -173,11 +177,7 @@ const ExploreModule = (function () {
     }
     if (result.events.indexOf('map_locked') !== -1) return;
 
-    if (result.result.type === 'egg') {
-      _handleWildEgg(result.player, result.result.variant);
-    } else {
-      DB.Player.save(result.player);
-    }
+    DB.Player.save(result.player);
     _showSpotResult(spotEl, result.result);
 
     App.refreshHeader();
@@ -185,35 +185,19 @@ const ExploreModule = (function () {
     HomeModule.recordMissions(['explored']);
   }
 
-  /** 야생 알: 빈 보금자리가 있으면 수용, 가득이면 코인 전환 */
-  function _handleWildEgg(playerAfter, variant) {
-    const snailCount = DB.Snails.get().length;
-    if (snailCount < (playerAfter.snail_slots || 1)) {
-      DB.Player.save(playerAfter);
-      const egg = GAME.newEgg(DB.now());
-      egg.wild_variant = variant;
-      DB.Snails.add(egg);
-      DB.Journal.add('wild_egg',
-        GAME.EXPLORE_MAPS[_currentMap].label + '에서 야생 알을 발견해 데려왔어요!');
-      Sound.play('fanfare');
-      FX.confetti(14);
-      Toast.celebrate({
-        emoji: '🥚',
-        title: '야생 알 발견!',
-        message: '서식지로 데려왔어요. 홈에서 터치해 이름을 지어주세요.'
-      });
-      HabitatModule.sync();
-      return;
-    }
-
-    const converted = GAME.convertWildEgg(playerAfter);
-    DB.Player.save(converted.player);
-    Toast.show('🥚 야생 알을 발견했지만 보금자리가 가득해요 — 코인 ' +
-      GAME.CONFIG.WILD_EGG_FALLBACK_COINS + '개로 바꿨어요. 상점에서 보금자리를 넓혀보세요!', 'warn');
-  }
-
   function bind() {
-    document.getElementById('btn-explore-exit').addEventListener('click', render);
+    document.getElementById('btn-explore-exit').addEventListener('click', _showSelect); // 맵 → 탐험 목록
+    document.getElementById('btn-explore-back').addEventListener('click', _showHub);    // 탐험 → 미니게임 허브
+    document.querySelectorAll('.minigame-card[data-game]').forEach(function (card) {
+      card.addEventListener('click', function () {
+        if (card.dataset.game === 'explore') {
+          _showSelect();
+          document.getElementById('explore-stamina').textContent = _staminaText();
+        } else {
+          Toast.show('🚧 준비 중이에요! 곧 만나요.');
+        }
+      });
+    });
   }
 
   return { render: render, bind: bind };

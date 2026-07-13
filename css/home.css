@@ -312,8 +312,14 @@ body[data-weather="fog"] .snail-habitat::before {
 }
 
 .chip-right {
-  right: 12px;
+  right: 62px; /* 설정 아이콘 자리만큼 왼쪽으로 */
 }
+
+.chip-settings {
+  right: 12px;
+  padding: 9px 12px;
+}
+.chip-settings i { font-size: 15px; }
 
 .chip-missions {
   top: auto;

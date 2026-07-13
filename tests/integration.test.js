@@ -18,7 +18,7 @@ const localDateKey = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).pad
 const NAMESPACES = {
   'js/db.js': 'DB', 'js/game.js': 'GAME', 'js/toast.js': 'Toast', 'js/api.js': 'Api',
   'js/sound.js': 'Sound', 'js/fx.js': 'FX',
-  'js/stats.js': 'StatsModule', 'js/home.js': 'HomeModule', 'js/shop.js': 'ShopModule',
+  'js/stats.js': 'StatsModule', 'js/dex.js': 'DexModule', 'js/home.js': 'HomeModule', 'js/shop.js': 'ShopModule',
   'js/deco.js': 'DecoModule', 'js/explore.js': 'ExploreModule', 'js/settings.js': 'SettingsModule',
   'js/habitat.js': 'HabitatModule', 'js/app.js': 'App'
 };
@@ -99,8 +99,9 @@ function clickSnail(w, entId) {
   assert(doc.getElementById('mission-progress').textContent === '2/3', '미션 2/3');
   doc.querySelector('.popup-close').click();
 
-  // 탐험 (코인 결과 rng 0.1 → +4)
+  // 탐험 (미니게임 허브 → 탐험, 코인 결과 rng 0.1 → +4)
   doc.querySelector('.tab[data-screen="explore"]').click();
+  doc.querySelector('.minigame-card[data-game="explore"]').click(); // 허브에서 탐험 진입
   doc.querySelectorAll('.explore-map-card .btn')[0].click();
   w.Math.random = () => 0.1;
   doc.querySelector('.explore-spot').click();
@@ -176,13 +177,16 @@ function clickSnail(w, entId) {
   assert(snails(w).some(s => s.stage === 'egg') && snails(w).some(s => s.name === '몽이'), '알 교체 + 몽이 유지');
   doc.querySelector('#modal-root .btn-wide').click();
 
-  // ── [8] 유저 탭 ─────────────────────────────────────────
-  console.log('[8] 유저 탭');
-  doc.querySelector('.tab[data-screen="stats"]').click();
+  // ── [8] 유저 탭 + 도감 탭 ───────────────────────────────
+  console.log('[8] 유저 탭 / 도감 탭');
+  doc.querySelector('.tab[data-screen="user"]').click();
   assert(doc.getElementById('keeper-level').textContent === String(player(w).keeper.level), '양육자 레벨 표시');
   assert(doc.getElementById('keeper-next').textContent.indexOf('Lv.4') !== -1, '다음 해금 안내(사과): ' + doc.getElementById('keeper-next').textContent);
-  assert(doc.getElementById('snail-select') === null, '개체 선택기 제거');
   assert(doc.querySelectorAll('#album-list .album-card').length === 1, '앨범 표시');
+  // 도감 탭 — 등급 섹션(기본/레어/에픽) 분리
+  doc.querySelector('.tab[data-screen="dex"]').click();
+  assert(doc.querySelectorAll('#dex-sections .dex-section').length === 3, '도감 등급 3섹션: ' + doc.querySelectorAll('#dex-sections .dex-section').length);
+  assert(doc.querySelector('#dex-sections .dex-cell') !== null, '도감 셀 렌더');
 
   // ── [9] 장식 효과 ───────────────────────────────────────
   console.log('[9] 장식 효과');

@@ -433,12 +433,11 @@ def map_available(map_id: str, generation: int, unlocked: list) -> bool:
 
 
 def explore_roll(generation: int, map_id: str, rng=random.random) -> dict:
+    # 12차: 달팽이(야생 알) 찾기 제거 — 코인 55% / 상추 25% / 꽝 20%
     roll = rng()
     if roll < 0.55:
         amount = CONFIG["EXPLORE_COIN_MIN"] + int(rng() * (CONFIG["EXPLORE_COIN_MAX"] - CONFIG["EXPLORE_COIN_MIN"] + 1))
         return {"type": "coins", "amount": amount}
     if roll < 0.80:
         return {"type": "food", "amount": 1 + int(rng() * 2)}
-    if roll < 0.95:
-        return {"type": "none"}
-    return {"type": "egg", "variant": wild_egg_variant(map_id, generation, rng)}
+    return {"type": "none"}

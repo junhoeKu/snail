@@ -8,7 +8,6 @@ const StatsModule = (function () {
 
   function render() {
     _renderKeeper();
-    _renderDex();
     _renderAlbum();
     _renderJournal();
   }
@@ -46,46 +45,7 @@ const StatsModule = (function () {
     document.getElementById('keeper-next').textContent = _nextUnlockText(keeper.level);
   }
 
-  // ── 도감 ──────────────────────────────────────────────
-
-  function _renderDex() {
-    const discovered = GAME.discoveredVariants(DB.Album.get(), DB.Snails.get());
-    const grid = document.getElementById('dex-grid');
-    grid.innerHTML = '';
-
-    Object.keys(GAME.VARIANTS).forEach(function (key) {
-      const found = discovered.indexOf(key) !== -1;
-      const cell = document.createElement('div');
-      cell.className = 'dex-cell' + (found ? ' found' : '');
-
-      if (found) {
-        const img = document.createElement('img');
-        img.className = 'dex-img';
-        img.src = GAME.spritePath(key, 'baby');
-        img.alt = GAME.VARIANTS[key].label;
-        cell.appendChild(img);
-      } else {
-        const swatch = document.createElement('div');
-        swatch.className = 'dex-swatch'; // 미발견 실루엣
-        cell.appendChild(swatch);
-      }
-
-      const label = document.createElement('span');
-      label.textContent = found ? GAME.VARIANTS[key].label : '???';
-      cell.appendChild(label);
-
-      const rarity = GAME.VARIANTS[key].rarity;
-      const badge = document.createElement('span');
-      badge.className = 'rarity-badge rarity-' + rarity;
-      badge.textContent = GAME.RARITIES[rarity].label;
-      cell.appendChild(badge);
-      grid.appendChild(cell);
-    });
-
-    const total = Object.keys(GAME.VARIANTS).length;
-    document.getElementById('dex-count').textContent =
-      discovered.length + '/' + total + (discovered.length === total ? ' · 달팽이 박사 🏅' : '');
-  }
+  // 도감은 DexModule(js/dex.js)로 분리됨 (12차 탭 개편)
 
   // ── 앨범 ──────────────────────────────────────────────
 

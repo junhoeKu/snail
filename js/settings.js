@@ -32,6 +32,31 @@ const SettingsModule = (function () {
     const versionEl = document.querySelector('.settings-version');
     const base = versionEl.textContent.replace(' · 🛠️ ADMIN', '');
     versionEl.textContent = base + (DB.Player.get().admin ? ' · 🛠️ ADMIN' : '');
+
+    _showMenu(); // 설정 진입 시 항상 메뉴부터
+  }
+
+  // ── 설정 하위 라우팅 (메뉴 ↔ 세부 화면) ─────────────────
+
+  const SUB_TITLES = { rules: '규칙', bg: '배경', sound: '사운드', data: '데이터' };
+
+  function _showMenu() {
+    document.getElementById('settings-menu').classList.remove('hidden');
+    document.querySelectorAll('.settings-panel').forEach(function (p) { p.classList.add('hidden'); });
+    document.getElementById('settings-back').classList.add('hidden');
+    document.getElementById('settings-title-text').textContent = '설정';
+    _renderMailbox(); // 메뉴에서만 우편함 노출
+  }
+
+  function _openSub(name) {
+    document.getElementById('settings-menu').classList.add('hidden');
+    document.getElementById('mailbox-section').classList.add('hidden');
+    document.querySelectorAll('.settings-panel').forEach(function (p) { p.classList.add('hidden'); });
+    const panel = document.getElementById('sub-' + name);
+    if (panel) panel.classList.remove('hidden');
+    document.getElementById('settings-back').classList.remove('hidden');
+    document.getElementById('settings-title-text').textContent = SUB_TITLES[name] || '설정';
+    if (name === 'bg' && typeof DecoModule !== 'undefined') DecoModule.render(); // 배경 선택 표시 갱신
   }
 
   /** 우편함 — 서버 모드 전용 (졸업 달팽이 엽서 / 보상) */
@@ -176,6 +201,10 @@ const SettingsModule = (function () {
   }
 
   function bind() {
+    document.querySelectorAll('.settings-menu-item').forEach(function (btn) {
+      btn.addEventListener('click', function () { _openSub(btn.dataset.sub); });
+    });
+    document.getElementById('settings-back').addEventListener('click', _showMenu);
     document.getElementById('btn-sound-toggle').addEventListener('click', _toggleSound);
     document.getElementById('btn-backup-export').addEventListener('click', _exportBackup);
     document.getElementById('btn-backup-import').addEventListener('click', _importBackup);
