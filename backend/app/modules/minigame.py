@@ -48,3 +48,40 @@ def race(body: RaceIn,
         "left": rules.CONFIG["RACE_MAX_PER_DAY"] - state["count"],
         "player": service.player_payload(db, user),
     }
+
+
+class QuizIn(BaseModel):
+    index: int   # 문항 번호
+    answer: int  # 고른 선택지
+
+
+@router.post("/quiz")
+def quiz(body: QuizIn,
+         user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """퀴즈 1문제 — 하루 제한 안에서 서버가 정답 검증, 맞으면 보상 코인."""
+    if user.suspended_at is not None:
+        raise ApiError(403, "suspended", "이용이 정지된 계정입니다.")
+
+    service.lock_user(db, user)
+    tk = service.today_key(user)
+    state = dict(user.minigame_quiz or {})
+    if state.get("date") != tk:
+        state = {"date": tk, "count": 0}
+    if state["count"] >= rules.CONFIG["QUIZ_MAX_PER_DAY"]:
+        raise ApiError(409, "no_quiz", "오늘 퀴즈를 다 풀었어요. 내일 또 도전해요!")
+    state["count"] += 1
+    user.minigame_quiz = state
+
+    correct = rules.quiz_check(int(body.index), int(body.answer))
+    coins = 0
+    if correct:
+        coins = rules.CONFIG["QUIZ_REWARD"]
+        service.add_coins(db, user, coins, "quiz_correct")
+    service.bump_revision(user)
+    db.commit()
+    answer = rules.QUIZ_BANK[body.index]["answer"] if 0 <= body.index < len(rules.QUIZ_BANK) else -1
+    return {
+        "correct": correct, "answer": answer, "coins": coins,
+        "left": rules.CONFIG["QUIZ_MAX_PER_DAY"] - state["count"],
+        "player": service.player_payload(db, user),
+    }

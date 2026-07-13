@@ -142,7 +142,9 @@
   display: flex;
   align-items: center;
   height: 44px;
+  border-bottom: 1px dashed rgba(120, 145, 100, 0.35); /* 레인 구분선 */
 }
+.race-lane:last-child { border-bottom: none; }
 .race-num {
   width: 20px;
   font-weight: 800;
@@ -160,8 +162,14 @@
   transform-origin: center;
   filter: drop-shadow(0 2px 2px rgba(20,18,10,.25));
 }
-.race-snail.race-winner { animation: race-bounce 0.5s ease infinite alternate; }
-@keyframes race-bounce { to { transform: translateX(calc(100% - 4px)) translateY(-4px); } }
+/* 우승 강조 — transform(translateX 위치)은 건드리지 않고 발광만 (위치 리셋 방지) */
+.race-snail.race-winner {
+  filter: drop-shadow(0 2px 2px rgba(20,18,10,.25)) drop-shadow(0 0 8px rgba(242, 200, 60, 0.95));
+  animation: race-glow 0.6s ease-in-out infinite alternate;
+}
+@keyframes race-glow {
+  to { filter: drop-shadow(0 2px 2px rgba(20,18,10,.25)) drop-shadow(0 0 14px rgba(242, 200, 60, 1)); }
+}
 
 .race-guess {
   display: flex;
@@ -171,3 +179,16 @@
 }
 .race-pick { min-width: 56px; padding: 10px 12px; }
 .race-left { text-align: center; font-size: 12px; color: var(--color-text-sub); margin-top: 10px; }
+
+/* ── 달팽이 퀴즈 (13차) ───────────────────── */
+.quiz-question {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 14px 0;
+  line-height: 1.5;
+}
+.quiz-choices { display: flex; flex-direction: column; gap: 8px; }
+.quiz-choice { padding: 14px; font-size: 15px; }
+.quiz-choice.quiz-correct { background: rgba(111, 141, 90, 0.35); color: #2a3d1a; font-weight: 800; }
+.quiz-choice.quiz-wrong { background: rgba(210, 90, 90, 0.25); }
+.quiz-result { text-align: center; font-size: 15px; margin-top: 12px; min-height: 22px; }

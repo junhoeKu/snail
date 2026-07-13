@@ -52,9 +52,12 @@ CONFIG = {
     # 미니게임 — 달팽이 경주
     "RACE_LANES": 5,
     "RACE_REWARD": 10,
-    "RACE_MAX_PER_DAY": 10,
+    "RACE_MAX_PER_DAY": 3,
     "RACE_TIME_MIN": 8.0,
     "RACE_TIME_MAX": 10.5,
+    # 미니게임 — 달팽이 퀴즈
+    "QUIZ_REWARD": 5,
+    "QUIZ_MAX_PER_DAY": 3,
     "EXPLORE_SEARCHES_PER_DAY": 10,
     "EXPLORE_COIN_MIN": 3,
     "EXPLORE_COIN_MAX": 12,
@@ -436,6 +439,23 @@ def map_available(map_id: str, generation: int, unlocked: list) -> bool:
     if not m["locked"]:
         return True
     return generation >= CONFIG["DECO_GENERATION_REQUIRED"] or map_id in (unlocked or [])
+
+
+# 달팽이 퀴즈 문항 — 정답은 서버가 검증(치트 방지). 클라 game.js와 동일 순서 유지.
+QUIZ_BANK = [
+    {"q": "달팽이는 몇 시간마다 배고파질까요?", "choices": ["1시간", "3시간", "6시간"], "answer": 0},
+    {"q": "레어 등급 달팽이는 무엇일까요?", "choices": ["황금", "연못", "검정"], "answer": 1},
+    {"q": "달팽이를 여행 보내려면 몇 레벨이 필요할까요?", "choices": ["Lv.10", "Lv.15", "Lv.20"], "answer": 2},
+    {"q": "양육자 레벨을 올리면 무엇이 좋아질까요?", "choices": ["새 먹이 해금", "달팽이가 커짐", "코인 2배"], "answer": 0},
+    {"q": "상추를 주면 배고픔이 어떻게 될까요?", "choices": ["늘어요", "줄어요", "그대로예요"], "answer": 1},
+    {"q": "달팽이 색은 언제 정해질까요?", "choices": ["부화할 때", "성체가 될 때", "매일 바뀜"], "answer": 0},
+]
+
+
+def quiz_check(index: int, answer: int) -> bool:
+    if index < 0 or index >= len(QUIZ_BANK):
+        return False
+    return QUIZ_BANK[index]["answer"] == answer
 
 
 def race_roll(rng=random.random) -> dict:

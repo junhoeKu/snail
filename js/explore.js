@@ -98,6 +98,7 @@ const ExploreModule = (function () {
     document.getElementById('explore-select').classList.add('hidden');
     document.getElementById('explore-map').classList.add('hidden');
     document.getElementById('race-view').classList.add('hidden');
+    document.getElementById('quiz-view').classList.add('hidden');
     _currentMap = null;
   }
 
@@ -196,6 +197,8 @@ const ExploreModule = (function () {
           document.getElementById('explore-stamina').textContent = _staminaText();
         } else if (card.dataset.game === 'race') {
           RaceModule.start();
+        } else if (card.dataset.game === 'quiz') {
+          QuizModule.start();
         } else {
           Toast.show('🚧 준비 중이에요! 곧 만나요.');
         }

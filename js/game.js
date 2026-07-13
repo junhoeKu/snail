@@ -65,9 +65,12 @@ const GAME = (function () {
     // 미니게임 — 달팽이 경주
     RACE_LANES: 5,               // 출전 달팽이 수
     RACE_REWARD: 10,             // 1등 예측 성공 보상 코인
-    RACE_MAX_PER_DAY: 10,        // 하루 경주 횟수 제한
+    RACE_MAX_PER_DAY: 3,        // 하루 경주 횟수 제한
     RACE_TIME_MIN: 8.0,          // 결승 도착 최소 초 (연출용)
     RACE_TIME_MAX: 10.5,         // 결승 도착 최대 초
+    // 미니게임 — 달팽이 퀴즈
+    QUIZ_REWARD: 5,
+    QUIZ_MAX_PER_DAY: 3,
 
     // 탐험 채집
     EXPLORE_SEARCHES_PER_DAY: 10, // 하루 뒤지기 횟수 (맵 공용)
@@ -377,6 +380,16 @@ const GAME = (function () {
    * 시간 범위가 좁아 2~3마리가 접전하다 한 마리가 이기는 연출이 나온다.
    * @returns {{winner:number, order:number[], times:number[]}}
    */
+  // 달팽이 퀴즈 문항 (rules.py QUIZ_BANK와 동일 순서). 정답 검증은 서버 권위.
+  const QUIZ_BANK = [
+    { q: '달팽이는 몇 시간마다 배고파질까요?', choices: ['1시간', '3시간', '6시간'], answer: 0 },
+    { q: '레어 등급 달팽이는 무엇일까요?', choices: ['황금', '연못', '검정'], answer: 1 },
+    { q: '달팽이를 여행 보내려면 몇 레벨이 필요할까요?', choices: ['Lv.10', 'Lv.15', 'Lv.20'], answer: 2 },
+    { q: '양육자 레벨을 올리면 무엇이 좋아질까요?', choices: ['새 먹이 해금', '달팽이가 커짐', '코인 2배'], answer: 0 },
+    { q: '상추를 주면 배고픔이 어떻게 될까요?', choices: ['늘어요', '줄어요', '그대로예요'], answer: 1 },
+    { q: '달팽이 색은 언제 정해질까요?', choices: ['부화할 때', '성체가 될 때', '매일 바뀜'], answer: 0 }
+  ];
+
   function raceRoll(rng) {
     const rand = rng || Math.random;
     const times = [];
@@ -1124,6 +1137,7 @@ const GAME = (function () {
     weatherFor: weatherFor,
     simulateAwayLife: simulateAwayLife,
     raceRoll: raceRoll,
+    QUIZ_BANK: QUIZ_BANK,
     conditionOf: conditionOf,
     rollPersonality: rollPersonality,
     rollVariant: rollVariant,

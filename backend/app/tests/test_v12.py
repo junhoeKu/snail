@@ -35,3 +35,17 @@ def test_race_daily_limit(guest, monkeypatch):
         assert client.post("/v1/minigame/race", json={"guess": 0}, headers=guest["headers"]).status_code == 200
     over = client.post("/v1/minigame/race", json={"guess": 0}, headers=guest["headers"])
     assert over.status_code == 409 and over.json()["error"]["code"] == "no_race"
+
+
+def test_quiz_correct_and_limit(guest):
+    client.get("/v1/game/state", headers=guest["headers"])
+    # 0번 문항 정답은 0
+    r = client.post("/v1/minigame/quiz", json={"index": 0, "answer": 0}, headers=guest["headers"]).json()
+    assert r["correct"] is True and r["coins"] == rules.CONFIG["QUIZ_REWARD"]
+    # 오답
+    r2 = client.post("/v1/minigame/quiz", json={"index": 0, "answer": 2}, headers=guest["headers"]).json()
+    assert r2["correct"] is False and r2["coins"] == 0
+    # 하루 3회 → 한도 초과
+    client.post("/v1/minigame/quiz", json={"index": 0, "answer": 0}, headers=guest["headers"])
+    over = client.post("/v1/minigame/quiz", json={"index": 0, "answer": 0}, headers=guest["headers"])
+    assert over.status_code == 409 and over.json()["error"]["code"] == "no_quiz"
