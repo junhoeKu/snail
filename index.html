@@ -58,6 +58,9 @@
                 <span id="wallet-food-emoji">🥬</span> <span id="food-count">0</span>
               </button>
             </div>
+            <button id="btn-settings" class="chip chip-settings" title="설정">
+              <i class="fa-solid fa-gear"></i>
+            </button>
             <div class="fab-group">
               <button id="btn-feed" class="fab" title="먹이주기">
                 <span id="fab-food-emoji" class="fab-emoji">🥬</span><span>먹이</span>
@@ -71,8 +74,8 @@
 
       </section>
 
-      <!-- 유저 (양육자/도감/앨범/일지 — 개체 상세는 홈 팝업) -->
-      <section id="screen-stats" class="screen">
+      <!-- 유저 (양육자/앨범/일지 — 개체 상세는 홈 팝업, 도감은 별도 탭) -->
+      <section id="screen-user" class="screen">
         <div class="card">
           <h2 class="screen-title"><i class="fa-solid fa-user"></i> 유저</h2>
 
@@ -83,14 +86,19 @@
             <p id="keeper-next" class="stats-next"></p>
           </div>
 
-          <h3 class="journal-title"><i class="fa-solid fa-book"></i> 도감 <span id="dex-count" class="dex-count"></span></h3>
-          <div id="dex-grid" class="dex-grid"></div>
-
           <h3 class="journal-title"><i class="fa-solid fa-trophy"></i> 앨범</h3>
           <ul id="album-list" class="album-list"></ul>
 
           <h3 class="journal-title"><i class="fa-solid fa-book-open"></i> 성장 일지</h3>
           <ul id="journal-list" class="journal-list"></ul>
+        </div>
+      </section>
+
+      <!-- 도감 (변이 수집 — 등급별) -->
+      <section id="screen-dex" class="screen">
+        <div class="card">
+          <h2 class="screen-title"><i class="fa-solid fa-book"></i> 도감 <span id="dex-count" class="dex-count"></span></h2>
+          <div id="dex-sections"></div>
         </div>
       </section>
 
@@ -113,24 +121,42 @@
             <button id="btn-buy-egg" class="btn btn-primary btn-sm">500 <i class="fa-solid fa-coins"></i></button>
           </div>
 
-          <h3 class="settings-subtitle">배경</h3>
-          <div class="shop-backgrounds">
-            <button class="bg-option" data-bg="default"><i class="fa-solid fa-seedling"></i> 이끼 숲</button>
-            <button class="bg-option" data-bg="garden"><i class="fa-solid fa-sun"></i> 햇살 정원</button>
-          </div>
-
           <h3 class="settings-subtitle">장식</h3>
           <ul id="deco-list" class="deco-list"></ul>
           <p class="screen-desc deco-hint">장식은 서식지 바닥 슬롯 3곳에 놓여요. 게임 수치에는 영향이 없어요.</p>
         </div>
       </section>
 
-      <!-- 탐험 -->
+      <!-- 미니게임 (탐험 / 경주 / 퀴즈) -->
       <section id="screen-explore" class="screen">
-        <div id="explore-select">
+        <div id="minigame-hub" class="minigame-hub">
           <div class="card">
+            <h2 class="screen-title"><i class="fa-solid fa-gamepad"></i> 미니게임</h2>
+            <p class="screen-desc">달팽이와 함께하는 놀이. 새 게임이 계속 추가돼요!</p>
+            <div class="minigame-list">
+              <button class="minigame-card" data-game="explore">
+                <span class="minigame-emoji">🌿</span>
+                <span class="minigame-info"><b>탐험</b><small>수풀을 뒤져 코인·상추를 찾아요</small></span>
+                <i class="fa-solid fa-chevron-right"></i>
+              </button>
+              <button class="minigame-card locked" data-game="race">
+                <span class="minigame-emoji">🏁</span>
+                <span class="minigame-info"><b>달팽이 경주</b><small>준비 중</small></span>
+              </button>
+              <button class="minigame-card locked" data-game="quiz">
+                <span class="minigame-emoji">❓</span>
+                <span class="minigame-info"><b>달팽이 퀴즈</b><small>준비 중</small></span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div id="explore-select" class="hidden">
+          <div class="card">
+            <button id="btn-explore-back" class="btn btn-ghost btn-sm explore-exit">
+              <i class="fa-solid fa-arrow-left"></i> 미니게임
+            </button>
             <h2 class="screen-title"><i class="fa-solid fa-compass"></i> 탐험</h2>
-            <p class="screen-desc">수풀을 뒤져 코인·상추·야생 알을 찾아보세요.<br>
+            <p class="screen-desc">수풀을 뒤져 코인·상추를 찾아보세요.<br>
               <strong id="explore-stamina"></strong></p>
             <ul id="explore-maps" class="explore-maps"></ul>
           </div>
@@ -144,11 +170,15 @@
         </div>
       </section>
 
-      <!-- 설정 -->
+      <!-- 설정 (홈 우측 상단 아이콘으로 진입 — 메뉴 + 하위 화면) -->
       <section id="screen-settings" class="screen">
         <div class="card">
-          <h2 class="screen-title"><i class="fa-solid fa-gear"></i> 설정</h2>
+          <div class="settings-topbar">
+            <button id="settings-back" class="icon-btn hidden" title="뒤로"><i class="fa-solid fa-arrow-left"></i></button>
+            <h2 class="screen-title settings-title"><i class="fa-solid fa-gear"></i> <span id="settings-title-text">설정</span></h2>
+          </div>
 
+          <!-- 우편함 (서버 모드, 메뉴에서만 표시) -->
           <section id="mailbox-section" class="hidden">
             <h3 class="settings-subtitle">
               <i class="fa-solid fa-envelope"></i> 우편함
@@ -157,26 +187,46 @@
             <ul id="mailbox-list" class="mailbox-list"></ul>
           </section>
 
-          <h3 class="settings-subtitle">게임 규칙</h3>
-          <ul id="rules-list" class="rules-list"></ul>
+          <!-- 메뉴 -->
+          <div id="settings-menu" class="settings-menu">
+            <button class="settings-menu-item" data-sub="rules"><span><i class="fa-solid fa-book"></i> 규칙</span><i class="fa-solid fa-chevron-right"></i></button>
+            <button class="settings-menu-item" data-sub="bg"><span><i class="fa-solid fa-image"></i> 배경</span><i class="fa-solid fa-chevron-right"></i></button>
+            <button class="settings-menu-item" data-sub="sound"><span><i class="fa-solid fa-volume-high"></i> 사운드</span><i class="fa-solid fa-chevron-right"></i></button>
+            <button class="settings-menu-item" data-sub="data"><span><i class="fa-solid fa-database"></i> 데이터</span><i class="fa-solid fa-chevron-right"></i></button>
+          </div>
 
-          <h3 class="settings-subtitle">소리</h3>
-          <button id="btn-sound-toggle" class="btn btn-ghost btn-wide"></button>
+          <!-- 하위: 규칙 -->
+          <div id="sub-rules" class="settings-panel hidden">
+            <ul id="rules-list" class="rules-list"></ul>
+          </div>
 
-          <h3 class="settings-subtitle">백업 &amp; 복구</h3>
-          <p class="screen-desc">기기를 바꾸거나 데이터를 지키고 싶을 때 사용하세요.</p>
-          <button id="btn-backup-export" class="btn btn-ghost btn-wide">
-            <i class="fa-solid fa-copy"></i> 백업 코드 복사
-          </button>
-          <textarea id="backup-input" class="text-input backup-input"
-            placeholder="백업 코드를 붙여넣고 아래 버튼을 누르세요"></textarea>
-          <button id="btn-backup-import" class="btn btn-ghost btn-wide">
-            <i class="fa-solid fa-file-import"></i> 백업 코드로 복구
-          </button>
+          <!-- 하위: 배경 (상점에서 이관) -->
+          <div id="sub-bg" class="settings-panel hidden">
+            <div class="shop-backgrounds">
+              <button class="bg-option" data-bg="default"><i class="fa-solid fa-seedling"></i> 이끼 숲</button>
+              <button class="bg-option" data-bg="garden"><i class="fa-solid fa-sun"></i> 햇살 정원</button>
+            </div>
+          </div>
 
-          <h3 class="settings-subtitle">데이터</h3>
-          <button id="btn-reset" class="btn btn-danger btn-wide">데이터 초기화</button>
-          <p class="settings-version">Snail v1.3.0</p>
+          <!-- 하위: 사운드 -->
+          <div id="sub-sound" class="settings-panel hidden">
+            <button id="btn-sound-toggle" class="btn btn-ghost btn-wide"></button>
+          </div>
+
+          <!-- 하위: 데이터 -->
+          <div id="sub-data" class="settings-panel hidden">
+            <p class="screen-desc">기기를 바꾸거나 데이터를 지키고 싶을 때 사용하세요.</p>
+            <button id="btn-backup-export" class="btn btn-ghost btn-wide">
+              <i class="fa-solid fa-copy"></i> 백업 코드 복사
+            </button>
+            <textarea id="backup-input" class="text-input backup-input"
+              placeholder="백업 코드를 붙여넣고 아래 버튼을 누르세요"></textarea>
+            <button id="btn-backup-import" class="btn btn-ghost btn-wide">
+              <i class="fa-solid fa-file-import"></i> 백업 코드로 복구
+            </button>
+            <button id="btn-reset" class="btn btn-danger btn-wide">데이터 초기화</button>
+            <p class="settings-version">Snail v1.4.0</p>
+          </div>
         </div>
       </section>
 
@@ -184,11 +234,11 @@
 
     <!-- 하단 탭 바 -->
     <nav class="tab-bar">
-      <button class="tab" data-screen="stats">
+      <button class="tab" data-screen="user">
         <i class="fa-solid fa-user"></i><span>유저</span>
       </button>
-      <button class="tab" data-screen="shop">
-        <i class="fa-solid fa-store"></i><span>상점</span>
+      <button class="tab" data-screen="dex">
+        <i class="fa-solid fa-book"></i><span>도감</span>
       </button>
       <button class="tab tab-home" data-screen="home" title="홈">
         <i class="fa-solid fa-house"></i>
@@ -196,8 +246,8 @@
       <button class="tab" data-screen="explore">
         <i class="fa-solid fa-compass"></i><span>탐험</span>
       </button>
-      <button class="tab" data-screen="settings">
-        <i class="fa-solid fa-gear"></i><span>설정</span>
+      <button class="tab" data-screen="shop">
+        <i class="fa-solid fa-store"></i><span>상점</span>
       </button>
     </nav>
 
@@ -307,6 +357,7 @@
   <script src="js/sound.js"></script>
   <script src="js/fx.js"></script>
   <script src="js/stats.js"></script>
+  <script src="js/dex.js"></script>
   <script src="js/home.js"></script>
   <script src="js/shop.js"></script>
   <script src="js/deco.js"></script>

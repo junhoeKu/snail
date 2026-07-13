@@ -628,8 +628,8 @@ const GAME = (function () {
   }
 
   /**
-   * 뒤지기 1회: 스태미나 차감 + 결과 판정 (코인 55% / 상추 25% / 꽝 15% / 야생 알 5%).
-   * 야생 알의 슬롯 검사·수용은 호출부 책임 (가득이면 convertWildEgg).
+   * 뒤지기 1회: 스태미나 차감 + 결과 판정 (코인 55% / 상추 25% / 꽝 20%).
+   * 12차: 달팽이(야생 알) 찾기 이벤트 제거 — 슬롯 확장은 상점 구매로만.
    * @returns {{player: object, result: object|null, events: string[]}}
    */
   function explore(player, mapId, todayKey, rng) {
@@ -661,11 +661,8 @@ const GAME = (function () {
       const amount = 1 + Math.floor(random() * 2);
       _grantLettuce(p, amount);
       result = { type: 'food', amount: amount };
-    } else if (roll < 0.95) {
-      result = { type: 'none' };
     } else {
-      result = { type: 'egg', variant: wildEggVariant(mapId, p.generation || 1, random) };
-      events.push('wild_egg');
+      result = { type: 'none' };
     }
 
     events.push('explored');

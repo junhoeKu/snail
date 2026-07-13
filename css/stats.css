@@ -182,3 +182,34 @@
   background: rgba(120, 145, 100, 0.08);
   border-radius: var(--radius-sm);
 }
+
+/* ── 도감 등급 섹션 (12차) ───────────────── */
+.dex-section { margin-bottom: 18px; }
+
+.dex-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  margin: 14px 0 10px;
+}
+
+.dex-section-prog {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-sub);
+}
+
+.dex-empty {
+  font-size: 13px;
+  color: var(--color-text-sub);
+  padding: 10px 12px;
+  background: rgba(120, 145, 100, 0.08);
+  border-radius: var(--radius-sm);
+}
+
+/* ── 앨범 내부 스크롤 (12차) ──────────────── */
+.album-list {
+  max-height: 300px;
+  overflow-y: auto;
+}

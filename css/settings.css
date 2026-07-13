@@ -206,3 +206,47 @@
   border-radius: var(--radius-sm);
   line-height: 1.5;
 }
+
+/* ── 설정 메뉴 + 하위 화면 (12차) ─────────── */
+.settings-topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.icon-btn {
+  border: none;
+  background: rgba(120, 145, 100, 0.14);
+  color: var(--color-text);
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.settings-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: rgba(120, 145, 100, 0.1);
+  font: inherit;
+  font-weight: 700;
+  color: var(--color-text);
+  cursor: pointer;
+}
+.settings-menu-item span { display: flex; align-items: center; gap: 10px; }
+.settings-menu-item > i { color: var(--color-text-sub); font-size: 12px; }
+.settings-menu-item:active { background: rgba(120, 145, 100, 0.2); }
+
+.settings-panel { margin-top: 4px; }

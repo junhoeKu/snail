@@ -342,22 +342,13 @@ def explore_search(body: ExploreIn,
         state["searches"] += 1
         user.explore_state = state
 
+        # 12차: 야생 알(egg) 결과 제거 — 코인/상추/꽝만
         result = rules.explore_roll(user.generation, body.mapId)
         events: list[dict] = [{"type": "explored", "result": result}]
         if result["type"] == "coins":
             service.add_coins(db, user, result["amount"], "explore_find")
         elif result["type"] == "food":
             service.add_item(db, user, "lettuce", result["amount"], "explore_find")
-        elif result["type"] == "egg":
-            active = service.active_snails(db, user)
-            if len(active) < user.snail_slots:
-                egg = service.new_egg(db, user)
-                egg.wild_variant = result["variant"]
-                service.add_journal(db, user, "wild_egg", "탐험에서 야생 알을 발견해 데려왔어요!")
-                events.append({"type": "wild_egg", "snailId": egg.id})
-            else:
-                service.add_coins(db, user, rules.CONFIG["WILD_EGG_FALLBACK_COINS"], "wild_egg_convert")
-                events.append({"type": "wild_egg_converted", "coins": rules.CONFIG["WILD_EGG_FALLBACK_COINS"]})
 
         events += _keeper(db, user, "explore")
         events += _missions(db, user, ["explore"])

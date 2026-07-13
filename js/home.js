@@ -526,7 +526,7 @@ const HomeModule = (function () {
     });
     document.getElementById('btn-feed').addEventListener('click', _feed);
     document.getElementById('snail-chip').addEventListener('click', function () {
-      App.navigate('stats');
+      App.navigate('user');
     });
     document.getElementById('mission-chip').addEventListener('click', _showMissionSheet);
     document.getElementById('wallet-food').addEventListener('click', _showFoodSheet);

@@ -21,7 +21,8 @@ const App = (function () {
     });
 
     if (screen === 'home' && typeof HomeModule !== 'undefined') HomeModule.render();
-    if (screen === 'stats' && typeof StatsModule !== 'undefined') StatsModule.render();
+    if (screen === 'user' && typeof StatsModule !== 'undefined') StatsModule.render();
+    if (screen === 'dex' && typeof DexModule !== 'undefined') DexModule.render();
     if (screen === 'shop' && typeof ShopModule !== 'undefined') ShopModule.render();
     if (screen === 'explore' && typeof ExploreModule !== 'undefined') ExploreModule.render();
     if (screen === 'settings' && typeof SettingsModule !== 'undefined') SettingsModule.render();
@@ -109,8 +110,11 @@ const App = (function () {
       if (document.getElementById('screen-home').classList.contains('active')) {
         HomeModule.render();
       }
-      if (document.getElementById('screen-stats').classList.contains('active')) {
+      if (document.getElementById('screen-user').classList.contains('active')) {
         StatsModule.render();
+      }
+      if (document.getElementById('screen-dex').classList.contains('active')) {
+        DexModule.render();
       }
     }, TICK_MS);
   }
@@ -264,6 +268,14 @@ const App = (function () {
         navigate(tab.dataset.screen);
       });
     });
+    // 홈 우측 상단 설정 아이콘 → 설정 화면 (탭바에서 빠짐)
+    const settingsBtn = document.getElementById('btn-settings');
+    if (settingsBtn) {
+      settingsBtn.addEventListener('click', function () {
+        Sound.play('tap');
+        navigate('settings');
+      });
+    }
   }
 
   /** 서버 모드: 위치는 주기 저장 (경제 데이터 아님) */
