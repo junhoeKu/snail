@@ -36,13 +36,18 @@ def test_roll_variant_blocked_goes_brown():
 
 # ── 도감 등급 완성 판정 ──
 
+RARE_ALL = ["pond", "maple", "pinwheel", "cherry", "sunflower"]
+EPIC_ALL = ["bee", "devil", "angel", "ladybug"]
+
+
 def test_dex_completed_tiers():
     assert rules.dex_completed_tiers([]) == []
-    # 레어 등급은 연못 1종뿐 → 발견 시 완성
-    assert "rare" in rules.dex_completed_tiers(["pond"])
-    # 에픽 3종 모두 있어야 완성
-    assert "epic" not in rules.dex_completed_tiers(["bee"])
-    assert "epic" in rules.dex_completed_tiers(["bee", "devil", "angel"])
+    # 레어 등급은 5종 모두 있어야 완성
+    assert "rare" not in rules.dex_completed_tiers(["pond"])
+    assert "rare" in rules.dex_completed_tiers(RARE_ALL)
+    # 에픽 4종 모두 있어야 완성
+    assert "epic" not in rules.dex_completed_tiers(["bee", "devil", "angel"])
+    assert "epic" in rules.dex_completed_tiers(EPIC_ALL)
 
 
 # ── 도감 완성 보상: 우편함 생성 + 멱등 + 수령 ──
@@ -54,12 +59,18 @@ def _fresh_user(db) -> models.User:
     return user
 
 
+def _seed_rare_album(db, user):
+    """레어 등급 완성용 앨범 5종."""
+    for color in RARE_ALL:
+        db.add(models.AlbumEntry(user_id=user.id, name="졸업이", color=color,
+                                 level=20, generation=1))
+    db.flush()
+
+
 def test_dex_reward_mailbox_and_idempotent():
     with database.SessionLocal() as db:
         user = _fresh_user(db)
-        db.add(models.AlbumEntry(user_id=user.id, name="졸업이", color="pond",
-                                 level=20, generation=1))
-        db.flush()
+        _seed_rare_album(db, user)
 
         events = service.grant_dex_rewards(db, user)
         assert any(e["type"] == "dex_tier_complete" and e["tier"] == "rare" for e in events)
@@ -80,9 +91,7 @@ def test_dex_reward_mailbox_and_idempotent():
 def test_dex_reward_claim_grants_coins():
     with database.SessionLocal() as db:
         user = _fresh_user(db)
-        db.add(models.AlbumEntry(user_id=user.id, name="졸업이", color="pond",
-                                 level=20, generation=1))
-        db.flush()
+        _seed_rare_album(db, user)
         service.grant_dex_rewards(db, user)
         db.commit()
         mail = db.query(models.MailboxMessage).filter_by(

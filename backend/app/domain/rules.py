@@ -86,26 +86,32 @@ FOOD_DEFS = {
 
 # 등급: 갈색/적갈색/회갈색 = 기본(common), 올리브 = 레어(rare), 황금 = 에픽(epic)
 VARIANTS = {
-    "brown": {"label": "갈색", "chance": 0.0965, "rarity": "common"},
-    "gray": {"label": "회갈색", "chance": 0.0965, "rarity": "common"},
-    "red": {"label": "붉은색", "chance": 0.0965, "rarity": "common"},
-    "yellow": {"label": "노란색", "chance": 0.0965, "rarity": "common"},
-    "bluegray": {"label": "블루그레이", "chance": 0.0965, "rarity": "common"},
-    "lavender": {"label": "라벤더그레이", "chance": 0.0965, "rarity": "common"},
-    "herb": {"label": "허브", "chance": 0.0965, "rarity": "common"},
-    "black": {"label": "검정", "chance": 0.0965, "rarity": "common"},
-    "lime": {"label": "라임", "chance": 0.0965, "rarity": "common"},
-    "sky": {"label": "소라", "chance": 0.0965, "rarity": "common"},
+    "brown": {"label": "갈색", "chance": 0.088, "rarity": "common"},
+    "gray": {"label": "회갈색", "chance": 0.088, "rarity": "common"},
+    "red": {"label": "붉은색", "chance": 0.088, "rarity": "common"},
+    "yellow": {"label": "노란색", "chance": 0.088, "rarity": "common"},
+    "bluegray": {"label": "블루그레이", "chance": 0.088, "rarity": "common"},
+    "lavender": {"label": "라벤더그레이", "chance": 0.088, "rarity": "common"},
+    "herb": {"label": "허브", "chance": 0.088, "rarity": "common"},
+    "black": {"label": "검정", "chance": 0.088, "rarity": "common"},
+    "lime": {"label": "라임", "chance": 0.088, "rarity": "common"},
+    "sky": {"label": "소라", "chance": 0.088, "rarity": "common"},
     "pond": {"label": "연못", "chance": 0.02, "rarity": "rare"},
+    "maple": {"label": "단풍", "chance": 0.02, "rarity": "rare"},
+    "pinwheel": {"label": "바람개비", "chance": 0.02, "rarity": "rare"},
+    "cherry": {"label": "벚꽃", "chance": 0.02, "rarity": "rare"},
+    "sunflower": {"label": "해바라기", "chance": 0.02, "rarity": "rare"},
     "bee": {"label": "꿀벌", "chance": 0.005, "rarity": "epic"},
     "devil": {"label": "악마", "chance": 0.005, "rarity": "epic"},
     "angel": {"label": "천사", "chance": 0.005, "rarity": "epic"},
+    "ladybug": {"label": "무당벌레", "chance": 0.005, "rarity": "epic"},
 }
-# 세대 보정: 연못(레어)이 세대마다 오르고 기본 10종이 균등하게 조금씩 내린다 (합계 0)
+# 세대 보정: 연못(레어)이 세대마다 오르고 기본 10종이 균등하게 조금씩 내린다 (합계 0). 그 외 무보정
 VARIANT_GEN_DELTA = {
     "brown": -0.1, "gray": -0.1, "red": -0.1, "yellow": -0.1, "bluegray": -0.1,
     "lavender": -0.1, "herb": -0.1, "black": -0.1, "lime": -0.1, "sky": -0.1,
-    "pond": 1.0, "bee": 0, "devil": 0, "angel": 0,
+    "pond": 1.0, "maple": 0, "pinwheel": 0, "cherry": 0, "sunflower": 0,
+    "bee": 0, "devil": 0, "angel": 0, "ladybug": 0,
 }
 
 RARITIES = ("common", "rare", "epic")

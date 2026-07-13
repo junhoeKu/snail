@@ -2,7 +2,7 @@
  * Snail 서비스 워커 — 정적 자산 캐시 우선 (오프라인 실행)
  * CACHE_VERSION을 올리면 다음 방문 시 새 캐시로 교체된다.
  */
-const CACHE_VERSION = 'snail-v1.5.2';
+const CACHE_VERSION = 'snail-v1.5.3';
 
 const PRECACHE = [
   '.',
@@ -69,6 +69,18 @@ const PRECACHE = [
   'assets/characters/snail_pond_baby.png',
   'assets/characters/snail_pond_junior.png',
   'assets/characters/snail_pond_adult.png',
+  'assets/characters/snail_maple_baby.png',
+  'assets/characters/snail_maple_junior.png',
+  'assets/characters/snail_maple_adult.png',
+  'assets/characters/snail_pinwheel_baby.png',
+  'assets/characters/snail_pinwheel_junior.png',
+  'assets/characters/snail_pinwheel_adult.png',
+  'assets/characters/snail_cherry_baby.png',
+  'assets/characters/snail_cherry_junior.png',
+  'assets/characters/snail_cherry_adult.png',
+  'assets/characters/snail_sunflower_baby.png',
+  'assets/characters/snail_sunflower_junior.png',
+  'assets/characters/snail_sunflower_adult.png',
   'assets/characters/snail_bee_baby.png',
   'assets/characters/snail_bee_junior.png',
   'assets/characters/snail_bee_adult.png',
@@ -77,7 +89,10 @@ const PRECACHE = [
   'assets/characters/snail_devil_adult.png',
   'assets/characters/snail_angel_baby.png',
   'assets/characters/snail_angel_junior.png',
-  'assets/characters/snail_angel_adult.png'
+  'assets/characters/snail_angel_adult.png',
+  'assets/characters/snail_ladybug_baby.png',
+  'assets/characters/snail_ladybug_junior.png',
+  'assets/characters/snail_ladybug_adult.png'
 ];
 
 self.addEventListener('install', function (event) {
