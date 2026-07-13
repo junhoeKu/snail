@@ -19,7 +19,7 @@ const NAMESPACES = {
   'js/db.js': 'DB', 'js/game.js': 'GAME', 'js/toast.js': 'Toast', 'js/api.js': 'Api',
   'js/sound.js': 'Sound', 'js/fx.js': 'FX',
   'js/stats.js': 'StatsModule', 'js/dex.js': 'DexModule', 'js/home.js': 'HomeModule', 'js/shop.js': 'ShopModule',
-  'js/deco.js': 'DecoModule', 'js/explore.js': 'ExploreModule', 'js/race.js': 'RaceModule', 'js/settings.js': 'SettingsModule',
+  'js/deco.js': 'DecoModule', 'js/explore.js': 'ExploreModule', 'js/race.js': 'RaceModule', 'js/quiz.js': 'QuizModule', 'js/settings.js': 'SettingsModule',
   'js/habitat.js': 'HabitatModule', 'js/app.js': 'App'
 };
 

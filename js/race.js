@@ -96,16 +96,24 @@ const RaceModule = (function () {
     });
   }
 
-  /** times(초)대로 각 레인 달팽이를 결승선까지 이동 */
+  /** times(초)대로 각 레인 달팽이를 결승선(트랙 우측 끝)까지 이동 */
   function _animate(times, done) {
-    const snails = _track().querySelectorAll('.race-snail');
+    const track = _track();
+    const lane = track.querySelector('.race-lane');
+    const snail0 = track.querySelector('.race-snail');
+    // 결승선까지 이동 거리 = 레인 폭 − (시작 left + 달팽이 폭 + 여백)
+    const startLeft = snail0 ? snail0.offsetLeft : 24;
+    const snailW = snail0 ? snail0.offsetWidth : 40;
+    const goal = Math.max(40, lane.clientWidth - startLeft - snailW - 2);
+
+    const snails = track.querySelectorAll('.race-snail');
     let maxT = 0;
     snails.forEach(function (el) {
       const t = times[Number(el.dataset.lane)];
       maxT = Math.max(maxT, t);
       el.style.transition = 'transform ' + t + 's cubic-bezier(.35,.1,.6,1)';
       requestAnimationFrame(function () {
-        el.style.transform = 'translateX(calc(100% - 4px))';
+        el.style.transform = 'translateX(' + goal + 'px)';
       });
     });
     setTimeout(done, maxT * 1000 + 250);

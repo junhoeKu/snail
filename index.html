@@ -144,9 +144,10 @@
                 <span class="minigame-info"><b>달팽이 경주</b><small>1등을 맞히면 10골드!</small></span>
                 <i class="fa-solid fa-chevron-right"></i>
               </button>
-              <button class="minigame-card locked" data-game="quiz">
+              <button class="minigame-card" data-game="quiz">
                 <span class="minigame-emoji">❓</span>
-                <span class="minigame-info"><b>달팽이 퀴즈</b><small>준비 중</small></span>
+                <span class="minigame-info"><b>달팽이 퀴즈</b><small>맞히면 5골드!</small></span>
+                <i class="fa-solid fa-chevron-right"></i>
               </button>
             </div>
           </div>
@@ -168,6 +169,20 @@
           </button>
           <div id="explore-field" class="explore-field"></div>
           <p id="explore-map-stamina" class="explore-map-stamina"></p>
+        </div>
+
+        <!-- 달팽이 퀴즈 -->
+        <div id="quiz-view" class="hidden">
+          <div class="card quiz-card">
+            <button id="btn-quiz-back" class="btn btn-ghost btn-sm explore-exit">
+              <i class="fa-solid fa-arrow-left"></i> 미니게임
+            </button>
+            <h2 class="screen-title">❓ 달팽이 퀴즈</h2>
+            <p id="quiz-question" class="quiz-question"></p>
+            <div id="quiz-choices" class="quiz-choices"></div>
+            <p id="quiz-result" class="quiz-result"></p>
+            <p id="quiz-left" class="race-left"></p>
+          </div>
         </div>
 
         <!-- 달팽이 경주 -->
@@ -240,7 +255,7 @@
               <i class="fa-solid fa-file-import"></i> 백업 코드로 복구
             </button>
             <button id="btn-reset" class="btn btn-danger btn-wide">데이터 초기화</button>
-            <p class="settings-version">Snail v1.4.1</p>
+            <p class="settings-version">Snail v1.4.2</p>
           </div>
         </div>
       </section>
@@ -378,6 +393,7 @@
   <script src="js/deco.js"></script>
   <script src="js/explore.js"></script>
   <script src="js/race.js"></script>
+  <script src="js/quiz.js"></script>
   <script src="js/settings.js"></script>
   <script src="js/habitat.js"></script>
   <script src="js/app.js"></script>

@@ -309,6 +309,7 @@ const App = (function () {
     DecoModule.bind();
     ExploreModule.bind();
     RaceModule.bind();
+    QuizModule.bind();
     SettingsModule.bind();
     SettingsModule.render();
 
