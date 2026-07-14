@@ -62,7 +62,9 @@ assert(r.snail.hunger === 100 && r.snail.happiness === 0, '상한 100 / 하한 0
 
 console.log('[6] 쓰다듬기');
 r = GAME.pet(snail, player, '2026-07-11T12:00:00.000Z');
-assert(r.events.includes('petted') && r.snail.happiness === Math.min(100, snail.happiness + 5), '쓰다듬기 → 행복 +5');
+assert(r.events.includes('petted') &&
+  r.snail.happiness === Math.min(100, snail.happiness + GAME.CONFIG.PET_HAPPINESS),
+  '쓰다듬기 → 행복 +' + GAME.CONFIG.PET_HAPPINESS + ' (CONFIG 단일 소스)');
 r = GAME.pet(r.snail, r.player, '2026-07-11T12:00:01.000Z');
 assert(r.events.includes('petted'), '쿨다운 없이 즉시 반복 가능');
 assert(GAME.pet({stage:'egg'}, player, '2026-07-11T12:00:00.000Z').events.includes('not_hatched'), '알 보호');
