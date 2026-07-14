@@ -378,7 +378,7 @@ const App = (function () {
     const rep = hatched[0] || snails[0];
     const href = (!rep || rep.stage === 'egg')
       ? 'assets/characters/egg.png'
-      : GAME.spritePath(rep.color, rep.stage);
+      : GAME.spritePath(rep.color, GAME.displayStage(rep));
     if (link.getAttribute('href') !== href) {
       link.setAttribute('type', 'image/png');
       link.setAttribute('href', href);

@@ -17,6 +17,9 @@ const GAME = (function () {
     // 먹이 주기 (종류별 효과는 FOOD_DEFS)
     FEED_COINS: 2,
     FOOD_BUNDLE_DISCOUNT: 0.9, // ×10 묶음 10% 할인
+    // 서식지 드롭 먹이 — 드롭=상태 기록, 소모·보상은 먹기 완료 시 정산 (13차 Phase 2)
+    FIELD_FOOD_MAX: 10,        // 동시 드롭 상한
+    FIELD_FOOD_TTL_HOURS: 24,  // 드롭 유지 시간 (지나면 소멸 — 재고 무변동)
 
     // 양육자 레벨
     KEEPER_XP: {
@@ -460,6 +463,36 @@ const GAME = (function () {
   }
 
   /**
+   * TTL이 지났거나 시각이 깨진 드롭 먹이를 걸러낸다 (rules.prune_dropped_foods 대칭).
+   * @param {Array} drops [{id, food_id, rx, ry, dropped_at}]
+   * @param {number} [nowMs] 기준 시각 (테스트 주입용, 기본 Date.now())
+   */
+  function pruneDroppedFoods(drops, nowMs) {
+    const ttlMs = CONFIG.FIELD_FOOD_TTL_HOURS * 3600 * 1000;
+    const now = typeof nowMs === 'number' ? nowMs : Date.now();
+    return (drops || []).filter(function (d) {
+      const at = Date.parse(d && d.dropped_at);
+      return isFinite(at) && (now - at) < ttlMs;
+    });
+  }
+
+  /** 도달한 성장 단계 목록 — 모습 바꾸기 후보 (13차 Phase 3) */
+  function reachedStages(snail) {
+    if (snail.stage === 'egg') return [];
+    return ['baby', 'junior', 'adult'].filter(function (id) {
+      return STAGES[id].minLevel <= snail.level;
+    });
+  }
+
+  /** 표시용 단계 — 유효한 skin_stage(도달한 단계)가 있으면 우선. 판정은 항상 실제 stage를 쓴다 */
+  function displayStage(snail) {
+    if (snail.skin_stage && reachedStages(snail).indexOf(snail.skin_stage) !== -1) {
+      return snail.skin_stage;
+    }
+    return snail.stage;
+  }
+
+  /**
    * 경험치 획득 → 레벨업 → 단계 변화까지 처리
    * @returns {{snail: object, events: string[]}}
    */
@@ -477,6 +510,7 @@ const GAME = (function () {
       const nextStage = stageForLevel(s.level);
       if (nextStage !== s.stage) {
         s.stage = nextStage;
+        s.skin_stage = null; // 진화하면 새 모습을 먼저 보여준다
         events.push('stage_up');
       }
     }
@@ -1196,6 +1230,9 @@ const GAME = (function () {
     missionProgress: missionProgress,
     stageForLevel: stageForLevel,
     expToNext: expToNext,
+    reachedStages: reachedStages,
+    displayStage: displayStage,
+    pruneDroppedFoods: pruneDroppedFoods,
     gainExp: gainExp,
     hatch: hatch,
     feed: feed,

@@ -129,8 +129,66 @@ def _run(db: Session, user: models.User, action_type: str, request_id: str,
 
 # ── 달팽이 행동 ─────────────────────────────────────────
 
+class FoodDropIn(BaseModel):
+    id: str = ""
+    foodId: str = "lettuce"
+    rx: float = 0.5
+    ry: float = 0.5
+
+
+@router.post("/habitat/foods")
+def drop_food(body: FoodDropIn,
+              user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """드롭 = 상태 기록만. 소모·보상은 먹기 완료 시 feed가 정산한다 (경제 무변동).
+
+    검증: 상한(FIELD_FOOD_MAX)·먹이 존재·재고(대기 중 같은 먹이 포함). 같은 id 재전송은 멱등.
+    """
+    service.lock_user(db, user)  # JSON 컬럼 동시 갱신(lost update) 방지
+    drops = rules.prune_dropped_foods(list(user.dropped_foods or []), service.utcnow())
+
+    if body.id and any(d.get("id") == body.id for d in drops):
+        db.commit()
+        return {"ok": True}
+    if len(drops) >= rules.CONFIG["FIELD_FOOD_MAX"]:
+        raise ApiError(409, "field_full", "먹이가 이미 잔뜩 있어요. 먼저 먹게 해주세요.")
+    if body.foodId not in rules.FOOD_DEFS:
+        raise ApiError(422, "invalid_food", "알 수 없는 먹이예요.")
+    pending_same = sum(1 for d in drops if d.get("food_id") == body.foodId)
+    if service.get_inventory(db, user).get(body.foodId, 0) < pending_same + 1:
+        raise ApiError(409, "no_food", "선택한 먹이가 없어요.")
+
+    drops.append({
+        "id": body.id or models._uuid(),
+        "food_id": body.foodId,
+        "rx": rules.clamp01(body.rx),
+        "ry": rules.clamp01(body.ry),
+        "dropped_at": service.utcnow().isoformat(),
+    })
+    user.dropped_foods = drops
+    service.bump_revision(user)  # 다른 기기의 revision 기반 리싱크가 감지하도록
+    db.commit()
+    return {"ok": True}
+
+
+@router.delete("/habitat/foods/{drop_id}")
+def remove_drop(drop_id: str,
+                user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """드롭 기록 정리 — 먹기 실패(도메인 거절) 등으로 화면에서 사라진 드롭의 유령 복원 방지.
+
+    소모가 아니므로 재고·원장 무변동. 없는 id는 조용히 성공(멱등).
+    """
+    service.lock_user(db, user)
+    drops = [d for d in (user.dropped_foods or []) if d.get("id") != drop_id]
+    if len(drops) != len(user.dropped_foods or []):
+        user.dropped_foods = drops
+        service.bump_revision(user)
+    db.commit()
+    return {"ok": True}
+
+
 class FeedIn(ActionIn):
     foodId: str | None = None
+    dropId: str | None = None  # 드롭 먹이를 먹은 경우 해당 드롭 제거
 
 
 @router.post("/snails/{snail_id}/feed")
@@ -145,6 +203,9 @@ def feed(snail_id: str, body: FeedIn,
         service.apply_snail_dict(snail, s)
         service.add_item(db, user, food_id, -1, "feed_consume", snail.id)
         service.add_coins(db, user, rules.CONFIG["FEED_COINS"], "feed_reward", snail.id)
+        if body.dropId:
+            user.dropped_foods = [dr for dr in (user.dropped_foods or [])
+                                  if dr.get("id") != body.dropId]
         for e in events:
             if e["type"] == "levelup":
                 service.add_journal(db, user, "levelup", f"{snail.name}(이)가 Lv.{e['level']}이 되었어요!")
@@ -247,6 +308,25 @@ def rename(snail_id: str, body: NameIn,
     service.bump_revision(user)
     db.commit()
     return {"ok": True, "name": name, "version": snail.version}
+
+
+class SkinIn(BaseModel):
+    stage: str | None = None  # None → 원래 모습으로
+
+
+@router.patch("/snails/{snail_id}/skin")
+def set_skin(snail_id: str, body: SkinIn,
+             user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """모습 바꾸기 — 연출 전용(skin_stage). 판정(레벨/도감/성장)은 실제 stage를 쓴다."""
+    snail = _snail_of(db, user, snail_id)
+    stage = None if body.stage == snail.stage else body.stage  # 실제 단계면 저장하지 않는다
+    if not rules.skin_allowed(service.snail_dict(snail), stage):
+        raise ApiError(409, "skin_locked", "아직 도달하지 않은 모습이에요.")
+    snail.skin_stage = stage
+    snail.version += 1
+    service.bump_revision(user)
+    db.commit()
+    return {"ok": True, "skin_stage": stage, "version": snail.version}
 
 
 # ── 상점 ────────────────────────────────────────────────

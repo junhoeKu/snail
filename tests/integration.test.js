@@ -48,9 +48,11 @@ const player = (w) => JSON.parse(w.localStorage.getItem('sn_player'));
 const snails = (w) => JSON.parse(w.localStorage.getItem('sn_snails'));
 
 function clickSnail(w, entId) {
+  // 탭 = pointerdown + (이동 없이) pointerup — 드래그 판정(13차 Phase 3)과 구분된다
   const ent = w.HabitatModule.debugState().ents.find(e => !entId || e.id === entId);
-  w.document.getElementById('snail-habitat').dispatchEvent(
-    new w.MouseEvent('pointerdown', { clientX: ent.x, clientY: ent.y, bubbles: true }));
+  const habitat = w.document.getElementById('snail-habitat');
+  habitat.dispatchEvent(new w.MouseEvent('pointerdown', { clientX: ent.x, clientY: ent.y, bubbles: true }));
+  habitat.dispatchEvent(new w.MouseEvent('pointerup', { clientX: ent.x, clientY: ent.y, bubbles: true }));
   return ent;
 }
 
@@ -235,8 +237,74 @@ function clickSnail(w, entId) {
   assert(pa.foods.lettuce === 999 && pa.foods.salad === 999, '전 먹이 999');
   assert(wa.GAME.foodUnlocked(pa, 'salad'), '관리자 먹이 잠금 무시');
 
-  // ── [12] 콘솔 에러 ──────────────────────────────────────
-  console.log('[12] 콘솔 에러');
+  // ── [12] 드롭 먹이 지속 (13차 Phase 2 — 로컬 모드) ──────
+  console.log('[12] 드롭 먹이 지속');
+  // 몽이(배고픔>0)가 있는 w에서 드롭 → 저장 확인 (스냅숏은 먹기 완료 전에 동기 캡처)
+  const dropsBefore = (player(w).dropped_foods || []).length;
+  doc.getElementById('btn-feed').click();
+  assert((player(w).dropped_foods || []).length === dropsBefore + 1, '드롭 즉시 저장');
+  const snap12 = Object.fromEntries(
+    ['sn_player', 'sn_snails', 'sn_journal', 'sn_album'].map(k => [k, w.localStorage.getItem(k)]));
+  // TTL 만료 드롭을 섞어 복원 필터를 함께 검증
+  const p12 = JSON.parse(snap12.sn_player);
+  p12.dropped_foods.push({
+    id: 'stale1', food_id: 'lettuce', rx: 0.5, ry: 0.5,
+    dropped_at: new Date(Date.now() - 25 * 3600 * 1000).toISOString()
+  });
+  snap12.sn_player = JSON.stringify(p12);
+
+  const w5 = await boot(snap12, 0.5);
+  assert(w5.document.querySelectorAll('.food-item').length === 1, '재부팅 후 드롭 1개 복원 (만료분 제외)');
+  const p12b = JSON.parse(w5.localStorage.getItem('sn_player'));
+  assert(p12b.dropped_foods.length === 1 && p12b.dropped_foods[0].id !== 'stale1', 'TTL 만료 드롭 정리');
+  await sleep(2600); // 복원 먹이는 기본 EAT_DURATION(1.8s)으로 먹는다
+  assert(w5.document.querySelectorAll('.food-item').length === 0, '복원 먹이 이어 먹기 완료');
+  assert(JSON.parse(w5.localStorage.getItem('sn_player')).dropped_foods.length === 0, '먹은 뒤 드롭 기록 제거');
+
+  // ── [13] 모습 바꾸기 (13차 Phase 3 — 연출 전용) ─────────
+  console.log('[13] 모습 바꾸기');
+  const list13 = snails(w);
+  const mong13 = list13.find(s => s.name === '몽이');
+  mong13.level = 20; mong13.stage = 'adult';
+  w.localStorage.setItem('sn_snails', JSON.stringify(list13));
+  w.HomeModule.render();
+  clickSnail(w, mong13.id);
+  assert(doc.querySelector('.popup-skin') !== null, '팝업에 [모습 바꾸기] 버튼 (성체)');
+  doc.querySelector('.popup-skin').click();
+  const skinRows = doc.querySelectorAll('.skin-row');
+  assert(skinRows.length === 3, '도달한 단계 3종 후보: ' + skinRows.length);
+  skinRows[0].click(); // 아기 모습 선택
+  assert(snails(w).find(s => s.id === mong13.id).skin_stage === 'baby', 'skin_stage=baby 저장');
+  const sprite13 = doc.querySelector('#snail-layer .snail-entity .snail-img');
+  assert(sprite13.getAttribute('src').indexOf('_baby') !== -1, '서식지 스프라이트 아기 모습');
+  assert(snails(w).find(s => s.id === mong13.id).stage === 'adult', '판정 단계는 성체 유지');
+  doc.querySelector('.popup-close').click();
+
+  // ── [14] 드래그 이동 (13차 Phase 3) ─────────────────────
+  console.log('[14] 드래그 이동');
+  const habitat14 = doc.getElementById('snail-habitat');
+  // jsdom은 레이아웃이 없어 크기를 주입해 좌표 계산을 살린다
+  Object.defineProperty(habitat14, 'clientWidth', { value: 390, configurable: true });
+  Object.defineProperty(habitat14, 'clientHeight', { value: 500, configurable: true });
+  const ent14 = w.HabitatModule.debugState().ents[0];
+  habitat14.dispatchEvent(new w.MouseEvent('pointerdown', { clientX: ent14.x, clientY: ent14.y, bubbles: true }));
+  habitat14.dispatchEvent(new w.MouseEvent('pointermove', { clientX: 200, clientY: 300, bubbles: true }));
+  habitat14.dispatchEvent(new w.MouseEvent('pointerup', { clientX: 200, clientY: 300, bubbles: true }));
+  assert(doc.querySelector('.snail-popup') === null, '드래그 후 팝업이 열리지 않음');
+  const ent14b = w.HabitatModule.debugState().ents[0];
+  assert(Math.abs(ent14b.x - 200) < 1 && Math.abs(ent14b.y - 300) < 1,
+    '드롭 위치로 이동: ' + ent14b.x + ',' + ent14b.y);
+  assert(ent14b.state === 'idle', '드롭 후 일상 복귀(idle): ' + ent14b.state);
+  const mongPos = snails(w).find(s => s.id === ent14b.id).pos;
+  assert(Math.abs(mongPos.rx - 200 / 390) < 0.01 && Math.abs(mongPos.ry - 300 / 500) < 0.01,
+    '드롭 위치 저장(rx/ry): ' + JSON.stringify(mongPos));
+  // 이동 없는 탭은 여전히 팝업
+  clickSnail(w, ent14b.id);
+  assert(doc.querySelector('.snail-popup') !== null, '탭은 여전히 팝업');
+  doc.querySelector('.popup-close').click();
+
+  // ── [15] 콘솔 에러 ──────────────────────────────────────
+  console.log('[15] 콘솔 에러');
   assert(consoleErrors.length === 0, '콘솔 에러 0개' + (consoleErrors.length ? ' — ' + consoleErrors.join(' | ') : ''));
 
   console.log(failures === 0 ? '\n✅ 통합 테스트 전체 통과' : '\n❌ 실패 ' + failures + '건');

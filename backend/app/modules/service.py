@@ -170,6 +170,11 @@ def settle(db: Session, user: models.User) -> list[dict]:
         rules.apply_decay(s, now, deco_fx)
         apply_snail_dict(snail, s)
 
+    # 1.5) 드롭 먹이 TTL 정리 (소모 아님 — 재고 무변동)
+    pruned = rules.prune_dropped_foods(user.dropped_foods or [], now)
+    if len(pruned) != len(user.dropped_foods or []):
+        user.dropped_foods = pruned
+
     # 2) 부재 중 발견 (계정 단위, 부화 개체가 있을 때만)
     away_min = (now - _aware(user.last_seen_at)).total_seconds() / 60
     has_hatched = any(s.stage != "egg" for s in active_snails(db, user))
@@ -242,7 +247,8 @@ def mailbox_unread(db: Session, user: models.User) -> int:
 
 def snail_dict(s: models.Snail) -> dict:
     return {
-        "id": s.id, "name": s.name, "stage": s.stage, "level": s.level, "exp": s.exp,
+        "id": s.id, "name": s.name, "stage": s.stage, "skin_stage": s.skin_stage,
+        "level": s.level, "exp": s.exp,
         "hunger": s.hunger, "happiness": s.happiness, "color": s.color,
         "personality": s.personality, "wild_variant": s.wild_variant,
         "last_state_at": _aware(s.last_state_at), "graduated_at": s.graduated_at,
@@ -251,6 +257,7 @@ def snail_dict(s: models.Snail) -> dict:
 
 def apply_snail_dict(s: models.Snail, d: dict) -> None:
     s.name, s.stage, s.level, s.exp = d["name"], d["stage"], d["level"], d["exp"]
+    s.skin_stage = d.get("skin_stage")
     s.hunger, s.happiness = d["hunger"], d["happiness"]
     s.color, s.personality, s.wild_variant = d["color"], d["personality"], d["wild_variant"]
     s.last_state_at = d["last_state_at"]
@@ -296,6 +303,7 @@ def player_payload(db: Session, user: models.User) -> dict:
         "explore": user.explore_state or {"date": None, "searches": 0},
         "unlocked_maps": user.unlocked_maps or [],
         "decorations": {"owned": user.decorations_owned or [], "slots": user.decoration_slots or [None, None, None]},
+        "dropped_foods": user.dropped_foods or [],
         "last_seen": _aware(user.last_seen_at).isoformat(),
         "server_mode": True,
         "migration_done": user.migration_done,
@@ -305,6 +313,7 @@ def player_payload(db: Session, user: models.User) -> dict:
 def snail_payload(s: models.Snail) -> dict:
     return {
         "schema_version": 6, "id": s.id, "name": s.name, "stage": s.stage,
+        "skin_stage": s.skin_stage,
         "level": s.level, "exp": s.exp,
         "hunger": int(round(s.hunger)), "happiness": int(round(s.happiness)),
         "color": s.color, "personality": s.personality, "wild_variant": s.wild_variant,

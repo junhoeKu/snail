@@ -239,6 +239,7 @@
   z-index: 100;
   width: max-content;
   max-width: 90vw;
+  pointer-events: none; /* 토스트는 표시 전용 — 아래 행동 버튼 탭을 막지 않는다 */
 }
 
 .toast {
@@ -395,6 +396,20 @@
   font-size: 11px;
   color: var(--color-text-sub);
   margin-top: 2px;
+}
+
+/* 모습 바꾸기 행 — food-sheet-row 재사용 + 스프라이트 미리보기 */
+.skin-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.skin-row-img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .shop-item.locked {

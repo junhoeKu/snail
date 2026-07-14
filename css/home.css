@@ -42,7 +42,8 @@
   inset: 0;
   overflow: hidden;
   cursor: pointer;
-  touch-action: manipulation;
+  /* none: 브라우저 팬/줌이 제스처를 가로채면 드래그가 pointercancel로 끊긴다 (13차 Phase 3) */
+  touch-action: none;
   /* 배경은 body가 그린다 — 서식지는 투명 */
   background: transparent;
 }
@@ -175,6 +176,19 @@ body[data-weather="fog"] .snail-habitat::before {
   animation: snail-nap 3.2s ease-in-out infinite;
 }
 
+/* 드래그(집어 옮기기) — 들어올린 느낌: 모션 정지 + 그림자 깊게 */
+.snail-entity.state-dragging {
+  z-index: 5;
+}
+
+.snail-entity.state-dragging .snail-motion {
+  animation: none;
+}
+
+.snail-entity.state-dragging .snail-img {
+  filter: drop-shadow(0 10px 8px rgba(20, 18, 10, 0.35));
+}
+
 @keyframes snail-nap {
   0%, 100% { transform: scaleY(1); }
   50%      { transform: scaleY(0.94) translateY(2px); }
@@ -206,9 +220,9 @@ body[data-weather="fog"] .snail-habitat::before {
   -webkit-user-drag: none;
 }
 
-.snail-sprite.stage-baby .snail-img { width: 44px; }
-.snail-sprite.stage-junior .snail-img { width: 64px; }
-.snail-sprite.stage-adult .snail-img { width: 84px; }
+.snail-sprite.stage-baby .snail-img { width: 36px; }
+.snail-sprite.stage-junior .snail-img { width: 52px; }
+.snail-sprite.stage-adult .snail-img { width: 68px; }
 
 /* 머리 위 스탯 배지 (배고픔/행복) */
 .snail-badge {

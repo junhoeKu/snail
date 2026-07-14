@@ -47,7 +47,7 @@ const ShareModule = (function () {
     // 달팽이들 (색/단계 스프라이트)
     const snails = DB.Snails.get().filter(function (s) { return s.stage !== 'egg'; });
     const imgs = await Promise.all(snails.map(function (s) {
-      return _loadImage(GAME.spritePath(s.color, s.stage));
+      return _loadImage(GAME.spritePath(s.color, GAME.displayStage(s)));
     }));
     imgs.forEach(function (img, i) {
       if (!img) return;

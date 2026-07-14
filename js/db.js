@@ -82,7 +82,8 @@ const DB = (function () {
       snail_slots: 1,            // 보금자리 수 (최대 3 — 상점에서 확장)
       explore: { date: null, searches: 0 }, // 탐험 스태미나 (하루 리셋)
       unlocked_maps: [],
-      dex_claimed: []            // 수령한 도감 등급 완성 보상 (common/rare/epic — 로컬 모드)
+      dex_claimed: [],           // 수령한 도감 등급 완성 보상 (common/rare/epic — 로컬 모드)
+      dropped_foods: []          // 서식지 드롭 먹이 [{id, food_id, rx, ry, dropped_at}] — 재접속 복원
     };
   }
 
@@ -100,6 +101,7 @@ const DB = (function () {
       hunger: 0,
       happiness: 100,
       stage: 'egg',
+      skin_stage: null,      // 모습 바꾸기(연출 전용) — 도달한 단계만, 판정은 stage
       color: 'brown',        // 껍질 변이 (부화 시 결정)
       personality: null,     // 성격 (부화 시 결정, 구버전 데이터는 부팅 시 소급 부여)
       wild_variant: null,    // 야생 알: 발견한 맵에서 예약된 변이 (부화 시 사용)

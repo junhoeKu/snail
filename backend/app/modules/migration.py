@@ -100,6 +100,20 @@ def migrate_local_v6(body: MigrationIn,
     for food_id in rules.FOOD_DEFS:
         service.set_item(db, user, food_id, _clamp_int(foods.get(food_id, 0), 0, 9999))
 
+    # ── 서식지 드롭 먹이 (13차 Phase 2 — 재접속 이어 먹기 상태) ──
+    drops = []
+    for d in (p.get("dropped_foods") or [])[: rules.CONFIG["FIELD_FOOD_MAX"]]:
+        if not isinstance(d, dict) or d.get("food_id") not in rules.FOOD_DEFS:
+            continue
+        try:
+            rx, ry = rules.clamp01(float(d.get("rx", 0.5))), rules.clamp01(float(d.get("ry", 0.5)))
+        except (TypeError, ValueError):
+            continue
+        drops.append({"id": str(d.get("id") or models._uuid()), "food_id": d["food_id"],
+                      "rx": rx, "ry": ry,
+                      "dropped_at": str(d.get("dropped_at") or "")})
+    user.dropped_foods = rules.prune_dropped_foods(drops, service.utcnow())
+
     # ── 달팽이 (게스트 생성 시 받은 기본 알은 제거 후 교체) ──
     for snail in service.active_snails(db, user):
         db.delete(snail)
@@ -109,9 +123,14 @@ def migrate_local_v6(body: MigrationIn,
         color = raw.get("color") if raw.get("color") in ALLOWED_COLORS else "brown"
         personality = raw.get("personality") if raw.get("personality") in ALLOWED_PERSONALITIES else None
         pos = raw.get("pos") or {}
+        level = _clamp_int(raw.get("level", 0), 0, 999)
+        skin = raw.get("skin_stage") if raw.get("skin_stage") in ("baby", "junior", "adult") else None
+        if skin and not rules.skin_allowed({"stage": stage, "level": level}, skin):
+            skin = None
         db.add(models.Snail(
             user_id=user.id, name=str(raw.get("name", ""))[:12], stage=stage,
-            level=_clamp_int(raw.get("level", 0), 0, 999),
+            skin_stage=skin,
+            level=level,
             exp=_clamp_int(raw.get("exp", 0), 0, 100000),
             hunger=_clamp_int(raw.get("hunger", 0), 0, 100),
             happiness=_clamp_int(raw.get("happiness", 100), 0, 100),

@@ -376,7 +376,7 @@ const HomeModule = (function () {
     const img = document.createElement('img');
     const rareVariant = GAME.VARIANTS[safeColor] && GAME.VARIANTS[safeColor].rarity !== 'common';
     img.className = 'popup-img' + (rareVariant ? ' popup-rare' : '');
-    img.src = GAME.spritePath(safeColor, rec.stage);
+    img.src = GAME.spritePath(safeColor, GAME.displayStage(rec));
     img.alt = rec.name;
     box.appendChild(img);
 
@@ -445,6 +445,15 @@ const HomeModule = (function () {
     actions.appendChild(petBtn);
     box.appendChild(actions);
 
+    // 모습 바꾸기 — 도달한 단계가 2개 이상일 때만 (연출 전용, 판정은 실제 stage)
+    if (GAME.reachedStages(rec).length >= 2) {
+      const skinBtn = document.createElement('button');
+      skinBtn.className = 'btn btn-ghost btn-wide popup-skin';
+      skinBtn.textContent = '🎭 모습 바꾸기';
+      skinBtn.addEventListener('click', function () { _showSkinSheet(snailId); });
+      box.appendChild(skinBtn);
+    }
+
     if (GAME.canGraduate(rec)) {
       const gradBtn = document.createElement('button');
       gradBtn.className = 'btn btn-primary btn-wide popup-graduate';
@@ -464,6 +473,93 @@ const HomeModule = (function () {
 
     overlay.appendChild(box);
     root.appendChild(overlay);
+  }
+
+  // ── 모습 바꾸기 (팝업에서 진입 — 도달한 단계만, 연출 전용) ──
+
+  function _showSkinSheet(snailId) {
+    const rec = DB.Snails.getById(snailId);
+    if (!rec) return;
+
+    const root = document.getElementById('modal-root');
+    root.innerHTML = '';
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const box = document.createElement('div');
+    box.className = 'modal-box';
+
+    const title = document.createElement('h3');
+    title.textContent = '🎭 모습 바꾸기';
+    box.appendChild(title);
+    const msg = document.createElement('p');
+    msg.textContent = '지금까지 자라온 모습 중 하나로 지낼 수 있어요.';
+    box.appendChild(msg);
+
+    const safeColor = GAME.VARIANTS[rec.color] ? rec.color : 'brown';
+    const current = GAME.displayStage(rec);
+    const list = document.createElement('div');
+    list.className = 'food-sheet';
+    GAME.reachedStages(rec).forEach(function (stageId) {
+      const row = document.createElement('button');
+      row.className = 'food-sheet-row skin-row' + (stageId === current ? ' active' : '');
+
+      const sprite = document.createElement('img');
+      sprite.className = 'skin-row-img';
+      sprite.src = GAME.spritePath(safeColor, stageId);
+      sprite.alt = '';
+      const name = document.createElement('span');
+      name.className = 'food-sheet-name';
+      name.textContent = GAME.STAGES[stageId].label + ' 모습' +
+        (stageId === rec.stage ? ' (원래 모습)' : '');
+      row.appendChild(sprite);
+      row.appendChild(name);
+
+      row.addEventListener('click', function () {
+        overlay.remove();
+        _applySkin(snailId, stageId);
+      });
+      list.appendChild(row);
+    });
+    box.appendChild(list);
+
+    const close = document.createElement('button');
+    close.className = 'btn btn-ghost btn-wide';
+    close.textContent = '닫기';
+    close.addEventListener('click', function () { overlay.remove(); });
+    box.appendChild(close);
+
+    overlay.appendChild(box);
+    root.appendChild(overlay);
+  }
+
+  function _applySkin(snailId, stageId) {
+    const rec = DB.Snails.getById(snailId);
+    if (!rec) return;
+    const skin = stageId === rec.stage ? null : stageId; // 실제 단계면 저장하지 않는다
+
+    // 저장 경로만 모드별로 다르고 마무리(연출/갱신)는 공유 — 분기 드리프트 방지
+    const finish = function () {
+      Sound.play('tap');
+      HabitatModule.sync();
+      App.updateFavicon();
+      _renderSnailPopup(snailId);
+    };
+
+    if (Api.enabled()) {
+      Api.setSkin(snailId, skin).then(function (res) {
+        const fresh = DB.Snails.getById(snailId);
+        if (fresh) {
+          fresh.skin_stage = res.skin_stage;
+          DB.Snails.saveOne(fresh); // 미러 갱신 (판정 값 아님)
+        }
+        finish();
+      }).catch(Api.Net.fail);
+      return;
+    }
+
+    rec.skin_stage = skin;
+    DB.Snails.saveOne(rec);
+    finish();
   }
 
   // ── 여행 보내기 (팝업에서 진입) ────────────────────────

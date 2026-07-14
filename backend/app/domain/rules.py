@@ -14,6 +14,9 @@ CONFIG = {
     "DECAY_HAPPINESS": 5,
     # 먹이/보상
     "FEED_COINS": 2,
+    # 서식지 드롭 먹이 (드롭=상태 기록, 소모·보상은 먹기 완료 시 feed가 정산 — 13차 Phase 2)
+    "FIELD_FOOD_MAX": 10,
+    "FIELD_FOOD_TTL_HOURS": 24,
     "FOOD_BUNDLE_COUNT": 10,
     "FOOD_BUNDLE_DISCOUNT": 0.9,
     "DAILY_COINS": 20,
@@ -152,6 +155,11 @@ def clamp(v: float) -> float:
     return max(0.0, min(100.0, v))
 
 
+def clamp01(v: float) -> float:
+    """0~1 비율 좌표 클램프 (rx/ry)."""
+    return max(0.0, min(1.0, v))
+
+
 # ── 성장 ────────────────────────────────────────────────
 
 def exp_to_next(level: int) -> int:
@@ -179,8 +187,22 @@ def gain_exp(snail: dict, amount: int) -> list[dict]:
         next_stage = stage_for_level(snail["level"])
         if next_stage != snail["stage"]:
             snail["stage"] = next_stage
+            snail["skin_stage"] = None  # 진화하면 새 모습을 먼저 보여준다
             events.append({"type": "stage_up", "snailId": snail["id"], "stage": next_stage})
     return events
+
+
+def skin_allowed(snail: dict, stage: str | None) -> bool:
+    """모습(skin_stage, 연출 전용)은 이미 도달한 단계만 고를 수 있다. None=원래 모습.
+
+    단계 사다리의 단일 소스인 stage_for_level에서 도달 여부를 유도한다 (별도 테이블 금지).
+    """
+    if stage is None:
+        return True
+    if snail["stage"] == "egg":
+        return False
+    order = ["baby", "junior", "adult"]
+    return stage in order and order.index(stage) <= order.index(stage_for_level(snail["level"]))
 
 
 # ── 변이/성격 ───────────────────────────────────────────
@@ -248,6 +270,25 @@ def apply_decay(snail: dict, now: datetime, deco_fx: dict) -> tuple[int, list[di
     snail["last_state_at"] = snail["last_state_at"] + timedelta(minutes=intervals * CONFIG["DECAY_INTERVAL_MIN"])
     events.append({"type": "decayed", "snailId": snail["id"]})
     return intervals, events
+
+
+def prune_dropped_foods(drops: list, now: datetime) -> list:
+    """TTL이 지났거나 시각이 깨진 드롭 먹이를 걸러낸다.
+
+    드롭은 소모가 아니므로(재고 차감은 feed 시점) 소멸해도 재화 손실이 없다.
+    """
+    ttl = timedelta(hours=CONFIG["FIELD_FOOD_TTL_HOURS"])
+    kept = []
+    for d in drops or []:
+        try:
+            at = datetime.fromisoformat(str(d.get("dropped_at")))
+        except (TypeError, ValueError):
+            continue
+        if at.tzinfo is None:
+            at = at.replace(tzinfo=now.tzinfo)
+        if now - at < ttl:
+            kept.append(d)
+    return kept
 
 
 def decoration_effects(slots: list) -> dict:

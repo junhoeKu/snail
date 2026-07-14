@@ -50,6 +50,7 @@ class User(Base):
     explore_state: Mapped[dict] = mapped_column(JSON, default=dict)     # {date, searches}
     minigame_race: Mapped[dict] = mapped_column(JSON, default=dict)     # {date, count} 경주 하루 제한
     minigame_quiz: Mapped[dict] = mapped_column(JSON, default=dict)     # {date, count} 퀴즈 하루 제한
+    dropped_foods: Mapped[list] = mapped_column(JSON, default=list)     # 서식지 드롭 먹이 [{id, food_id, rx, ry, dropped_at}]
     unlocked_maps: Mapped[list] = mapped_column(JSON, default=list)
     decorations_owned: Mapped[list] = mapped_column(JSON, default=list)
     decoration_slots: Mapped[list] = mapped_column(JSON, default=lambda: [None, None, None])
@@ -70,6 +71,7 @@ class Snail(Base):
     user_id: Mapped[str] = mapped_column(String(32), ForeignKey("users.id"), index=True)
     name: Mapped[str] = mapped_column(String(24), default="")
     stage: Mapped[str] = mapped_column(String(12), default="egg")  # egg|baby|junior|adult
+    skin_stage: Mapped[str | None] = mapped_column(String(12), nullable=True)  # 모습 바꾸기(연출 전용) — 판정은 stage
     level: Mapped[int] = mapped_column(Integer, default=0)
     exp: Mapped[int] = mapped_column(Integer, default=0)
     hunger: Mapped[float] = mapped_column(Float, default=0)
