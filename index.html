@@ -9,6 +9,8 @@
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="assets/icon-180.png">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <!-- Google Identity Services — 설정→계정 연결 전용 (오프라인 실패 시 버튼만 비활성) -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <link rel="stylesheet" href="css/theme.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/home.css">
@@ -221,6 +223,7 @@
 
           <!-- 메뉴 -->
           <div id="settings-menu" class="settings-menu">
+            <button class="settings-menu-item" data-sub="account"><span><i class="fa-solid fa-user"></i> 계정</span><i class="fa-solid fa-chevron-right"></i></button>
             <button class="settings-menu-item" data-sub="rules"><span><i class="fa-solid fa-book"></i> 규칙</span><i class="fa-solid fa-chevron-right"></i></button>
             <button class="settings-menu-item" data-sub="bg"><span><i class="fa-solid fa-image"></i> 배경</span><i class="fa-solid fa-chevron-right"></i></button>
             <button class="settings-menu-item" data-sub="sound"><span><i class="fa-solid fa-volume-high"></i> 사운드</span><i class="fa-solid fa-chevron-right"></i></button>
@@ -229,6 +232,13 @@
           </div>
 
           <!-- 하위: 규칙 -->
+          <!-- 하위: 계정 (게스트 → Google 연결 / 기기 이전 — 서버 모드 전용) -->
+          <div id="sub-account" class="settings-panel hidden">
+            <p id="account-status" class="screen-desc"></p>
+            <div id="google-btn-slot" class="google-btn-slot"></div>
+            <p id="account-hint" class="screen-desc account-hint"></p>
+          </div>
+
           <div id="sub-rules" class="settings-panel hidden">
             <ul id="rules-list" class="rules-list"></ul>
           </div>
