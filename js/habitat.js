@@ -1042,8 +1042,7 @@ const HabitatModule = (function () {
     const drag = _releaseDrag(e);
     if (!drag) return;
 
-    if (drag.holding) return; // 롱프레스 쓰다듬기 종료 — 팝업 없이 마무리
-    if (!drag.moved) { // 탭 — 기존 동작 (깨우기 + 개체 팝업)
+    if (!drag.moved) { // 탭/롱프레스 — 어느 쪽이든 손을 떼면 항상 정보 팝업
       if (drag.ent.state === STATE.NAPPING) _setState(drag.ent, STATE.IDLE);
       HomeModule.openSnailPopup(drag.ent.id);
       return;

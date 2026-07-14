@@ -141,6 +141,15 @@
   transform: scale(0.96);
 }
 
+.btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.btn:disabled:active {
+  transform: none;
+}
+
 .btn-primary {
   background: var(--color-primary);
 }
