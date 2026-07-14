@@ -47,7 +47,7 @@ const DecoModule = (function () {
       if (owned.indexOf(id) !== -1) {
         const placed = slots.indexOf(id) !== -1;
         status.textContent = '✨ ' + def.fxDesc + (placed ? ' (발동 중)' : ' — 슬롯에 놓으면 발동');
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < GAME.CONFIG.DECO_SLOT_COUNT; i++) {
           const slotBtn = document.createElement('button');
           slotBtn.className = 'slot-btn' + (slots[i] === id ? ' active' : '');
           slotBtn.textContent = i + 1;

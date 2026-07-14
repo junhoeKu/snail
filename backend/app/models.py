@@ -53,7 +53,7 @@ class User(Base):
     dropped_foods: Mapped[list] = mapped_column(JSON, default=list)     # 서식지 드롭 먹이 [{id, food_id, rx, ry, dropped_at}]
     unlocked_maps: Mapped[list] = mapped_column(JSON, default=list)
     decorations_owned: Mapped[list] = mapped_column(JSON, default=list)
-    decoration_slots: Mapped[list] = mapped_column(JSON, default=lambda: [None, None, None])
+    decoration_slots: Mapped[list] = mapped_column(JSON, default=lambda: [None] * 5)  # DECO_SLOT_COUNT
 
     migration_done: Mapped[bool] = mapped_column(Boolean, default=False)
     suspended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)  # 운영자 정지

@@ -60,9 +60,32 @@
 }
 
 body[data-weather="rain"] .snail-habitat::before {
-  opacity: 0.45;
-  background: repeating-linear-gradient(75deg, transparent 0 10px, rgba(235, 242, 255, 0.55) 10px 11px);
-  animation: rain-fall 0.5s linear infinite;
+  opacity: 0.5;
+  /* 굵기 다른 빗줄기 2겹 — 얕은 시차감 */
+  background:
+    repeating-linear-gradient(75deg, transparent 0 10px, rgba(235, 242, 255, 0.55) 10px 11px),
+    repeating-linear-gradient(75deg, transparent 0 23px, rgba(235, 242, 255, 0.3) 23px 25px);
+  animation: rain-fall 0.45s linear infinite;
+}
+
+/* 비 갠 직후 무지개 (data-rainbow — 슬롯 전환 첫 1시간, 맑음일 때만) */
+body[data-rainbow="1"] .snail-habitat::before {
+  opacity: 0.55;
+  background: radial-gradient(ellipse 130% 95% at 50% 128%,
+    transparent 55%,
+    rgba(235, 120, 110, 0.30) 56.5%,
+    rgba(240, 185, 95, 0.30) 58.5%,
+    rgba(240, 230, 140, 0.28) 60.5%,
+    rgba(150, 205, 145, 0.28) 62.5%,
+    rgba(130, 170, 230, 0.28) 64.5%,
+    rgba(170, 140, 215, 0.26) 66.5%,
+    transparent 68%);
+  animation: rainbow-in 2.5s ease;
+}
+
+@keyframes rainbow-in {
+  from { opacity: 0; }
+  to   { opacity: 0.55; }
 }
 
 body[data-weather="fog"] .snail-habitat::before {
@@ -78,7 +101,92 @@ body[data-weather="fog"] .snail-habitat::before {
   to   { background-position: -15px 56px; }
 }
 
+/* 점액 트레일 (Phase 5) — 달팽이 아래(z1), 서서히 사라진다 */
+.slime-dot {
+  position: absolute;
+  width: 7px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(215, 235, 200, 0.4);
+  z-index: 1;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation: slime-fade 6s linear forwards;
+}
+
+@keyframes slime-fade {
+  0%   { opacity: 0.9; }
+  100% { opacity: 0; }
+}
+
+/* 두리번/하품 모션 (Phase 5) — motion 레이어에 잠깐 얹는 peek */
+.snail-entity .snail-motion.peek {
+  animation: snail-peek 1.3s ease-in-out;
+}
+
+@keyframes snail-peek {
+  0%, 100% { transform: rotate(0deg); }
+  25%      { transform: rotate(-6deg) translateY(-2px); }
+  60%      { transform: rotate(5deg) translateY(-1px); }
+}
+
+/* 방문객 (나비/무당벌레/반딧불이) — 연출 전용, 클릭 통과 */
+.visitor {
+  position: absolute;
+  z-index: 3;
+  pointer-events: none;
+  transform: scaleX(var(--vflip, 1));
+  filter: drop-shadow(0 2px 2px rgba(20, 18, 10, 0.2));
+}
+
+/* transform은 좌우 반전이 쓰므로 상하 모션은 margin으로 */
+.visitor-butterfly {
+  animation: visitor-flutter 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes visitor-flutter {
+  from { margin-top: -7px; }
+  to   { margin-top: 7px; }
+}
+
+.visitor-ladybug {
+  animation: visitor-waddle 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes visitor-waddle {
+  from { margin-top: 0; }
+  to   { margin-top: -2px; }
+}
+
+.visitor-firefly {
+  animation: firefly-glow 1.6s ease-in-out infinite alternate,
+             visitor-flutter 2.8s ease-in-out infinite alternate;
+}
+
+@keyframes firefly-glow {
+  from {
+    filter: drop-shadow(0 0 3px rgba(255, 235, 130, 0.5));
+    opacity: 0.55;
+  }
+  to {
+    filter: drop-shadow(0 0 10px rgba(255, 235, 130, 0.95));
+    opacity: 1;
+  }
+}
+
 /* 바닥 디테일은 일러스트 배경이 담당한다 */
+
+/* 전경 풀숲 — 달팽이(z2) 앞, 날씨 오버레이(z4) 뒤. 하단 가장자리 깊이감 */
+#fg-layer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 12%;
+  z-index: 3;
+  pointer-events: none;
+  background: url("../assets/backgrounds/fg_grass.png") bottom / 100% 100% no-repeat;
+}
 
 /*
  * 3계층 분리 (2차_MVP_구현계획.md §3)

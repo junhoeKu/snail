@@ -61,7 +61,8 @@ const GAME = (function () {
     GRADUATE_COINS: 100,
     GENERATION_BOOST_CAP: 5, // 변이 확률 보정이 커지는 최대 세대 수 (6세대+에서 고정)
 
-    // 장식 해금 조건
+    // 장식
+    DECO_SLOT_COUNT: 5,        // 서식지 배치 슬롯 수 (14차 Phase 4에서 3→5 확대)
     DECO_MISSIONS_REQUIRED: 7, // 들꽃: 미션 완주 누적
     DECO_GENERATION_REQUIRED: 2, // 이끼 바위: 세대
 
@@ -328,10 +329,22 @@ const GAME = (function () {
   }
 
   /** 날짜 키 → 날씨 id (결정적 해시: 맑음 60% / 비 25% / 안개 15%) */
-  function weatherFor(dateKey) {
+  /**
+   * 결정적 날씨 — 하루 2슬롯: 낮(06~18) / 밤(18~06). 경계는 천사/악마 부화 시간창과 동일.
+   * 새벽(00~06)은 전날 밤 슬롯을 이어간다 (자정에 밤 날씨가 끊기지 않게).
+   * @param {string} dateKey YYYY-MM-DD
+   * @param {number} [hour] 0~23. 생략 시 하루 단위 판정(레거시/테스트 호환)
+   */
+  function weatherFor(dateKey, hour) {
+    let key = dateKey;
+    if (typeof hour === 'number') {
+      const night = hour >= 18 || hour < 6;
+      if (hour < 6) key = _prevDayKey(dateKey);
+      key += night ? '#night' : '#day';
+    }
     let hash = 0;
-    for (let i = 0; i < dateKey.length; i++) {
-      hash = ((hash << 5) - hash + dateKey.charCodeAt(i)) | 0;
+    for (let i = 0; i < key.length; i++) {
+      hash = ((hash << 5) - hash + key.charCodeAt(i)) | 0;
     }
     const roll = Math.abs(hash) % 100;
     if (roll < 60) return 'sunny';
@@ -553,7 +566,11 @@ const GAME = (function () {
   }
 
   function _ensureDecorations(player) {
-    if (!player.decorations) player.decorations = { owned: [], slots: [null, null, null] };
+    if (!player.decorations) player.decorations = { owned: [], slots: [] };
+    // 구버전(3슬롯) 레코드를 현재 슬롯 수로 패딩
+    while (player.decorations.slots.length < CONFIG.DECO_SLOT_COUNT) {
+      player.decorations.slots.push(null);
+    }
   }
 
   /** 해금형 장식의 조건 충족 여부 */
@@ -621,7 +638,7 @@ const GAME = (function () {
     const events = [];
     _ensureDecorations(p);
 
-    if (!DECORATIONS[id] || slotIndex < 0 || slotIndex > 2 ||
+    if (!DECORATIONS[id] || slotIndex < 0 || slotIndex >= CONFIG.DECO_SLOT_COUNT ||
         p.decorations.owned.indexOf(id) === -1) {
       events.push('invalid');
       return { player: p, events: events };

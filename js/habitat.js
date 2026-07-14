@@ -24,6 +24,11 @@ const HabitatModule = (function () {
     EDGE_PADDING: 8,      // px (스프라이트 절반 크기에 더하는 여백)
     PET_RADIUS_MIN: 34,   // px (쓰다듬기 터치 판정 최소 반경)
     DRAG_THRESHOLD_PX: 8, // 이 거리 미만 = 탭(팝업), 이상 = 드래그(옮기기)
+    LONGPRESS_MS: 420,    // 이 시간 이상 누르고 있으면 연속 쓰다듬기 (연출 전용)
+    LONGPRESS_HEART_MS: 550, // 누르는 동안 하트 간격
+    TRAIL_STEP_PX: 26,    // 이동 누적 N px마다 점액 자국 1점
+    TRAIL_LIFE_MS: 6000,  // 점액 자국 수명
+    TRAIL_MAX: 40,        // 동시 점액 자국 상한 (성능 가드)
     FLIP_RIGHT: -1,       // 스프라이트가 왼쪽을 보므로 오른쪽 이동 시 반전
     FLIP_LEFT: 1
   };
@@ -49,7 +54,8 @@ const HabitatModule = (function () {
     GREET_MS: 1500,
     ANCHOR_INSET: 0.16,        // 모서리 앵커 안쪽 비율
     EMOTE_MS: 2500,
-    EMOTE_INTERVAL_MS: 4000    // resting/napping 중 간헐 이모트 간격
+    EMOTE_INTERVAL_MS: 4000,   // resting/napping/idle 중 간헐 이모트 간격
+    BUDDY_GREETS: 3            // 세션 내 인사 누적 N회 → 단짝 연출 (💞·같이 쉬기 확률↑)
   };
 
   function _isNight() {
@@ -73,11 +79,13 @@ const HabitatModule = (function () {
     { x: '84%', y: '84%' }
   ];
 
-  // 슬롯 위치 (장식 — 서식지 바닥, % 좌표)
+  // 슬롯 위치 (장식 — 서식지 바닥, % 좌표) — 수는 GAME.CONFIG.DECO_SLOT_COUNT와 일치
   const DECO_SLOTS = [
-    { x: '16%', y: '88%' },
-    { x: '50%', y: '93%' },
-    { x: '84%', y: '88%' }
+    { x: '12%', y: '86%' },
+    { x: '31%', y: '90%' },
+    { x: '50%', y: '87%' },
+    { x: '69%', y: '90%' },
+    { x: '88%', y: '86%' }
   ];
 
   // 개체: { id, x, y, target, facing, state, idleUntil, eatUntil, napUntil,
@@ -240,7 +248,7 @@ const HabitatModule = (function () {
   function _computeMods(ent) {
     const rec = DB.Snails.getById(ent.id);
     if (!rec) return;
-    const weather = GAME.WEATHER[GAME.weatherFor(DB.today())];
+    const weather = GAME.WEATHER[GAME.weatherFor(DB.today(), new Date().getHours())];
     const condition = GAME.conditionOf(rec);
     const personality = GAME.PERSONALITIES[rec.personality] ||
       { seekFactor: 1, speedFactor: 1, idleFactor: 1, napFactor: 1, napLenFactor: 1, eatFactor: 1 };
@@ -366,7 +374,7 @@ const HabitatModule = (function () {
     const rec = DB.Snails.getById(ent.id);
     if (!rec) { _startWander(ent); return; }
     const night = _isNight();
-    const weather = GAME.WEATHER[GAME.weatherFor(DB.today())] || { id: 'sunny' };
+    const weather = GAME.WEATHER[GAME.weatherFor(DB.today(), new Date().getHours())] || { id: 'sunny' };
     const rain = weather.id === 'rain';
     const per = rec.personality;
     const now = performance.now();
@@ -411,7 +419,7 @@ const HabitatModule = (function () {
   }
 
   function _beginNap(ent, shelter) {
-    const rain = (GAME.WEATHER[GAME.weatherFor(DB.today())] || {}).id === 'rain';
+    const rain = (GAME.WEATHER[GAME.weatherFor(DB.today(), new Date().getHours())] || {}).id === 'rain';
     ent.napUntil = performance.now() +
       (MOTION.NAP_MIN_MS + _rng() * (MOTION.NAP_MAX_MS - MOTION.NAP_MIN_MS)) * (ent.mods.napLenFactor || 1);
     ent.emoteNext = performance.now() + BEHAVIOR.EMOTE_INTERVAL_MS;
@@ -441,13 +449,27 @@ const HabitatModule = (function () {
     _setState(ent, STATE.WANDERING);
   }
 
+  // 단짝 (Phase 5) — 세션 내 인사 횟수 누적 (연출 전용, 저장 없음)
+  const _buddyGreets = {};
+
+  function _pairKey(a, b) {
+    return a < b ? a + '|' + b : b + '|' + a;
+  }
+
+  function _isBuddy(a, b) {
+    return (_buddyGreets[_pairKey(a, b)] || 0) >= BEHAVIOR.BUDDY_GREETS;
+  }
+
   function _beginGreet(ent) {
     const target = _ents.find(function (e) { return e.id === ent.socialTarget; });
     if (!target || target.state === STATE.EATING) { _setState(ent, STATE.IDLE); return; }
     _setState(ent, STATE.SOCIALIZING);
     ent.greetUntil = performance.now() + BEHAVIOR.GREET_MS;
-    _emote(ent, '💕');
-    _emote(target, '💕');
+    const key = _pairKey(ent.id, target.id);
+    _buddyGreets[key] = (_buddyGreets[key] || 0) + 1;
+    const heart = _isBuddy(ent.id, target.id) ? '💞' : '💕'; // 단짝은 더 진한 하트
+    _emote(ent, heart);
+    _emote(target, heart);
   }
 
   function _startWatch(ent, eatingPeer) {
@@ -484,6 +506,11 @@ const HabitatModule = (function () {
     if (Math.abs(dx) > 1) {
       _setFacing(ent, dx > 0 ? MOTION.FLIP_RIGHT : MOTION.FLIP_LEFT);
     }
+    ent.trailAcc = (ent.trailAcc || 0) + step; // 점액 자국 (Phase 5)
+    if (ent.trailAcc >= MOTION.TRAIL_STEP_PX) {
+      ent.trailAcc = 0;
+      _dropTrail(ent);
+    }
     _renderPosition(ent);
     return false;
   }
@@ -495,10 +522,65 @@ const HabitatModule = (function () {
     }
   }
 
+  /**
+   * 유휴 생활감 (Phase 5) — 컨디션 표정(배고픔 🥺 / 행복 ✨)과
+   * 이따금의 하품·두리번 모션. 전부 연출 전용.
+   */
+  function _idleLife(ent, nowTs) {
+    if (nowTs < (ent.emoteNext || 0)) return;
+    ent.emoteNext = nowTs + BEHAVIOR.EMOTE_INTERVAL_MS;
+
+    const rec = DB.Snails.getById(ent.id);
+    if (!rec) return;
+    const condition = GAME.conditionOf(rec);
+    if (condition.id === 'hungry') {
+      if (_rng() < 0.45) _emote(ent, '🥺');
+      return;
+    }
+    if (condition.id === 'happy' && _rng() < 0.3) {
+      _emote(ent, '✨');
+      return;
+    }
+    const r = _rng();
+    if (r < 0.14) { // 하품
+      _emote(ent, '🥱');
+      _peek(ent);
+    } else if (r < 0.3) { // 두리번
+      _peek(ent);
+    }
+  }
+
+  /** 두리번/기지개 — motion 레이어에 잠깐 peek 애니메이션 */
+  function _peek(ent) {
+    const motion = ent.root.querySelector('.snail-motion');
+    if (!motion) return;
+    motion.classList.add('peek');
+    setTimeout(function () { motion.classList.remove('peek'); }, 1300);
+  }
+
+  // ── 점액 트레일 (Phase 5 — 이동 흔적, 연출 전용) ───────
+
+  let _trailCount = 0;
+
+  function _dropTrail(ent) {
+    if (_trailCount >= MOTION.TRAIL_MAX) return;
+    const el = document.createElement('div');
+    el.className = 'slime-dot';
+    el.style.left = ent.x + 'px';
+    el.style.top = (ent.y + _edge(ent) * 0.4) + 'px';
+    _habitat().appendChild(el);
+    _trailCount++;
+    setTimeout(function () {
+      el.remove();
+      _trailCount--;
+    }, MOTION.TRAIL_LIFE_MS);
+  }
+
   function _updateEnt(ent, dt, nowTs) {
     switch (ent.state) {
       case STATE.IDLE:
         if (nowTs >= ent.idleUntil) _chooseBehavior(ent);
+        else _idleLife(ent, nowTs); // 표정/하품/두리번 (Phase 5)
         break;
       case STATE.NAPPING:
         if (nowTs >= ent.napUntil) _setState(ent, STATE.IDLE);
@@ -510,7 +592,9 @@ const HabitatModule = (function () {
         break;
       case STATE.SOCIALIZING:
         if (nowTs >= ent.greetUntil) {
-          if (_rng() < 0.6) _startRest(ent, false); // 60% 같이 쉬기
+          // 단짝(세션 인사 3회+)은 거의 항상 같이 쉰다
+          const together = _isBuddy(ent.id, ent.socialTarget || '') ? 0.9 : 0.6;
+          if (_rng() < together) _startRest(ent, false);
           else _setState(ent, STATE.IDLE);
         }
         break;
@@ -783,6 +867,55 @@ const HabitatModule = (function () {
     _assignFoods(); // 남은 먹이 재배정
   }
 
+  // ── 방문객 (연출 전용 — 14차 Phase 4) ─────────────────
+  // 낮: 나비/무당벌레, 밤(연출 밤 기준): 반딧불이. 게임 수치 무영향, 화면을 가로질러 사라진다.
+
+  const VISITORS = {
+    butterfly: { src: 'assets/visitors/visitor_butterfly.png', size: 36, duration: 14000, band: [0.15, 0.45], cls: 'visitor-butterfly' },
+    ladybug: { src: 'assets/visitors/visitor_ladybug.png', size: 24, duration: 20000, band: [0.78, 0.9], cls: 'visitor-ladybug' },
+    firefly: { src: 'assets/visitors/visitor_firefly.png', size: 18, duration: 16000, band: [0.2, 0.6], cls: 'visitor-firefly' }
+  };
+  const VISITOR_CHECK_MS = 45000; // 45초마다 방문 판정
+  const VISITOR_CHANCE = 0.35;
+  let _visitorTimer = null;
+  let _visitorBusy = false; // 동시 1마리 (성능/소란 가드)
+
+  function _spawnVisitor() {
+    const b = _bounds();
+    if (!b.w || _visitorBusy) return;
+    const pool = _isNight() ? ['firefly'] : ['butterfly', 'ladybug'];
+    const def = VISITORS[pool[Math.floor(_rng() * pool.length)]];
+
+    const el = document.createElement('img');
+    el.className = 'visitor ' + def.cls;
+    el.src = def.src;
+    el.alt = '';
+    el.style.width = def.size + 'px';
+    const fromLeft = _rng() < 0.5;
+    el.style.top = ((def.band[0] + _rng() * (def.band[1] - def.band[0])) * b.h) + 'px';
+    el.style.left = (fromLeft ? -def.size : b.w + def.size) + 'px';
+    el.style.setProperty('--vflip', fromLeft ? -1 : 1); // 스프라이트는 왼쪽을 본다
+    _habitat().appendChild(el);
+
+    _visitorBusy = true;
+    requestAnimationFrame(function () {
+      el.style.transition = 'left ' + def.duration + 'ms linear';
+      el.style.left = (fromLeft ? b.w + def.size : -def.size * 2) + 'px';
+    });
+    setTimeout(function () {
+      el.remove();
+      _visitorBusy = false;
+    }, def.duration + 500);
+  }
+
+  function _startVisitors() {
+    if (_visitorTimer) return;
+    _visitorTimer = setInterval(function () {
+      if (!_running) return; // 홈 화면 + 보이는 탭일 때만
+      if (_rng() < VISITOR_CHANCE) _spawnVisitor();
+    }, VISITOR_CHECK_MS);
+  }
+
   // ── 장식 ──────────────────────────────────────────────
 
   function renderDecorations() {
@@ -905,12 +1038,28 @@ const HabitatModule = (function () {
       // 탭인지 드래그인지는 이동 거리(DRAG_THRESHOLD_PX)로 pointerup에서 판정
       _drag = { ent: nearest, pointerId: e.pointerId, startX: x, startY: y, moved: false,
                 rect: rect, edge: _edge(nearest) };
+      // 움직이지 않고 오래 누르면 연속 쓰다듬기 (Phase 5 — 연출 전용)
+      _drag.holdTimer = setTimeout(_beginHold, MOTION.LONGPRESS_MS);
       if (_habitat().setPointerCapture && e.pointerId !== undefined) {
         try { _habitat().setPointerCapture(e.pointerId); } catch (err) { /* 미지원 무시 */ }
       }
       return;
     }
     dropFood(x, y);
+  }
+
+  /** 롱프레스 시작 — 누르는 동안 하트가 이어진다 (pet 판정은 팝업 버튼 경로 그대로) */
+  function _beginHold() {
+    if (!_drag || _drag.moved) return;
+    _drag.holding = true;
+    const ent = _drag.ent;
+    if (ent.state === STATE.NAPPING) _setState(ent, STATE.IDLE); // 쓰다듬으면 깬다
+    Sound.play('heart');
+    _emote(ent, '💗');
+    _drag.heartTimer = setInterval(function () {
+      if (!_drag || !_drag.holding) return;
+      _emote(_drag.ent, _rng() < 0.5 ? '💗' : '💕');
+    }, MOTION.LONGPRESS_HEART_MS);
   }
 
   function _onPointerMove(e) {
@@ -921,6 +1070,7 @@ const HabitatModule = (function () {
 
     if (!_drag.moved) {
       if (Math.hypot(x - _drag.startX, y - _drag.startY) < MOTION.DRAG_THRESHOLD_PX) return;
+      _stopHold(_drag); // 움직이면 쓰다듬기 종료 → 드래그로 전환
       if (ent.state === STATE.EATING) { _drag = null; return; } // 식사는 방해하지 않는다 — 스와이프는 무효(탭 아님)
       _drag.moved = true; // 드래그 시작 — 집힌 개체는 루프에서 제외
       if (ent.food) { ent.food.claimedBy = null; ent.food = null; } // 점유 먹이 반납 (재배정)
@@ -934,10 +1084,18 @@ const HabitatModule = (function () {
     _renderPosition(ent);
   }
 
+  function _stopHold(drag) {
+    if (drag.holdTimer) clearTimeout(drag.holdTimer);
+    if (drag.heartTimer) clearInterval(drag.heartTimer);
+    drag.holdTimer = null;
+    drag.heartTimer = null;
+  }
+
   function _releaseDrag(e) {
     if (!_drag || e.pointerId !== _drag.pointerId) return null;
     const drag = _drag;
     _drag = null;
+    _stopHold(drag);
     if (_habitat().releasePointerCapture && drag.pointerId !== undefined) {
       try { _habitat().releasePointerCapture(drag.pointerId); } catch (err) { /* 무시 */ }
     }
@@ -948,6 +1106,7 @@ const HabitatModule = (function () {
     const drag = _releaseDrag(e);
     if (!drag) return;
 
+    if (drag.holding) return; // 롱프레스 쓰다듬기 종료 — 팝업 없이 마무리
     if (!drag.moved) { // 탭 — 기존 동작 (깨우기 + 개체 팝업)
       if (drag.ent.state === STATE.NAPPING) _setState(drag.ent, STATE.IDLE);
       HomeModule.openSnailPopup(drag.ent.id);
@@ -978,6 +1137,7 @@ const HabitatModule = (function () {
     renderDecorations();
     sync();
     restoreDrops(); // 지난 세션에 떨어뜨린 먹이 복원 → 이어 먹기
+    _startVisitors();
   }
 
   return {

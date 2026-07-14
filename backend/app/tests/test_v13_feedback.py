@@ -105,6 +105,31 @@ def test_remove_drop_idempotent_and_revision(guest):
     assert client.delete("/v1/habitat/foods/d1", headers=guest["headers"]).status_code == 200
 
 
+# ── Phase 4: 장식 슬롯 5 · 배경 검증 ──
+
+def test_decoration_slots_expanded_to_five(guest):
+    hatch_first(guest)
+    state = _state(guest)
+    assert len(state["changes"]["player"]["decorations"]["slots"]) == rules.CONFIG["DECO_SLOT_COUNT"] == 5
+
+    # 구버전 클라(3슬롯 배열)가 보내도 5로 패딩
+    r = client.post("/v1/decorations/slots", json={"slots": [None, None, None]},
+                    headers=guest["headers"])
+    assert r.status_code == 200 and len(r.json()["slots"]) == 5
+
+
+def test_background_validation_garden_retired(guest):
+    hatch_first(guest)
+    for bg, accepted in [("pond", True), ("fern", True), ("garden", False), ("mars", False)]:
+        r = client.patch("/v1/game/settings", json={"background": bg}, headers=guest["headers"])
+        assert r.status_code == 200
+        now = _state(guest)["changes"]["player"]["background"]
+        if accepted:
+            assert now == bg
+        else:
+            assert now != bg  # 무효 배경은 조용히 무시
+
+
 # ── 모습 바꾸기 (skin_stage — 연출 전용, 도달한 단계만) ──
 
 def test_skin_gate_and_change(guest):

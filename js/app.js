@@ -199,15 +199,27 @@ const App = (function () {
     return life.lines;
   }
 
-  /** 저장된 배경을 body에 적용 */
+  /** 저장된 배경을 body에 적용 — 은퇴/무효 배경(garden 등)은 default로 표시 */
   function applyBackground() {
     const player = DB.Player.get();
-    document.body.dataset.background = player.background || 'default';
+    const bg = player.background;
+    document.body.dataset.background =
+      (bg === 'default' || bg === 'pond' || bg === 'fern') ? bg : 'default';
   }
 
-  /** 오늘의 날씨를 body에 적용 (결정적 — 저장하지 않음) */
+  /** 현재 슬롯(낮/밤)의 날씨를 body에 적용 (결정적 — 저장하지 않음) */
   function applyWeather() {
-    document.body.dataset.weather = GAME.weatherFor(DB.today());
+    const hour = new Date().getHours();
+    const today = DB.today();
+    const current = GAME.weatherFor(today, hour);
+    document.body.dataset.weather = current;
+
+    // 비 갠 직후 무지개 — 슬롯 전환 첫 1시간(06시/18시대), 이전 슬롯이 비였고 지금 맑음
+    let rainbow = false;
+    if (current === 'sunny' && (hour === 6 || hour === 18)) {
+      rainbow = GAME.weatherFor(today, hour - 1) === 'rain';
+    }
+    document.body.dataset.rainbow = rainbow ? '1' : '0';
   }
 
   /**
