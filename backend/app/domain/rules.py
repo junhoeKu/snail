@@ -14,6 +14,9 @@ CONFIG = {
     "DECAY_HAPPINESS": 5,
     # 먹이/보상
     "FEED_COINS": 2,
+    # 서식지 드롭 먹이 (드롭=상태 기록, 소모·보상은 먹기 완료 시 feed가 정산 — 13차 Phase 2)
+    "FIELD_FOOD_MAX": 10,
+    "FIELD_FOOD_TTL_HOURS": 24,
     "FOOD_BUNDLE_COUNT": 10,
     "FOOD_BUNDLE_DISCOUNT": 0.9,
     "DAILY_COINS": 20,
@@ -248,6 +251,25 @@ def apply_decay(snail: dict, now: datetime, deco_fx: dict) -> tuple[int, list[di
     snail["last_state_at"] = snail["last_state_at"] + timedelta(minutes=intervals * CONFIG["DECAY_INTERVAL_MIN"])
     events.append({"type": "decayed", "snailId": snail["id"]})
     return intervals, events
+
+
+def prune_dropped_foods(drops: list, now: datetime) -> list:
+    """TTL이 지났거나 시각이 깨진 드롭 먹이를 걸러낸다.
+
+    드롭은 소모가 아니므로(재고 차감은 feed 시점) 소멸해도 재화 손실이 없다.
+    """
+    ttl = timedelta(hours=CONFIG["FIELD_FOOD_TTL_HOURS"])
+    kept = []
+    for d in drops or []:
+        try:
+            at = datetime.fromisoformat(str(d.get("dropped_at")))
+        except (TypeError, ValueError):
+            continue
+        if at.tzinfo is None:
+            at = at.replace(tzinfo=now.tzinfo)
+        if now - at < ttl:
+            kept.append(d)
+    return kept
 
 
 def decoration_effects(slots: list) -> dict:

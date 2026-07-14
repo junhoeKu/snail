@@ -170,6 +170,11 @@ def settle(db: Session, user: models.User) -> list[dict]:
         rules.apply_decay(s, now, deco_fx)
         apply_snail_dict(snail, s)
 
+    # 1.5) 드롭 먹이 TTL 정리 (소모 아님 — 재고 무변동)
+    pruned = rules.prune_dropped_foods(user.dropped_foods or [], now)
+    if len(pruned) != len(user.dropped_foods or []):
+        user.dropped_foods = pruned
+
     # 2) 부재 중 발견 (계정 단위, 부화 개체가 있을 때만)
     away_min = (now - _aware(user.last_seen_at)).total_seconds() / 60
     has_hatched = any(s.stage != "egg" for s in active_snails(db, user))
@@ -296,6 +301,7 @@ def player_payload(db: Session, user: models.User) -> dict:
         "explore": user.explore_state or {"date": None, "searches": 0},
         "unlocked_maps": user.unlocked_maps or [],
         "decorations": {"owned": user.decorations_owned or [], "slots": user.decoration_slots or [None, None, None]},
+        "dropped_foods": user.dropped_foods or [],
         "last_seen": _aware(user.last_seen_at).isoformat(),
         "server_mode": True,
         "migration_done": user.migration_done,

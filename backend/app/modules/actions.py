@@ -129,8 +129,49 @@ def _run(db: Session, user: models.User, action_type: str, request_id: str,
 
 # ── 달팽이 행동 ─────────────────────────────────────────
 
+class FoodDropIn(BaseModel):
+    id: str = ""
+    foodId: str = "lettuce"
+    rx: float = 0.5
+    ry: float = 0.5
+
+
+@router.post("/habitat/foods")
+def drop_food(body: FoodDropIn,
+              user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """드롭 = 상태 기록만. 소모·보상은 먹기 완료 시 feed가 정산한다 (경제 무변동).
+
+    검증: 상한(FIELD_FOOD_MAX)·먹이 존재·재고(대기 중 같은 먹이 포함). 같은 id 재전송은 멱등.
+    """
+    service.lock_user(db, user)  # JSON 컬럼 동시 갱신(lost update) 방지
+    drops = rules.prune_dropped_foods(list(user.dropped_foods or []), service.utcnow())
+
+    if body.id and any(d.get("id") == body.id for d in drops):
+        db.commit()
+        return {"ok": True}
+    if len(drops) >= rules.CONFIG["FIELD_FOOD_MAX"]:
+        raise ApiError(409, "field_full", "먹이가 이미 잔뜩 있어요. 먼저 먹게 해주세요.")
+    if body.foodId not in rules.FOOD_DEFS:
+        raise ApiError(422, "invalid_food", "알 수 없는 먹이예요.")
+    pending_same = sum(1 for d in drops if d.get("food_id") == body.foodId)
+    if service.get_inventory(db, user).get(body.foodId, 0) < pending_same + 1:
+        raise ApiError(409, "no_food", "선택한 먹이가 없어요.")
+
+    drops.append({
+        "id": body.id or models._uuid(),
+        "food_id": body.foodId,
+        "rx": min(1.0, max(0.0, body.rx)),
+        "ry": min(1.0, max(0.0, body.ry)),
+        "dropped_at": service.utcnow().isoformat(),
+    })
+    user.dropped_foods = drops
+    db.commit()
+    return {"ok": True}
+
+
 class FeedIn(ActionIn):
     foodId: str | None = None
+    dropId: str | None = None  # 드롭 먹이를 먹은 경우 해당 드롭 제거
 
 
 @router.post("/snails/{snail_id}/feed")
@@ -145,6 +186,9 @@ def feed(snail_id: str, body: FeedIn,
         service.apply_snail_dict(snail, s)
         service.add_item(db, user, food_id, -1, "feed_consume", snail.id)
         service.add_coins(db, user, rules.CONFIG["FEED_COINS"], "feed_reward", snail.id)
+        if body.dropId:
+            user.dropped_foods = [dr for dr in (user.dropped_foods or [])
+                                  if dr.get("id") != body.dropId]
         for e in events:
             if e["type"] == "levelup":
                 service.add_journal(db, user, "levelup", f"{snail.name}(이)가 Lv.{e['level']}이 되었어요!")

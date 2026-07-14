@@ -50,6 +50,7 @@ class User(Base):
     explore_state: Mapped[dict] = mapped_column(JSON, default=dict)     # {date, searches}
     minigame_race: Mapped[dict] = mapped_column(JSON, default=dict)     # {date, count} 경주 하루 제한
     minigame_quiz: Mapped[dict] = mapped_column(JSON, default=dict)     # {date, count} 퀴즈 하루 제한
+    dropped_foods: Mapped[list] = mapped_column(JSON, default=list)     # 서식지 드롭 먹이 [{id, food_id, rx, ry, dropped_at}]
     unlocked_maps: Mapped[list] = mapped_column(JSON, default=list)
     decorations_owned: Mapped[list] = mapped_column(JSON, default=list)
     decoration_slots: Mapped[list] = mapped_column(JSON, default=lambda: [None, None, None])
