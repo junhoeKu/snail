@@ -173,11 +173,11 @@
 
 .race-guess {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap; /* 예측 버튼 5개는 항상 한 줄 */
   gap: 8px;
   justify-content: center;
 }
-.race-pick { min-width: 56px; padding: 10px 12px; }
+.race-pick { flex: 1 1 0; min-width: 0; padding: 10px 4px; }
 .race-left { text-align: center; font-size: 12px; color: var(--color-text-sub); margin-top: 10px; }
 
 /* ── 달팽이 퀴즈 (13차) ───────────────────── */
