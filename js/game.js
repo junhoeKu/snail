@@ -17,6 +17,9 @@ const GAME = (function () {
     // 먹이 주기 (종류별 효과는 FOOD_DEFS)
     FEED_COINS: 2,
     FOOD_BUNDLE_DISCOUNT: 0.9, // ×10 묶음 10% 할인
+    // 서식지 드롭 먹이 — 드롭=상태 기록, 소모·보상은 먹기 완료 시 정산 (13차 Phase 2)
+    FIELD_FOOD_MAX: 10,        // 동시 드롭 상한
+    FIELD_FOOD_TTL_HOURS: 24,  // 드롭 유지 시간 (지나면 소멸 — 재고 무변동)
 
     // 양육자 레벨
     KEEPER_XP: {

@@ -235,8 +235,32 @@ function clickSnail(w, entId) {
   assert(pa.foods.lettuce === 999 && pa.foods.salad === 999, '전 먹이 999');
   assert(wa.GAME.foodUnlocked(pa, 'salad'), '관리자 먹이 잠금 무시');
 
-  // ── [12] 콘솔 에러 ──────────────────────────────────────
-  console.log('[12] 콘솔 에러');
+  // ── [12] 드롭 먹이 지속 (13차 Phase 2 — 로컬 모드) ──────
+  console.log('[12] 드롭 먹이 지속');
+  // 몽이(배고픔>0)가 있는 w에서 드롭 → 저장 확인 (스냅숏은 먹기 완료 전에 동기 캡처)
+  const dropsBefore = (player(w).dropped_foods || []).length;
+  doc.getElementById('btn-feed').click();
+  assert((player(w).dropped_foods || []).length === dropsBefore + 1, '드롭 즉시 저장');
+  const snap12 = Object.fromEntries(
+    ['sn_player', 'sn_snails', 'sn_journal', 'sn_album'].map(k => [k, w.localStorage.getItem(k)]));
+  // TTL 만료 드롭을 섞어 복원 필터를 함께 검증
+  const p12 = JSON.parse(snap12.sn_player);
+  p12.dropped_foods.push({
+    id: 'stale1', food_id: 'lettuce', rx: 0.5, ry: 0.5,
+    dropped_at: new Date(Date.now() - 25 * 3600 * 1000).toISOString()
+  });
+  snap12.sn_player = JSON.stringify(p12);
+
+  const w5 = await boot(snap12, 0.5);
+  assert(w5.document.querySelectorAll('.food-item').length === 1, '재부팅 후 드롭 1개 복원 (만료분 제외)');
+  const p12b = JSON.parse(w5.localStorage.getItem('sn_player'));
+  assert(p12b.dropped_foods.length === 1 && p12b.dropped_foods[0].id !== 'stale1', 'TTL 만료 드롭 정리');
+  await sleep(2600); // 복원 먹이는 기본 EAT_DURATION(1.8s)으로 먹는다
+  assert(w5.document.querySelectorAll('.food-item').length === 0, '복원 먹이 이어 먹기 완료');
+  assert(JSON.parse(w5.localStorage.getItem('sn_player')).dropped_foods.length === 0, '먹은 뒤 드롭 기록 제거');
+
+  // ── [13] 콘솔 에러 ──────────────────────────────────────
+  console.log('[13] 콘솔 에러');
   assert(consoleErrors.length === 0, '콘솔 에러 0개' + (consoleErrors.length ? ' — ' + consoleErrors.join(' | ') : ''));
 
   console.log(failures === 0 ? '\n✅ 통합 테스트 전체 통과' : '\n❌ 실패 ' + failures + '건');

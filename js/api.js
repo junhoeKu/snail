@@ -123,8 +123,12 @@ const Api = (function () {
   const endpoints = {
     state: function () { return _request('GET', '/v1/game/state'); },
     config: function () { return _request('GET', '/v1/game/config'); },
-    feed: function (snailId, foodId, reqId) {
-      return _request('POST', '/v1/snails/' + snailId + '/feed', { foodId: foodId, requestId: reqId || requestId() });
+    feed: function (snailId, foodId, reqId, dropId) {
+      return _request('POST', '/v1/snails/' + snailId + '/feed',
+        { foodId: foodId, dropId: dropId || null, requestId: reqId || requestId() });
+    },
+    dropFood: function (drop) { // {id, foodId, rx, ry} — 상태 기록만 (소모·보상 없음)
+      return _request('POST', '/v1/habitat/foods', drop);
     },
     pet: function (snailId, reqId) {
       return _request('POST', '/v1/snails/' + snailId + '/pet', { requestId: reqId || requestId() });
@@ -376,8 +380,8 @@ const Api = (function () {
     HomeModule.render();
   }
 
-  function queueFeed(snailId, foodId) {
-    DB.Pending.add({ type: 'feed', snailId: snailId, foodId: foodId, requestId: requestId() });
+  function queueFeed(snailId, foodId, dropId) {
+    DB.Pending.add({ type: 'feed', snailId: snailId, foodId: foodId, dropId: dropId || null, requestId: requestId() });
     _optimisticFeed(snailId, foodId);
     Toast.show('📴 오프라인이에요. 온라인이 되면 반영돼요.', 'warn');
   }
@@ -396,7 +400,7 @@ const Api = (function () {
     try {
       for (const action of DB.Pending.get()) {
         try {
-          if (action.type === 'feed') await endpoints.feed(action.snailId, action.foodId, action.requestId);
+          if (action.type === 'feed') await endpoints.feed(action.snailId, action.foodId, action.requestId, action.dropId);
           else if (action.type === 'pet') await endpoints.pet(action.snailId, action.requestId);
           DB.Pending.remove(action.requestId);
         } catch (err) {
@@ -437,6 +441,7 @@ const Api = (function () {
     state: endpoints.state,
     config: endpoints.config,
     feed: endpoints.feed,
+    dropFood: endpoints.dropFood,
     pet: endpoints.pet,
     hatch: endpoints.hatch,
     graduate: endpoints.graduate,

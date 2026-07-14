@@ -82,7 +82,8 @@ const DB = (function () {
       snail_slots: 1,            // 보금자리 수 (최대 3 — 상점에서 확장)
       explore: { date: null, searches: 0 }, // 탐험 스태미나 (하루 리셋)
       unlocked_maps: [],
-      dex_claimed: []            // 수령한 도감 등급 완성 보상 (common/rare/epic — 로컬 모드)
+      dex_claimed: [],           // 수령한 도감 등급 완성 보상 (common/rare/epic — 로컬 모드)
+      dropped_foods: []          // 서식지 드롭 먹이 [{id, food_id, rx, ry, dropped_at}] — 재접속 복원
     };
   }
 

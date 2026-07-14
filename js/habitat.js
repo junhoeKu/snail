@@ -23,7 +23,6 @@ const HabitatModule = (function () {
     NAP_MAX_MS: 120000,
     EDGE_PADDING: 8,      // px (스프라이트 절반 크기에 더하는 여백)
     PET_RADIUS_MIN: 34,   // px (쓰다듬기 터치 판정 최소 반경)
-    FOOD_MAX: 10,         // 필드 동시 상추 상한 (성능/UX 가드)
     FLIP_RIGHT: -1,       // 스프라이트가 왼쪽을 보므로 오른쪽 이동 시 반전
     FLIP_LEFT: 1
   };
@@ -562,6 +561,83 @@ const HabitatModule = (function () {
     });
   }
 
+  /** 필드에 먹이 요소를 만든다 — 드롭/복원 공용 (검증·저장 없음) */
+  function _placeFood(x, y, fid, dropId) {
+    const templateId = fid === 'lettuce' ? 'food-template' : 'food-' + fid;
+    const template = document.getElementById(templateId);
+    if (!template) return null; // 알 수 없는 먹이 방어 (복원 데이터)
+
+    const p = _clampPoint(x, y, MOTION.EDGE_PADDING);
+    const el = document.createElement('div');
+    el.className = 'food-item';
+    el.appendChild(template.content.cloneNode(true));
+    el.style.left = p.x + 'px';
+    el.style.top = p.y + 'px';
+    _foodLayer().appendChild(el);
+
+    const food = { x: p.x, y: p.y, el: el, claimedBy: null, foodId: fid, dropId: dropId };
+    _foods.push(food);
+    return food;
+  }
+
+  function _newDropId() {
+    return 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  /** 드롭을 저장한다 — 재접속 시 이어 먹기 (서버 모드=서버 기록, 로컬 모드=DB.Player) */
+  function _persistDrop(food) {
+    const b = _bounds();
+    const rx = b.w ? Math.round((food.x / b.w) * 1000) / 1000 : 0.5;
+    const ry = b.h ? Math.round((food.y / b.h) * 1000) / 1000 : 0.5;
+
+    if (Api.enabled()) {
+      Api.dropFood({ id: food.dropId, foodId: food.foodId, rx: rx, ry: ry })
+        .catch(function () { /* 기록 실패 — 이번 세션 연출은 유지, 복원 대상에서만 빠진다 */ });
+      return;
+    }
+    const player = DB.Player.get();
+    player.dropped_foods = (player.dropped_foods || []).concat({
+      id: food.dropId, food_id: food.foodId, rx: rx, ry: ry, dropped_at: DB.now()
+    });
+    DB.Player.save(player);
+  }
+
+  /** 저장된 드롭 제거 (로컬 모드 전용 — 서버 모드는 feed(dropId)가 서버에서 지운다) */
+  function _unpersistDrop(food) {
+    if (!food.dropId || Api.enabled()) return;
+    const player = DB.Player.get();
+    player.dropped_foods = (player.dropped_foods || []).filter(function (d) {
+      return d.id !== food.dropId;
+    });
+    DB.Player.save(player);
+  }
+
+  /**
+   * 저장된 드롭 먹이 복원 (부팅 시 1회) — 이어 먹기는 _assignFoods가 자동 처리.
+   * TTL(FIELD_FOOD_TTL_HOURS)이 지난 항목은 걸러낸다 (소모가 아니라 재고 무변동).
+   */
+  function restoreDrops() {
+    if (_foods.length) return;
+    const player = DB.Player.get();
+    const drops = player.dropped_foods || [];
+    if (!drops.length) return;
+
+    const ttlMs = GAME.CONFIG.FIELD_FOOD_TTL_HOURS * 3600 * 1000;
+    const alive = drops.filter(function (d) {
+      const at = Date.parse(d.dropped_at);
+      return isFinite(at) && (Date.now() - at) < ttlMs;
+    });
+    const b = _bounds();
+    alive.slice(0, GAME.CONFIG.FIELD_FOOD_MAX).forEach(function (d) {
+      _placeFood((d.rx || 0.5) * b.w, (d.ry || 0.5) * b.h, d.food_id || 'lettuce', d.id);
+    });
+    if (!Api.enabled() && alive.length !== drops.length) { // 로컬 모드: TTL 만료분 정리
+      player.dropped_foods = alive;
+      DB.Player.save(player);
+    }
+    _assignFoods();
+  }
+
   /**
    * 서식지에 상추를 떨어뜨린다 — 터치/버튼 공용 단일 진입점.
    * 드롭 시점에는 사전 검증만 하고, 소모/효과 정산은 먹기 완료 시 GAME.feed()로 한다.
@@ -573,7 +649,7 @@ const HabitatModule = (function () {
     const player = DB.Player.get();
     const fid = foodId || player.selected_food || 'lettuce';
 
-    if (_foods.length >= MOTION.FOOD_MAX) {
+    if (_foods.length >= GAME.CONFIG.FIELD_FOOD_MAX) {
       Toast.show('먹이가 이미 잔뜩 있어요! 먼저 먹게 해주세요.', 'warn');
       return;
     }
@@ -588,16 +664,9 @@ const HabitatModule = (function () {
       return;
     }
 
-    const p = _clampPoint(x, y, MOTION.EDGE_PADDING);
-    const el = document.createElement('div');
-    el.className = 'food-item';
-    const templateId = fid === 'lettuce' ? 'food-template' : 'food-' + fid;
-    el.appendChild(document.getElementById(templateId).content.cloneNode(true));
-    el.style.left = p.x + 'px';
-    el.style.top = p.y + 'px';
-    _foodLayer().appendChild(el);
-
-    _foods.push({ x: p.x, y: p.y, el: el, claimedBy: null, foodId: fid });
+    const food = _placeFood(x, y, fid, _newDropId());
+    if (!food) return;
+    _persistDrop(food);
     _assignFoods();
   }
 
@@ -622,6 +691,7 @@ const HabitatModule = (function () {
   function _removeFood(food) {
     if (food.el) food.el.remove();
     _foods = _foods.filter(function (f) { return f !== food; });
+    _unpersistDrop(food);
   }
 
   function _startEating(ent) {
@@ -634,8 +704,10 @@ const HabitatModule = (function () {
   /** 먹기 완료 — 해당 개체에만 GAME.feed()로 정산 */
   function _finishEating(ent) {
     let foodId = null;
+    let dropId = null;
     if (ent.food) {
       foodId = ent.food.foodId;
+      dropId = ent.food.dropId || null;
       _removeFood(ent.food);
       ent.food = null;
     }
@@ -643,12 +715,12 @@ const HabitatModule = (function () {
     if (!rec) { _setState(ent, STATE.IDLE); return; }
 
     if (Api.enabled()) {
-      // 서버 판정 — 연출은 즉시, 수치는 응답으로 반영
+      // 서버 판정 — 연출은 즉시, 수치는 응답으로 반영 (dropId로 서버 드롭 기록도 정리)
       Sound.play('eat');
       const habitatRect = _habitat().getBoundingClientRect();
       FX.flyCoins(habitatRect.left + ent.x, habitatRect.top + ent.y, 2);
       const entX = ent.x, entY = ent.y, edge = _edge(ent);
-      Api.feed(ent.id, foodId).then(function (res) {
+      Api.feed(ent.id, foodId, null, dropId).then(function (res) {
         Api.Net.apply(res);
         const fed = (res.events || []).find(function (e) { return e.type === 'fed'; });
         if (fed) _floatAt(entX, entY - edge, '+' + fed.exp + ' EXP');
@@ -656,7 +728,7 @@ const HabitatModule = (function () {
         ent.hungry = !!fresh && fresh.hunger > 0;
       }).catch(function (err) {
         if (err && err.code === 'network') {
-          Api.queueFeed(ent.id, foodId);
+          Api.queueFeed(ent.id, foodId, dropId);
           const fresh = DB.Snails.getById(ent.id);
           ent.hungry = !!fresh && fresh.hunger > 0;
         } else {
@@ -727,6 +799,8 @@ const HabitatModule = (function () {
     (scene || []).forEach(function (item) {
       const ent = _ents.find(function (e) { return e.id === item.id; });
       if (!ent) return;
+      // 복원된 드롭 먹이를 향해 가거나 먹는 중이면 장면 배치로 방해하지 않는다 (이어 먹기 보장)
+      if (ent.state === STATE.SEEKING || ent.state === STATE.EATING) return;
       const shelter = item.anchor === 'mossrock' || item.anchor === 'mushroom';
       const a = _nearestAnchor(ent, shelter);
       if (a) { ent.x = a.x; ent.y = a.y; _renderPosition(ent); }
@@ -807,6 +881,7 @@ const HabitatModule = (function () {
 
     renderDecorations();
     sync();
+    restoreDrops(); // 지난 세션에 떨어뜨린 먹이 복원 → 이어 먹기
   }
 
   return {
@@ -816,6 +891,7 @@ const HabitatModule = (function () {
     pause: pause,
     resume: resume,
     dropFood: dropFood,
+    restoreDrops: restoreDrops,
     dropFoodRandom: dropFoodRandom,
     dropFoodNear: dropFoodNear,
     effect: effect,
