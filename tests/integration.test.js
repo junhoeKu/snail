@@ -308,6 +308,14 @@ function clickSnail(w, entId) {
   assert(doc.querySelector('.snail-popup') !== null, '탭은 여전히 팝업');
   doc.querySelector('.popup-close').click();
 
+  // 롱프레스 = 연속 쓰다듬기 (Phase 5) — 하트 이모트 + 팝업 억제
+  const ent14c = w.HabitatModule.debugState().ents[0];
+  habitat14.dispatchEvent(new w.MouseEvent('pointerdown', { clientX: ent14c.x, clientY: ent14c.y, bubbles: true }));
+  await sleep(1200); // LONGPRESS_MS(420) + 하트 간격(550) 경과
+  assert(doc.querySelectorAll('.snail-emote').length >= 2, '롱프레스 하트 연속: ' + doc.querySelectorAll('.snail-emote').length);
+  habitat14.dispatchEvent(new w.MouseEvent('pointerup', { clientX: ent14c.x, clientY: ent14c.y, bubbles: true }));
+  assert(doc.querySelector('.snail-popup') === null, '롱프레스 후엔 팝업이 열리지 않음');
+
   // ── [15] 콘솔 에러 ──────────────────────────────────────
   console.log('[15] 콘솔 에러');
   assert(consoleErrors.length === 0, '콘솔 에러 0개' + (consoleErrors.length ? ' — ' + consoleErrors.join(' | ') : ''));

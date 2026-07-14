@@ -24,6 +24,11 @@ const HabitatModule = (function () {
     EDGE_PADDING: 8,      // px (스프라이트 절반 크기에 더하는 여백)
     PET_RADIUS_MIN: 34,   // px (쓰다듬기 터치 판정 최소 반경)
     DRAG_THRESHOLD_PX: 8, // 이 거리 미만 = 탭(팝업), 이상 = 드래그(옮기기)
+    LONGPRESS_MS: 420,    // 이 시간 이상 누르고 있으면 연속 쓰다듬기 (연출 전용)
+    LONGPRESS_HEART_MS: 550, // 누르는 동안 하트 간격
+    TRAIL_STEP_PX: 26,    // 이동 누적 N px마다 점액 자국 1점
+    TRAIL_LIFE_MS: 6000,  // 점액 자국 수명
+    TRAIL_MAX: 40,        // 동시 점액 자국 상한 (성능 가드)
     FLIP_RIGHT: -1,       // 스프라이트가 왼쪽을 보므로 오른쪽 이동 시 반전
     FLIP_LEFT: 1
   };
@@ -49,7 +54,8 @@ const HabitatModule = (function () {
     GREET_MS: 1500,
     ANCHOR_INSET: 0.16,        // 모서리 앵커 안쪽 비율
     EMOTE_MS: 2500,
-    EMOTE_INTERVAL_MS: 4000    // resting/napping 중 간헐 이모트 간격
+    EMOTE_INTERVAL_MS: 4000,   // resting/napping/idle 중 간헐 이모트 간격
+    BUDDY_GREETS: 3            // 세션 내 인사 누적 N회 → 단짝 연출 (💞·같이 쉬기 확률↑)
   };
 
   function _isNight() {
@@ -443,13 +449,27 @@ const HabitatModule = (function () {
     _setState(ent, STATE.WANDERING);
   }
 
+  // 단짝 (Phase 5) — 세션 내 인사 횟수 누적 (연출 전용, 저장 없음)
+  const _buddyGreets = {};
+
+  function _pairKey(a, b) {
+    return a < b ? a + '|' + b : b + '|' + a;
+  }
+
+  function _isBuddy(a, b) {
+    return (_buddyGreets[_pairKey(a, b)] || 0) >= BEHAVIOR.BUDDY_GREETS;
+  }
+
   function _beginGreet(ent) {
     const target = _ents.find(function (e) { return e.id === ent.socialTarget; });
     if (!target || target.state === STATE.EATING) { _setState(ent, STATE.IDLE); return; }
     _setState(ent, STATE.SOCIALIZING);
     ent.greetUntil = performance.now() + BEHAVIOR.GREET_MS;
-    _emote(ent, '💕');
-    _emote(target, '💕');
+    const key = _pairKey(ent.id, target.id);
+    _buddyGreets[key] = (_buddyGreets[key] || 0) + 1;
+    const heart = _isBuddy(ent.id, target.id) ? '💞' : '💕'; // 단짝은 더 진한 하트
+    _emote(ent, heart);
+    _emote(target, heart);
   }
 
   function _startWatch(ent, eatingPeer) {
@@ -486,6 +506,11 @@ const HabitatModule = (function () {
     if (Math.abs(dx) > 1) {
       _setFacing(ent, dx > 0 ? MOTION.FLIP_RIGHT : MOTION.FLIP_LEFT);
     }
+    ent.trailAcc = (ent.trailAcc || 0) + step; // 점액 자국 (Phase 5)
+    if (ent.trailAcc >= MOTION.TRAIL_STEP_PX) {
+      ent.trailAcc = 0;
+      _dropTrail(ent);
+    }
     _renderPosition(ent);
     return false;
   }
@@ -497,10 +522,65 @@ const HabitatModule = (function () {
     }
   }
 
+  /**
+   * 유휴 생활감 (Phase 5) — 컨디션 표정(배고픔 🥺 / 행복 ✨)과
+   * 이따금의 하품·두리번 모션. 전부 연출 전용.
+   */
+  function _idleLife(ent, nowTs) {
+    if (nowTs < (ent.emoteNext || 0)) return;
+    ent.emoteNext = nowTs + BEHAVIOR.EMOTE_INTERVAL_MS;
+
+    const rec = DB.Snails.getById(ent.id);
+    if (!rec) return;
+    const condition = GAME.conditionOf(rec);
+    if (condition.id === 'hungry') {
+      if (_rng() < 0.45) _emote(ent, '🥺');
+      return;
+    }
+    if (condition.id === 'happy' && _rng() < 0.3) {
+      _emote(ent, '✨');
+      return;
+    }
+    const r = _rng();
+    if (r < 0.14) { // 하품
+      _emote(ent, '🥱');
+      _peek(ent);
+    } else if (r < 0.3) { // 두리번
+      _peek(ent);
+    }
+  }
+
+  /** 두리번/기지개 — motion 레이어에 잠깐 peek 애니메이션 */
+  function _peek(ent) {
+    const motion = ent.root.querySelector('.snail-motion');
+    if (!motion) return;
+    motion.classList.add('peek');
+    setTimeout(function () { motion.classList.remove('peek'); }, 1300);
+  }
+
+  // ── 점액 트레일 (Phase 5 — 이동 흔적, 연출 전용) ───────
+
+  let _trailCount = 0;
+
+  function _dropTrail(ent) {
+    if (_trailCount >= MOTION.TRAIL_MAX) return;
+    const el = document.createElement('div');
+    el.className = 'slime-dot';
+    el.style.left = ent.x + 'px';
+    el.style.top = (ent.y + _edge(ent) * 0.4) + 'px';
+    _habitat().appendChild(el);
+    _trailCount++;
+    setTimeout(function () {
+      el.remove();
+      _trailCount--;
+    }, MOTION.TRAIL_LIFE_MS);
+  }
+
   function _updateEnt(ent, dt, nowTs) {
     switch (ent.state) {
       case STATE.IDLE:
         if (nowTs >= ent.idleUntil) _chooseBehavior(ent);
+        else _idleLife(ent, nowTs); // 표정/하품/두리번 (Phase 5)
         break;
       case STATE.NAPPING:
         if (nowTs >= ent.napUntil) _setState(ent, STATE.IDLE);
@@ -512,7 +592,9 @@ const HabitatModule = (function () {
         break;
       case STATE.SOCIALIZING:
         if (nowTs >= ent.greetUntil) {
-          if (_rng() < 0.6) _startRest(ent, false); // 60% 같이 쉬기
+          // 단짝(세션 인사 3회+)은 거의 항상 같이 쉰다
+          const together = _isBuddy(ent.id, ent.socialTarget || '') ? 0.9 : 0.6;
+          if (_rng() < together) _startRest(ent, false);
           else _setState(ent, STATE.IDLE);
         }
         break;
@@ -956,12 +1038,28 @@ const HabitatModule = (function () {
       // 탭인지 드래그인지는 이동 거리(DRAG_THRESHOLD_PX)로 pointerup에서 판정
       _drag = { ent: nearest, pointerId: e.pointerId, startX: x, startY: y, moved: false,
                 rect: rect, edge: _edge(nearest) };
+      // 움직이지 않고 오래 누르면 연속 쓰다듬기 (Phase 5 — 연출 전용)
+      _drag.holdTimer = setTimeout(_beginHold, MOTION.LONGPRESS_MS);
       if (_habitat().setPointerCapture && e.pointerId !== undefined) {
         try { _habitat().setPointerCapture(e.pointerId); } catch (err) { /* 미지원 무시 */ }
       }
       return;
     }
     dropFood(x, y);
+  }
+
+  /** 롱프레스 시작 — 누르는 동안 하트가 이어진다 (pet 판정은 팝업 버튼 경로 그대로) */
+  function _beginHold() {
+    if (!_drag || _drag.moved) return;
+    _drag.holding = true;
+    const ent = _drag.ent;
+    if (ent.state === STATE.NAPPING) _setState(ent, STATE.IDLE); // 쓰다듬으면 깬다
+    Sound.play('heart');
+    _emote(ent, '💗');
+    _drag.heartTimer = setInterval(function () {
+      if (!_drag || !_drag.holding) return;
+      _emote(_drag.ent, _rng() < 0.5 ? '💗' : '💕');
+    }, MOTION.LONGPRESS_HEART_MS);
   }
 
   function _onPointerMove(e) {
@@ -972,6 +1070,7 @@ const HabitatModule = (function () {
 
     if (!_drag.moved) {
       if (Math.hypot(x - _drag.startX, y - _drag.startY) < MOTION.DRAG_THRESHOLD_PX) return;
+      _stopHold(_drag); // 움직이면 쓰다듬기 종료 → 드래그로 전환
       if (ent.state === STATE.EATING) { _drag = null; return; } // 식사는 방해하지 않는다 — 스와이프는 무효(탭 아님)
       _drag.moved = true; // 드래그 시작 — 집힌 개체는 루프에서 제외
       if (ent.food) { ent.food.claimedBy = null; ent.food = null; } // 점유 먹이 반납 (재배정)
@@ -985,10 +1084,18 @@ const HabitatModule = (function () {
     _renderPosition(ent);
   }
 
+  function _stopHold(drag) {
+    if (drag.holdTimer) clearTimeout(drag.holdTimer);
+    if (drag.heartTimer) clearInterval(drag.heartTimer);
+    drag.holdTimer = null;
+    drag.heartTimer = null;
+  }
+
   function _releaseDrag(e) {
     if (!_drag || e.pointerId !== _drag.pointerId) return null;
     const drag = _drag;
     _drag = null;
+    _stopHold(drag);
     if (_habitat().releasePointerCapture && drag.pointerId !== undefined) {
       try { _habitat().releasePointerCapture(drag.pointerId); } catch (err) { /* 무시 */ }
     }
@@ -999,6 +1106,7 @@ const HabitatModule = (function () {
     const drag = _releaseDrag(e);
     if (!drag) return;
 
+    if (drag.holding) return; // 롱프레스 쓰다듬기 종료 — 팝업 없이 마무리
     if (!drag.moved) { // 탭 — 기존 동작 (깨우기 + 개체 팝업)
       if (drag.ent.state === STATE.NAPPING) _setState(drag.ent, STATE.IDLE);
       HomeModule.openSnailPopup(drag.ent.id);

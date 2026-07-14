@@ -101,6 +101,35 @@ body[data-weather="fog"] .snail-habitat::before {
   to   { background-position: -15px 56px; }
 }
 
+/* 점액 트레일 (Phase 5) — 달팽이 아래(z1), 서서히 사라진다 */
+.slime-dot {
+  position: absolute;
+  width: 7px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(215, 235, 200, 0.4);
+  z-index: 1;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation: slime-fade 6s linear forwards;
+}
+
+@keyframes slime-fade {
+  0%   { opacity: 0.9; }
+  100% { opacity: 0; }
+}
+
+/* 두리번/하품 모션 (Phase 5) — motion 레이어에 잠깐 얹는 peek */
+.snail-entity .snail-motion.peek {
+  animation: snail-peek 1.3s ease-in-out;
+}
+
+@keyframes snail-peek {
+  0%, 100% { transform: rotate(0deg); }
+  25%      { transform: rotate(-6deg) translateY(-2px); }
+  60%      { transform: rotate(5deg) translateY(-1px); }
+}
+
 /* 방문객 (나비/무당벌레/반딧불이) — 연출 전용, 클릭 통과 */
 .visitor {
   position: absolute;
