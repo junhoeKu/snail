@@ -36,7 +36,6 @@ const PRECACHE = [
   'assets/backgrounds/bg_moss.jpg',
   'assets/backgrounds/bg_pond.jpg',
   'assets/backgrounds/bg_fern.jpg',
-  'assets/backgrounds/fg_grass.png',
   'assets/visitors/visitor_butterfly.png',
   'assets/visitors/visitor_ladybug.png',
   'assets/visitors/visitor_firefly.png',
