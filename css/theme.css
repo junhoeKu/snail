@@ -38,10 +38,11 @@ body {
 }
 
 /*
- * 배경 2종 — 일러스트 (docs/art 원본 → assets/backgrounds) + 하단 비네트
+ * 배경 3종 — 일러스트 (docs/art 원본 → assets/backgrounds) + 하단 비네트
+ * 햇살정원(garden)은 은퇴 — 저장값 폴백은 App.applyBackground/db.js가 처리
  */
 body[data-background="default"] {
-  /* 이끼 숲 */
+  /* 이끼 숲 (리디자인) */
   background-color: #74905f;
   background-image:
     radial-gradient(120% 60% at 50% 115%, rgba(18, 26, 12, 0.32), transparent 62%),
@@ -51,12 +52,23 @@ body[data-background="default"] {
   background-repeat: no-repeat;
 }
 
-body[data-background="garden"] {
-  /* 햇살 정원 */
-  background-color: #a98c60;
+body[data-background="pond"] {
+  /* 이슬 연못 */
+  background-color: #5f8a80;
   background-image:
-    radial-gradient(120% 60% at 50% 115%, rgba(62, 42, 16, 0.28), transparent 62%),
-    url("../assets/backgrounds/bg_garden.jpg");
+    radial-gradient(120% 60% at 50% 115%, rgba(12, 26, 24, 0.32), transparent 62%),
+    url("../assets/backgrounds/bg_pond.jpg");
+  background-size: 100% 100%, cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+body[data-background="fern"] {
+  /* 고사리 계곡 */
+  background-color: #4f6b46;
+  background-image:
+    radial-gradient(120% 60% at 50% 115%, rgba(14, 22, 10, 0.36), transparent 62%),
+    url("../assets/backgrounds/bg_fern.jpg");
   background-size: 100% 100%, cover;
   background-position: center;
   background-repeat: no-repeat;

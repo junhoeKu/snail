@@ -199,10 +199,12 @@ const App = (function () {
     return life.lines;
   }
 
-  /** 저장된 배경을 body에 적용 */
+  /** 저장된 배경을 body에 적용 — 은퇴/무효 배경(garden 등)은 default로 표시 */
   function applyBackground() {
     const player = DB.Player.get();
-    document.body.dataset.background = player.background || 'default';
+    const bg = player.background;
+    document.body.dataset.background =
+      (bg === 'default' || bg === 'pond' || bg === 'fern') ? bg : 'default';
   }
 
   /** 오늘의 날씨를 body에 적용 (결정적 — 저장하지 않음) */

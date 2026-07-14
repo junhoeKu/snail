@@ -68,7 +68,8 @@ def update_settings(body: SettingsIn,
                     user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     if body.selected_food is not None and body.selected_food in rules.FOOD_DEFS:
         user.selected_food = body.selected_food
-    if body.background is not None and body.background in ("default", "garden"):
+    # garden은 은퇴 배경 — 저장돼 있던 값은 클라가 default로 표시한다 (Expand-Contract 유예)
+    if body.background is not None and body.background in ("default", "pond", "fern"):
         user.background = body.background
     if body.sound_on is not None:
         user.sound_on = body.sound_on

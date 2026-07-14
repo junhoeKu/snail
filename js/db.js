@@ -136,6 +136,11 @@ const DB = (function () {
         delete player.food;
         _write(KEYS.PLAYER, player);
       }
+      // 은퇴한 배경(햇살정원) → 기본 배경으로 치유
+      if (player.background === 'garden') {
+        player.background = 'default';
+        _write(KEYS.PLAYER, player);
+      }
       return player;
     },
     save: function (player) {
