@@ -75,10 +75,8 @@ CONFIG = {
     },
     "KEEPER_LEVEL_COIN_MULT": 30,
     "KEEPER_STAMINA_LEVELS": [5, 8],
-    # 장식
-    "DECO_SLOT_COUNT": 5,       # 서식지 배치 슬롯 수 (14차 Phase 4에서 3→5)
-    "DECO_MISSIONS_REQUIRED": 7,
-    "DECO_GENERATION_REQUIRED": 2,
+    # 탐험 맵 게이트
+    "MAP_GENERATION_REQUIRED": 2,  # 이슬 연못: 2세대 도달 (또는 코인 해금)
 }
 
 FOOD_DEFS = {
@@ -134,12 +132,8 @@ def dex_completed_tiers(discovered) -> list[str]:
 
 PERSONALITIES = {"foodie": 0.40, "explorer": 0.35, "sleepy": 0.25}
 
-DECORATIONS = {
-    "pebble": {"label": "조약돌", "type": "buy", "price": 50},
-    "mushroom": {"label": "버섯", "type": "buy", "price": 80},
-    "wildflower": {"label": "들꽃", "type": "unlock"},
-    "mossrock": {"label": "이끼 바위", "type": "unlock"},
-}
+# 유효 배경 (클라 GAME.BACKGROUNDS와 대칭 — 은퇴 배경은 default 폴백)
+VALID_BACKGROUNDS = ("default", "pond", "fern")
 
 EXPLORE_MAPS = {
     "moss": {"variant_boost": "lime", "locked": False},
@@ -257,7 +251,7 @@ def wild_egg_variant(map_id: str, generation: int, rng=random.random) -> str:
 
 # ── 시간 감쇠 (lazy — 배치 없음) ────────────────────────
 
-def apply_decay(snail: dict, now: datetime, deco_fx: dict) -> tuple[int, list[dict]]:
+def apply_decay(snail: dict, now: datetime) -> tuple[int, list[dict]]:
     """last_state_at 기준 경과 구간만 적용, 잔여 시간은 last_state_at 보존으로 유지."""
     events: list[dict] = []
     if snail["stage"] == "egg":
@@ -266,8 +260,8 @@ def apply_decay(snail: dict, now: datetime, deco_fx: dict) -> tuple[int, list[di
     intervals = int(elapsed_min // CONFIG["DECAY_INTERVAL_MIN"])
     if intervals <= 0:
         return 0, events
-    snail["hunger"] = clamp(snail["hunger"] + round(intervals * CONFIG["DECAY_HUNGER"] * deco_fx["hungerDecayMult"]))
-    snail["happiness"] = clamp(snail["happiness"] - round(intervals * CONFIG["DECAY_HAPPINESS"] * deco_fx["happinessDecayMult"]))
+    snail["hunger"] = clamp(snail["hunger"] + round(intervals * CONFIG["DECAY_HUNGER"]))
+    snail["happiness"] = clamp(snail["happiness"] - round(intervals * CONFIG["DECAY_HAPPINESS"]))
     snail["last_state_at"] = snail["last_state_at"] + timedelta(minutes=intervals * CONFIG["DECAY_INTERVAL_MIN"])
     events.append({"type": "decayed", "snailId": snail["id"]})
     return intervals, events
@@ -290,16 +284,6 @@ def prune_dropped_foods(drops: list, now: datetime) -> list:
         if now - at < ttl:
             kept.append(d)
     return kept
-
-
-def decoration_effects(slots: list) -> dict:
-    slots = slots or []
-    return {
-        "happinessDecayMult": 0.85 if "pebble" in slots else 1.0,
-        "feedHungerMult": 1.1 if "mushroom" in slots else 1.0,
-        "petHappinessBonus": 3 if "wildflower" in slots else 0,
-        "hungerDecayMult": 0.9 if "mossrock" in slots else 1.0,
-    }
 
 
 # ── 양육자 ──────────────────────────────────────────────
@@ -399,7 +383,7 @@ def record_mission(user: dict, kind: str, today_key: str) -> tuple[dict, list[di
 
 # ── 행동 ────────────────────────────────────────────────
 
-def feed(snail: dict, food_id: str, foods: dict, deco_slots: list) -> tuple[dict, list[dict]]:
+def feed(snail: dict, food_id: str, foods: dict) -> tuple[dict, list[dict]]:
     """검증 통과 시 snail/foods 제자리 갱신. 반환: (사용한 def, events). 실패는 ValueError(code)."""
     d = FOOD_DEFS.get(food_id)
     if not d:
@@ -414,21 +398,19 @@ def feed(snail: dict, food_id: str, foods: dict, deco_slots: list) -> tuple[dict
         raise ValueError("not_hungry")
 
     foods[food_id] -= 1
-    fx = decoration_effects(deco_slots)
-    snail["hunger"] = clamp(snail["hunger"] - round(d["hunger"] * fx["feedHungerMult"]))
+    snail["hunger"] = clamp(snail["hunger"] - d["hunger"])
     snail["happiness"] = clamp(snail["happiness"] + d["happiness"])
     events = [{"type": "fed", "snailId": snail["id"], "food": food_id, "exp": d["exp"]}]
     events += gain_exp(snail, d["exp"])
     return d, events
 
 
-def pet(snail: dict, deco_slots: list) -> list[dict]:
+def pet(snail: dict) -> list[dict]:
     if snail["stage"] == "egg":
         raise ValueError("not_hatched")
     if snail.get("graduated_at"):
         raise ValueError("graduated")
-    fx = decoration_effects(deco_slots)
-    snail["happiness"] = clamp(snail["happiness"] + CONFIG["PET_HAPPINESS"] + fx["petHappinessBonus"])
+    snail["happiness"] = clamp(snail["happiness"] + CONFIG["PET_HAPPINESS"])
     return [{"type": "petted", "snailId": snail["id"]}]
 
 
@@ -514,7 +496,7 @@ def map_available(map_id: str, generation: int, unlocked: list) -> bool:
         return False
     if not m["locked"]:
         return True
-    return generation >= CONFIG["DECO_GENERATION_REQUIRED"] or map_id in (unlocked or [])
+    return generation >= CONFIG["MAP_GENERATION_REQUIRED"] or map_id in (unlocked or [])
 
 
 # 달팽이 퀴즈 문항 — 정답은 서버가 검증(치트 방지). 클라 game.js와 동일 순서 유지.

@@ -190,11 +190,10 @@ function clickSnail(w, entId) {
   assert(doc.querySelectorAll('#dex-sections .dex-section').length === 3, '도감 등급 3섹션: ' + doc.querySelectorAll('#dex-sections .dex-section').length);
   assert(doc.querySelector('#dex-sections .dex-cell') !== null, '도감 셀 렌더');
 
-  // ── [9] 장식 효과 ───────────────────────────────────────
-  console.log('[9] 장식 효과');
+  // ── [9] 부재 감쇠 (장식 시스템 제거 — 무보정 감쇠) ──────
+  console.log('[9] 부재 감쇠');
   const p9 = player(w);
-  p9.decorations.owned = ['mossrock', 'pebble'];
-  p9.decorations.slots = ['mossrock', 'pebble', null];
+  p9.decorations = { owned: ['mossrock'], slots: ['mossrock', null, null] }; // 구버전 잔존 데이터 — 무시돼야 함
   p9.last_seen = new Date(Date.now() - 5 * 3600 * 1000).toISOString();
   w.localStorage.setItem('sn_player', JSON.stringify(p9));
   const mongBefore = snails(w).find(s => s.name === '몽이');
@@ -202,13 +201,8 @@ function clickSnail(w, entId) {
     ['sn_player', 'sn_snails', 'sn_journal', 'sn_album'].map(k => [k, w.localStorage.getItem(k)])
   ), 0.99);
   const mongAfter = JSON.parse(w2effects.localStorage.getItem('sn_snails')).find(s => s.name === '몽이');
-  assert(mongAfter.hunger === Math.min(100, mongBefore.hunger + Math.round(35 * 0.9)),
-    '이끼 바위: 5시간 배고픔 +32 (기본 +35, 감쇠 7×5): ' + (mongAfter.hunger - mongBefore.hunger));
-  // 장식 슬롯 3→5: 구버전(3슬롯) 저장 데이터가 5슬롯으로 치유되는지 (Phase 4)
-  const p9After = JSON.parse(w2effects.localStorage.getItem('sn_player'));
-  const heal9 = w2effects.GAME.placeDecoration(p9After, 'pebble', 4); // 새 5번째 슬롯
-  assert(heal9.events.indexOf('deco_placed') !== -1 && heal9.player.decorations.slots.length === 5,
-    '장식 슬롯 5 확장 + 구데이터 패딩: ' + JSON.stringify(heal9.player.decorations.slots));
+  assert(mongAfter.hunger === Math.min(100, mongBefore.hunger + 35),
+    '5시간 배고픔 +35 (감쇠 7×5 — 구버전 장식 데이터는 효과 없음): ' + (mongAfter.hunger - mongBefore.hunger));
   const modal9 = w2effects.document.querySelector('.modal-overlay');
   if (modal9) modal9.querySelector('button').click();
 

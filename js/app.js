@@ -10,7 +10,7 @@ const App = (function () {
 
   /**
    * 화면(탭) 전환
-   * @param {string} screen 'home' | 'stats' | 'shop' | 'deco' | 'settings'
+   * @param {string} screen 'home' | 'user' | 'dex' | 'shop' | 'explore' | 'settings'
    */
   function navigate(screen) {
     document.querySelectorAll('.screen').forEach(function (el) {
@@ -82,10 +82,9 @@ const App = (function () {
    */
   function _settleTime() {
     const player = DB.Player.get();
-    const decoFx = GAME.decorationEffects(player);
     let intervals = 0;
     const updated = DB.Snails.get().map(function (snail) {
-      const result = GAME.applyTimeDecay(snail, player.last_seen, DB.now(), decoFx);
+      const result = GAME.applyTimeDecay(snail, player.last_seen, DB.now());
       intervals = Math.max(intervals, result.intervals);
       return result.snail;
     });
@@ -199,12 +198,10 @@ const App = (function () {
     return life.lines;
   }
 
-  /** 저장된 배경을 body에 적용 — 은퇴/무효 배경(garden 등)은 default로 표시 */
+  /** 저장된 배경을 body에 적용 — 은퇴/무효 배경(garden 등)은 default로 표시 (카탈로그 단일 소스) */
   function applyBackground() {
     const player = DB.Player.get();
-    const bg = player.background;
-    document.body.dataset.background =
-      (bg === 'default' || bg === 'pond' || bg === 'fern') ? bg : 'default';
+    document.body.dataset.background = GAME.backgroundOf(player.background).id;
   }
 
   /** 현재 슬롯(낮/밤)의 날씨를 body에 적용 (결정적 — 저장하지 않음) */
@@ -356,7 +353,6 @@ const App = (function () {
       _ensurePersonality();
       _settleAway();
       _claimDailyReward();
-      DecoModule.claimUnlocks();
     }
 
     applyBackground();
@@ -372,6 +368,17 @@ const App = (function () {
     if (!('serviceWorker' in navigator)) return;
     navigator.serviceWorker.register('sw.js').catch(function () {
       /* file:// 등 미지원 환경 무시 */
+    });
+    // 새 버전 SW가 활성화되면(controllerchange) 1회 새로고침 —
+    // 옛 캐시로 그려진 화면(css/js)과 새 자산이 섞여 "업데이트가 적용 안 됨"으로 보이는 문제 방지.
+    // 첫 방문(비제어 페이지)의 clients.claim()도 controllerchange를 발화시키므로,
+    // 등록 시점에 이미 제어 중이었을 때(=진짜 업데이트)만 리로드한다 — 온보딩 중 리셋 방지
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (!hadController || reloaded) return;
+      reloaded = true;
+      location.reload();
     });
   }
 

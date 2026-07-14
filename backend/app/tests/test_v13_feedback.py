@@ -105,17 +105,27 @@ def test_remove_drop_idempotent_and_revision(guest):
     assert client.delete("/v1/habitat/foods/d1", headers=guest["headers"]).status_code == 200
 
 
-# ── Phase 4: 장식 슬롯 5 · 배경 검증 ──
+# ── Phase 4/정리: 장식 제거 호환 · 배경 검증 ──
 
-def test_decoration_slots_expanded_to_five(guest):
+def test_decoration_legacy_endpoint_tolerant(guest):
+    """장식 시스템 제거 후에도 구버전 클라의 슬롯 저장은 조용히 성공한다 (효과 없음)."""
     hatch_first(guest)
-    state = _state(guest)
-    assert len(state["changes"]["player"]["decorations"]["slots"]) == rules.CONFIG["DECO_SLOT_COUNT"] == 5
-
-    # 구버전 클라(3슬롯 배열)가 보내도 5로 패딩
-    r = client.post("/v1/decorations/slots", json={"slots": [None, None, None]},
+    r = client.post("/v1/decorations/slots", json={"slots": ["mossrock", None, None]},
                     headers=guest["headers"])
-    assert r.status_code == 200 and len(r.json()["slots"]) == 5
+    assert r.status_code == 200
+    # 응답 형태 호환: decorations 필드는 유지되고 효과는 어디에도 적용되지 않는다
+    assert "decorations" in _state(guest)["changes"]["player"]
+
+
+def test_decoration_purchase_rejected(guest):
+    """장식 구매는 종료 — 구버전 클라 시도는 코인 차감 없이 거절."""
+    hatch_first(guest)
+    coins0 = _state(guest)["changes"]["player"]["coins"]
+    r = client.post("/v1/shop/purchase",
+                    json={"kind": "decoration", "itemId": "pebble", "requestId": rid()},
+                    headers=guest["headers"])
+    assert r.status_code == 422
+    assert _state(guest)["changes"]["player"]["coins"] == coins0
 
 
 def test_background_validation_garden_retired(guest):

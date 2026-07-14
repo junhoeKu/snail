@@ -75,7 +75,8 @@ def migrate_local_v6(body: MigrationIn,
     user.snail_slots = _clamp_int(p.get("snail_slots", 1), 1, settings.max_snails, 1)
     user.sound_on = bool(p.get("sound_on", True))
     user.selected_food = p.get("selected_food") if p.get("selected_food") in rules.FOOD_DEFS else "lettuce"
-    user.background = p.get("background") if p.get("background") in ("default", "garden") else "default"
+    # 은퇴 배경(garden 등)은 default로 — 0011 정리 후 재유입 방지
+    user.background = p.get("background") if p.get("background") in rules.VALID_BACKGROUNDS else "default"
 
     streak = p.get("streak") or {}
     user.streak_count = _clamp_int(streak.get("count", 0), 0, 10000)
@@ -90,11 +91,7 @@ def migrate_local_v6(body: MigrationIn,
     user.explore_state = p.get("explore") or {}
     user.unlocked_maps = [m for m in (p.get("unlocked_maps") or []) if m in rules.EXPLORE_MAPS]
 
-    deco = p.get("decorations") or {}
-    user.decorations_owned = [d for d in (deco.get("owned") or []) if d in rules.DECORATIONS]
-    slots = [(s if s in user.decorations_owned else None) for s in (deco.get("slots") or [])]
-    count = rules.CONFIG["DECO_SLOT_COUNT"]
-    user.decoration_slots = (slots + [None] * count)[:count]
+    # 장식 시스템 제거(13차 정리) — 로컬 장식 데이터는 이전하지 않는다
 
     # ── 먹이 인벤토리 ──
     foods = p.get("foods") or {}

@@ -36,10 +36,15 @@ def defaults() -> dict:
     return copy.deepcopy(_DEFAULTS)
 
 
+# CONFIG 키 rename 이력 — 저장된 구 오버라이드가 조용히 무시되지 않게 새 키로 이관한다
+_RENAMED_CONFIG_KEYS = {"DECO_GENERATION_REQUIRED": "MAP_GENERATION_REQUIRED"}
+
+
 def _apply_into(merged: dict, overrides: dict) -> None:
     """merged 를 overrides 로 덮는다 — 기존 키만(새 키/ID 추가 금지)."""
     ov = overrides or {}
     for k, v in (ov.get("config") or {}).items():
+        k = _RENAMED_CONFIG_KEYS.get(k, k)
         if k in merged["config"]:
             merged["config"][k] = v
     for section in ("variants", "foods"):

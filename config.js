@@ -11,3 +11,6 @@
  *   http://localhost:31111/?api=                        ← 끄기
  */
 window.SNAIL_API_BASE = 'https://snail-production-2a89.up.railway.app';
+
+window.SNAIL_GOOGLE_CLIENT_ID =
+  "328398093853-he4elssdif0a5u318k114d899lhmedco.apps.googleusercontent.com";

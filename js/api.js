@@ -148,9 +148,6 @@ const Api = (function () {
     explore: function (mapId) {
       return _request('POST', '/v1/explorations/search', { mapId: mapId, requestId: requestId() });
     },
-    setDecoSlots: function (slots) {
-      return _request('POST', '/v1/decorations/slots', { slots: slots });
-    },
     setSkin: function (snailId, stage) { // stage=null → 원래 모습 (연출 전용)
       return _request('PATCH', '/v1/snails/' + snailId + '/skin', { stage: stage });
     },
@@ -263,9 +260,6 @@ const Api = (function () {
             Sound.play('fanfare');
             FX.confetti(12);
             Toast.show('🧑‍🌾 양육자 레벨 업! Lv.' + e.level + ' (+' + e.coins + ' 코인)');
-            break;
-          case 'deco_unlocked':
-            Toast.show('🎉 장식 해금! 상점에서 배치할 수 있어요.');
             break;
           case 'wild_egg':
             FX.confetti(14);
@@ -454,7 +448,6 @@ const Api = (function () {
     graduate: endpoints.graduate,
     purchase: endpoints.purchase,
     explore: endpoints.explore,
-    setDecoSlots: endpoints.setDecoSlots,
     setSkin: endpoints.setSkin,
     syncPosition: endpoints.syncPosition,
     updateSettings: endpoints.updateSettings,

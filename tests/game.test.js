@@ -106,7 +106,7 @@ const lifeSnails = [
   { id: 'a', name: '달달이', stage: 'junior', color: 'brown', personality: 'sleepy' },
   { id: 'b', name: '몽이', stage: 'baby', color: 'pond', personality: 'explorer' }
 ];
-const lifePlayer = { decorations: { slots: ['mossrock', null, null] } };
+const lifePlayer = {}; // 장식 시스템 제거 — 생활 시뮬은 플레이어 상태와 무관
 const seedRng = (function () { let i = 0; const s = [0.2, 0.3, 0.1, 0.4]; return function () { return s[i++ % s.length]; }; })();
 const day = GAME.simulateAwayLife(lifeSnails, lifePlayer, 200, '2026-07-13', seedRng, false);
 assert(day.scene.length === 2, '복귀 장면 2개체');
