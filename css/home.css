@@ -42,7 +42,8 @@
   inset: 0;
   overflow: hidden;
   cursor: pointer;
-  touch-action: manipulation;
+  /* none: 브라우저 팬/줌이 제스처를 가로채면 드래그가 pointercancel로 끊긴다 (13차 Phase 3) */
+  touch-action: none;
   /* 배경은 body가 그린다 — 서식지는 투명 */
   background: transparent;
 }

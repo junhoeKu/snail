@@ -130,6 +130,9 @@ const Api = (function () {
     dropFood: function (drop) { // {id, foodId, rx, ry} — 상태 기록만 (소모·보상 없음)
       return _request('POST', '/v1/habitat/foods', drop);
     },
+    removeDrop: function (dropId) { // 유령 드롭 정리 (먹기 거절 등) — 멱등
+      return _request('DELETE', '/v1/habitat/foods/' + dropId);
+    },
     pet: function (snailId, reqId) {
       return _request('POST', '/v1/snails/' + snailId + '/pet', { requestId: reqId || requestId() });
     },
@@ -445,6 +448,7 @@ const Api = (function () {
     config: endpoints.config,
     feed: endpoints.feed,
     dropFood: endpoints.dropFood,
+    removeDrop: endpoints.removeDrop,
     pet: endpoints.pet,
     hatch: endpoints.hatch,
     graduate: endpoints.graduate,

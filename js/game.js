@@ -462,6 +462,20 @@ const GAME = (function () {
     return level * CONFIG.EXP_PER_LEVEL;
   }
 
+  /**
+   * TTL이 지났거나 시각이 깨진 드롭 먹이를 걸러낸다 (rules.prune_dropped_foods 대칭).
+   * @param {Array} drops [{id, food_id, rx, ry, dropped_at}]
+   * @param {number} [nowMs] 기준 시각 (테스트 주입용, 기본 Date.now())
+   */
+  function pruneDroppedFoods(drops, nowMs) {
+    const ttlMs = CONFIG.FIELD_FOOD_TTL_HOURS * 3600 * 1000;
+    const now = typeof nowMs === 'number' ? nowMs : Date.now();
+    return (drops || []).filter(function (d) {
+      const at = Date.parse(d && d.dropped_at);
+      return isFinite(at) && (now - at) < ttlMs;
+    });
+  }
+
   /** 도달한 성장 단계 목록 — 모습 바꾸기 후보 (13차 Phase 3) */
   function reachedStages(snail) {
     if (snail.stage === 'egg') return [];
@@ -1218,6 +1232,7 @@ const GAME = (function () {
     expToNext: expToNext,
     reachedStages: reachedStages,
     displayStage: displayStage,
+    pruneDroppedFoods: pruneDroppedFoods,
     gainExp: gainExp,
     hatch: hatch,
     feed: feed,

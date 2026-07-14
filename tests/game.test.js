@@ -115,5 +115,21 @@ const night = GAME.simulateAwayLife(lifeSnails, lifePlayer, 200, '2026-07-13', (
 assert(night.scene.every(function (s) { return s.state === 'napping'; }), '밤엔 전부 취침 장면');
 assert(GAME.simulateAwayLife(lifeSnails, lifePlayer, 10, '2026-07-13', seedRng).lines.length === 0, '부재 30분 미만 생활 문장 없음');
 
+// ── [12] 드롭 먹이 TTL / 모습 바꾸기 (13차) ──────────────
+console.log('[12] 드롭 TTL & 모습 바꾸기');
+const nowMs = Date.parse('2026-07-14T12:00:00Z');
+const pruned = GAME.pruneDroppedFoods([
+  { id: 'a', food_id: 'lettuce', dropped_at: '2026-07-14T11:00:00Z' },              // 1시간 전 — 유지
+  { id: 'b', food_id: 'lettuce', dropped_at: '2026-07-13T11:00:00Z' },              // 25시간 전 — 만료
+  { id: 'c', food_id: 'lettuce', dropped_at: 'not-a-date' }                          // 깨진 시각 — 제거
+], nowMs);
+assert(pruned.length === 1 && pruned[0].id === 'a', '드롭 TTL 24h — 만료/깨진 항목 제거 (rules.prune_dropped_foods 대칭)');
+
+assert(GAME.reachedStages({ stage: 'egg', level: 0 }).length === 0, '알은 모습 후보 없음');
+assert(GAME.reachedStages({ stage: 'adult', level: 20 }).join(',') === 'baby,junior,adult', '성체는 3단계 모두 후보');
+assert(GAME.displayStage({ stage: 'adult', level: 20, skin_stage: 'baby' }) === 'baby', 'skin 우선 표시');
+assert(GAME.displayStage({ stage: 'baby', level: 1, skin_stage: 'adult' }) === 'baby', '미도달 skin은 무시');
+assert(GAME.displayStage({ stage: 'junior', level: 10 }) === 'junior', 'skin 없으면 실제 단계');
+
 console.log(failures === 0 ? '\n✅ 전체 통과' : '\n❌ 실패 ' + failures + '건');
 process.exit(failures === 0 ? 0 : 1);

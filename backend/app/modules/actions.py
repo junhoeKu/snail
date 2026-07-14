@@ -160,11 +160,28 @@ def drop_food(body: FoodDropIn,
     drops.append({
         "id": body.id or models._uuid(),
         "food_id": body.foodId,
-        "rx": min(1.0, max(0.0, body.rx)),
-        "ry": min(1.0, max(0.0, body.ry)),
+        "rx": rules.clamp01(body.rx),
+        "ry": rules.clamp01(body.ry),
         "dropped_at": service.utcnow().isoformat(),
     })
     user.dropped_foods = drops
+    service.bump_revision(user)  # 다른 기기의 revision 기반 리싱크가 감지하도록
+    db.commit()
+    return {"ok": True}
+
+
+@router.delete("/habitat/foods/{drop_id}")
+def remove_drop(drop_id: str,
+                user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """드롭 기록 정리 — 먹기 실패(도메인 거절) 등으로 화면에서 사라진 드롭의 유령 복원 방지.
+
+    소모가 아니므로 재고·원장 무변동. 없는 id는 조용히 성공(멱등).
+    """
+    service.lock_user(db, user)
+    drops = [d for d in (user.dropped_foods or []) if d.get("id") != drop_id]
+    if len(drops) != len(user.dropped_foods or []):
+        user.dropped_foods = drops
+        service.bump_revision(user)
     db.commit()
     return {"ok": True}
 

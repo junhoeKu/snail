@@ -92,6 +92,19 @@ def test_prune_dropped_foods_ttl():
     assert [d["id"] for d in kept] == ["a"]
 
 
+def test_remove_drop_idempotent_and_revision(guest):
+    """드롭/정리는 revision을 올려 다른 기기의 리싱크가 감지한다. 없는 id 삭제는 조용히 성공."""
+    hatch_first(guest)
+    rev0 = _state(guest)["revision"]
+    assert _drop(guest, "d1").status_code == 200
+    assert _state(guest)["revision"] > rev0
+
+    r = client.delete("/v1/habitat/foods/d1", headers=guest["headers"])
+    assert r.status_code == 200
+    assert _state(guest)["changes"]["player"]["dropped_foods"] == []
+    assert client.delete("/v1/habitat/foods/d1", headers=guest["headers"]).status_code == 200
+
+
 # ── 모습 바꾸기 (skin_stage — 연출 전용, 도달한 단계만) ──
 
 def test_skin_gate_and_change(guest):

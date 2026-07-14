@@ -155,6 +155,11 @@ def clamp(v: float) -> float:
     return max(0.0, min(100.0, v))
 
 
+def clamp01(v: float) -> float:
+    """0~1 비율 좌표 클램프 (rx/ry)."""
+    return max(0.0, min(1.0, v))
+
+
 # ── 성장 ────────────────────────────────────────────────
 
 def exp_to_next(level: int) -> int:
@@ -188,13 +193,16 @@ def gain_exp(snail: dict, amount: int) -> list[dict]:
 
 
 def skin_allowed(snail: dict, stage: str | None) -> bool:
-    """모습(skin_stage, 연출 전용)은 이미 도달한 단계만 고를 수 있다. None=원래 모습."""
+    """모습(skin_stage, 연출 전용)은 이미 도달한 단계만 고를 수 있다. None=원래 모습.
+
+    단계 사다리의 단일 소스인 stage_for_level에서 도달 여부를 유도한다 (별도 테이블 금지).
+    """
     if stage is None:
         return True
     if snail["stage"] == "egg":
         return False
-    min_levels = {"baby": 1, **STAGE_LEVELS}
-    return stage in min_levels and snail["level"] >= min_levels[stage]
+    order = ["baby", "junior", "adult"]
+    return stage in order and order.index(stage) <= order.index(stage_for_level(snail["level"]))
 
 
 # ── 변이/성격 ───────────────────────────────────────────

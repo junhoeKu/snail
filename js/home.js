@@ -537,6 +537,14 @@ const HomeModule = (function () {
     if (!rec) return;
     const skin = stageId === rec.stage ? null : stageId; // 실제 단계면 저장하지 않는다
 
+    // 저장 경로만 모드별로 다르고 마무리(연출/갱신)는 공유 — 분기 드리프트 방지
+    const finish = function () {
+      Sound.play('tap');
+      HabitatModule.sync();
+      App.updateFavicon();
+      _renderSnailPopup(snailId);
+    };
+
     if (Api.enabled()) {
       Api.setSkin(snailId, skin).then(function (res) {
         const fresh = DB.Snails.getById(snailId);
@@ -544,19 +552,14 @@ const HomeModule = (function () {
           fresh.skin_stage = res.skin_stage;
           DB.Snails.saveOne(fresh); // 미러 갱신 (판정 값 아님)
         }
-        Sound.play('tap');
-        HabitatModule.sync();
-        _renderSnailPopup(snailId);
+        finish();
       }).catch(Api.Net.fail);
       return;
     }
 
     rec.skin_stage = skin;
     DB.Snails.saveOne(rec);
-    Sound.play('tap');
-    HabitatModule.sync();
-    App.updateFavicon();
-    _renderSnailPopup(snailId);
+    finish();
   }
 
   // ── 여행 보내기 (팝업에서 진입) ────────────────────────
