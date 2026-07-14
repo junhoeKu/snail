@@ -53,7 +53,9 @@ python3 -m http.server 31111
 # → http://localhost:31111
 ```
 
-또는 VS Code Live Server 확장을 사용하세요.
+python3 scripts/release.py "커밋 메시지"     # 처리→테스트→커밋→배포
+python3 scripts/release.py --dry-run         # 검증만 (배포 안 함)
+스크립트가 하는 일: ①docs/art/characters/**/*.png → 스프라이트 후처리(배경 제거·512 정사각) ②게임 등록 누락 경고 ③sw.js/index.html 버전 자동 증가 ④테스트(프론트+백엔드) ⑤commit + push → 자동 배포. Pillow도 없으면 전용 venv에 자동 설치합니다. 매핑은 docs/art/manifest.json 한 곳에서 관리합니다.
 
 ## 기술 스택
 
