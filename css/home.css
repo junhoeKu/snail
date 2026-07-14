@@ -206,9 +206,9 @@ body[data-weather="fog"] .snail-habitat::before {
   -webkit-user-drag: none;
 }
 
-.snail-sprite.stage-baby .snail-img { width: 44px; }
-.snail-sprite.stage-junior .snail-img { width: 64px; }
-.snail-sprite.stage-adult .snail-img { width: 84px; }
+.snail-sprite.stage-baby .snail-img { width: 36px; }
+.snail-sprite.stage-junior .snail-img { width: 52px; }
+.snail-sprite.stage-adult .snail-img { width: 68px; }
 
 /* 머리 위 스탯 배지 (배고픔/행복) */
 .snail-badge {
