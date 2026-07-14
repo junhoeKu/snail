@@ -141,7 +141,9 @@
 
 ## 배포 후 정리 (v1.8.0 — 사용자 결정)
 
-- **장식 시스템 전면 제거**: 장식 UI(상점 목록·슬롯 배치)·패시브 효과(감쇠/먹이/쓰다듬기 배수)·해금·SVG 템플릿을 클라에서 제거하고, 서버는 효과 중립화. 구클라 호환을 위해 `decorations` payload 필드·`/decorations/slots`(무해 저장)·컬럼은 1릴리스 유예 후 제거(Contract). 장식 구매는 422 거절(코인 보호). 맵 게이트 상수는 `MAP_GENERATION_REQUIRED`로 분리
+- **장식 시스템 전면 제거**: 장식 UI(상점 목록·슬롯 배치)·패시브 효과(감쇠/먹이/쓰다듬기 배수)·해금·SVG 템플릿을 클라에서 제거하고, 서버는 효과 중립화. 장식 구매는 422 거절(코인 보호). 맵 게이트 상수는 `MAP_GENERATION_REQUIRED`로 분리(원격설정 구 키는 config_service가 자동 이관)
+- **장식 Contract 체크리스트** (구클라 호환 유예 — v1.8.0 기준 **최소 2릴리스 후** 일괄 제거, 코드 태그 `[deprecated-deco]`로 grep):
+  ① `users.decorations_owned`/`decoration_slots` 컬럼(models.py + drop 마이그레이션) ② `POST /v1/decorations/slots` 엔드포인트+`SlotsIn`(actions.py — 현재 수용 후 폐기 no-op) ③ player payload의 `decorations` 필드(service.py) ④ config 응답의 `decorations: {}`(game.py) ⑤ purchase의 `decoration` 422 분기(actions.py) ⑥ Item 카탈로그의 `item_type='decoration'` 고아 행 정리 ⑦ config_service의 `_RENAMED_CONFIG_KEYS` alias
 - **햇살정원 최종 정리**: bg_garden.jpg 삭제 + 서버 저장값 일괄 default 전환(alembic 0011)
 - **SW 업데이트 UX**: 새 버전 활성화 시 1회 자동 새로고침 (v1.7.0 배경이 옛 캐시 화면에서 안 보이던 문제의 근본 수정)
 

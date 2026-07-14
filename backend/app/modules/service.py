@@ -301,7 +301,7 @@ def player_payload(db: Session, user: models.User) -> dict:
         "mission_completions": user.mission_completions,
         "explore": user.explore_state or {"date": None, "searches": 0},
         "unlocked_maps": user.unlocked_maps or [],
-        # [deprecated] 장식 시스템 제거(13차 정리) — 구버전 클라 렌더 호환용 필드만 유지 (다음 릴리스에 제거)
+        # [deprecated-deco] 장식 시스템 제거(v1.8.0) — 구클라 렌더 호환용 필드, 최소 2릴리스 유예 후 제거
         "decorations": {"owned": user.decorations_owned or [], "slots": user.decoration_slots or []},
         "dropped_foods": user.dropped_foods or [],
         "last_seen": _aware(user.last_seen_at).isoformat(),

@@ -75,7 +75,8 @@ def migrate_local_v6(body: MigrationIn,
     user.snail_slots = _clamp_int(p.get("snail_slots", 1), 1, settings.max_snails, 1)
     user.sound_on = bool(p.get("sound_on", True))
     user.selected_food = p.get("selected_food") if p.get("selected_food") in rules.FOOD_DEFS else "lettuce"
-    user.background = p.get("background") if p.get("background") in ("default", "garden") else "default"
+    # 은퇴 배경(garden 등)은 default로 — 0011 정리 후 재유입 방지
+    user.background = p.get("background") if p.get("background") in rules.VALID_BACKGROUNDS else "default"
 
     streak = p.get("streak") or {}
     user.streak_count = _clamp_int(streak.get("count", 0), 0, 10000)

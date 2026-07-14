@@ -29,7 +29,7 @@ def get_config():
         "config": rules.CONFIG,
         "foods": rules.FOOD_DEFS,
         "variants": rules.VARIANTS,
-        "decorations": {},  # [deprecated] 장식 시스템 제거 — 응답 형태 호환용 (다음 릴리스에 제거)
+        "decorations": {},  # [deprecated-deco] 장식 시스템 제거(v1.8.0) — 응답 형태 호환용, 최소 2릴리스 유예 후 제거
         "maps": rules.EXPLORE_MAPS,
         "missions": rules.MISSION_DEFS,
         "maxSnails": settings.max_snails,
@@ -68,8 +68,8 @@ def update_settings(body: SettingsIn,
                     user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     if body.selected_food is not None and body.selected_food in rules.FOOD_DEFS:
         user.selected_food = body.selected_food
-    # garden은 은퇴 배경 — 저장돼 있던 값은 클라가 default로 표시한다 (Expand-Contract 유예)
-    if body.background is not None and body.background in ("default", "pond", "fern"):
+    # 유효 배경은 rules.VALID_BACKGROUNDS 단일 소스 (은퇴 배경은 거부 — 클라는 default 폴백)
+    if body.background is not None and body.background in rules.VALID_BACKGROUNDS:
         user.background = body.background
     if body.sound_on is not None:
         user.sound_on = body.sound_on

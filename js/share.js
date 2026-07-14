@@ -23,10 +23,9 @@ const ShareModule = (function () {
     canvas.width = W; canvas.height = H;
     const ctx = canvas.getContext('2d');
 
-    // 배경
+    // 배경 — 서식지와 같은 카탈로그 사용 (pond/fern 반영, 은퇴 배경은 default 폴백)
     const player = DB.Player.get();
-    const bgFile = player.background === 'garden' ? 'bg_garden.jpg' : 'bg_moss.jpg';
-    const bg = await _loadImage('assets/backgrounds/' + bgFile);
+    const bg = await _loadImage(GAME.backgroundOf(player.background).asset);
     if (bg) {
       // cover 방식으로 채우기
       const r = Math.max(W / bg.width, H / bg.height);

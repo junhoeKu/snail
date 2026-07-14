@@ -52,7 +52,7 @@ class User(Base):
     minigame_quiz: Mapped[dict] = mapped_column(JSON, default=dict)     # {date, count} 퀴즈 하루 제한
     dropped_foods: Mapped[list] = mapped_column(JSON, default=list)     # 서식지 드롭 먹이 [{id, food_id, rx, ry, dropped_at}]
     unlocked_maps: Mapped[list] = mapped_column(JSON, default=list)
-    # [deprecated] 장식 시스템 제거(13차 정리) — 구클라 호환 유예 후 컬럼 제거 예정
+    # [deprecated-deco] 장식 시스템 제거(v1.8.0) — 최소 2릴리스 유예 후 컬럼 제거 (체크리스트: 13차 계획서 §배포 후 정리)
     decorations_owned: Mapped[list] = mapped_column(JSON, default=list)
     decoration_slots: Mapped[list] = mapped_column(JSON, default=list)
 

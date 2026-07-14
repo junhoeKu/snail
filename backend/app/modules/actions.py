@@ -371,14 +371,12 @@ class SlotsIn(BaseModel):
 @router.post("/decorations/slots")
 def set_decoration_slots(body: SlotsIn,
                          user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """[deprecated] 장식 시스템 제거(13차 정리) — 구버전 클라 호환용 무해 저장만 유지.
+    """[deprecated-deco] 장식 시스템 제거(v1.8.0) — 구버전 클라 호환용 수용 후 폐기(no-op).
 
-    효과·검증 없음 (패시브는 이미 중립화). 다음 릴리스에서 엔드포인트·컬럼과 함께 제거 예정.
-    """
-    slots = list(body.slots or [])[:8]
-    user.decoration_slots = slots
-    db.commit()
-    return {"ok": True, "slots": slots}
+    저장하지 않는다: 검증이 사라진 채 임의 JSON을 영속·에코하면 응답 비대화와
+    구클라 렌더 크래시(슬롯 5 초과 index) 위험이 있다. 기존 저장값은 그대로 둔다.
+    v1.8.0 기준 최소 2릴리스 유예 후 엔드포인트·컬럼과 함께 제거."""
+    return {"ok": True, "slots": list(user.decoration_slots or [])}
 
 
 # ── 탐험 ────────────────────────────────────────────────

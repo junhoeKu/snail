@@ -372,19 +372,18 @@ const HabitatModule = (function () {
     const total = w.wander + w.nap + w.rest + w.socialize + w.watch;
     let r = _rng() * total;
     if ((r -= w.wander) < 0) return _startWander(ent);
-    if ((r -= w.nap) < 0) return _startAnchorNap(ent, rain || night);
+    if ((r -= w.nap) < 0) return _startAnchorNap(ent);
     if ((r -= w.rest) < 0) return _startRest(ent);
     if ((r -= w.socialize) < 0) return _startSocialize(ent, peers);
     return _startWatch(ent, eatingPeer);
   }
 
   /** 앵커로 이동 후 nap/rest 시작 — 이동 자체가 디오라마. WANDERING pending으로 처리 */
-  function _startAnchorNap(ent, shelter) {
+  function _startAnchorNap(ent) {
     const a = _nearestAnchor(ent);
     if (!a) { _startNapHere(ent); return; }
     ent.target = { x: a.x, y: a.y };
     ent.pending = 'nap';
-    ent.pendingShelter = shelter; // 비/밤 — 이모트 연출용
     _setState(ent, STATE.WANDERING);
   }
 
@@ -395,13 +394,13 @@ const HabitatModule = (function () {
     _setState(ent, STATE.WANDERING);
   }
 
-  function _beginNap(ent, shelter) {
+  function _beginNap(ent) {
     const rain = (GAME.WEATHER[GAME.weatherFor(DB.today(), new Date().getHours())] || {}).id === 'rain';
     ent.napUntil = performance.now() +
       (MOTION.NAP_MIN_MS + _rng() * (MOTION.NAP_MAX_MS - MOTION.NAP_MIN_MS)) * (ent.mods.napLenFactor || 1);
     ent.emoteNext = performance.now() + BEHAVIOR.EMOTE_INTERVAL_MS;
     _setState(ent, STATE.NAPPING);
-    _emote(ent, shelter && rain ? '☔' : '💤');
+    _emote(ent, rain ? '☔' : '💤');
   }
 
   function _beginRest(ent) {
@@ -587,7 +586,7 @@ const HabitatModule = (function () {
         if (_moveToward(ent, ent.mods.wanderSpeed, dt)) {
           const pend = ent.pending;
           ent.pending = null;
-          if (pend === 'nap') _beginNap(ent, ent.pendingShelter);
+          if (pend === 'nap') _beginNap(ent);
           else if (pend === 'rest') _beginRest(ent);
           else if (pend === 'socialize') _beginGreet(ent);
           else if (pend === 'watch') _beginWatch(ent);
@@ -922,7 +921,7 @@ const HabitatModule = (function () {
           ent.state === STATE.DRAGGING) return;
       const a = _nearestAnchor(ent);
       if (a) { ent.x = a.x; ent.y = a.y; _renderPosition(ent); }
-      if (item.state === 'napping') _beginNap(ent, false);
+      if (item.state === 'napping') _beginNap(ent);
       else _beginRest(ent);
     });
   }

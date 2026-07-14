@@ -132,6 +132,9 @@ def dex_completed_tiers(discovered) -> list[str]:
 
 PERSONALITIES = {"foodie": 0.40, "explorer": 0.35, "sleepy": 0.25}
 
+# 유효 배경 (클라 GAME.BACKGROUNDS와 대칭 — 은퇴 배경은 default 폴백)
+VALID_BACKGROUNDS = ("default", "pond", "fern")
+
 EXPLORE_MAPS = {
     "moss": {"variant_boost": "lime", "locked": False},
     "field": {"variant_boost": "red", "locked": False},

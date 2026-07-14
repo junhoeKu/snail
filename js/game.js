@@ -180,6 +180,18 @@ const GAME = (function () {
     pond: { id: 'pond', label: '이슬 연못', emoji: '💧', variantBoost: 'gray', rareMult: 2, locked: true }
   };
 
+  /** 배경 카탈로그 — 표시(applyBackground)/공유 카드가 공유하는 단일 소스 (은퇴 배경은 default 폴백) */
+  const BACKGROUNDS = {
+    default: { id: 'default', label: '이끼 숲', asset: 'assets/backgrounds/bg_moss.jpg' },
+    pond: { id: 'pond', label: '이슬 연못', asset: 'assets/backgrounds/bg_pond.jpg' },
+    fern: { id: 'fern', label: '고사리 계곡', asset: 'assets/backgrounds/bg_fern.jpg' }
+  };
+
+  /** 저장값 → 유효 배경 (무효/은퇴 배경은 default) */
+  function backgroundOf(id) {
+    return BACKGROUNDS[id] || BACKGROUNDS.default;
+  }
+
   const STAGES = {
     egg: { id: 'egg', label: '알', emoji: '🥚', minLevel: 0 },
     baby: { id: 'baby', label: '아기', emoji: '🐌', minLevel: 1 },
@@ -335,7 +347,7 @@ const GAME = (function () {
    * 부재 중 생활 시뮬레이션 (순수 함수, 11차 §5) — "살아 있었다는 증거".
    * 부재 30분↑일 때 생활 문장 1~3개 + 복귀 장면(scene)을 생성한다.
    * 문장과 화면이 일치하도록 scene을 함께 반환한다. rng 주입으로 결정적.
-   * @returns {{lines: string[], scene: {id, state, anchor}[]}}
+   * @returns {{lines: string[], scene: {id, state}[]}}
    */
   function simulateAwayLife(snails, player, awayMinutes, dateKey, rng, nightOverride) {
     const rand = rng || Math.random;
@@ -352,27 +364,27 @@ const GAME = (function () {
     const scene = [];
     const lines = [];
     hatched.forEach(function (s) {
-      let state, anchor, line;
+      let state, line;
       if (night) {
-        state = 'napping'; anchor = 'corner';
+        state = 'napping';
         line = '🌙 ' + s.name + '은(는) ' + shelterName + '에서 곤히 잤어요';
       } else if (rain) {
-        state = 'resting'; anchor = 'corner';
+        state = 'resting';
         line = '☔ 비가 와서 ' + s.name + '은(는) ' + shelterName + '으로 숨었어요';
       } else if (s.personality === 'sleepy') {
-        state = 'napping'; anchor = 'corner';
+        state = 'napping';
         line = '💤 ' + s.name + '은(는) 그늘에서 오래 낮잠을 잤어요';
       } else if (s.personality === 'foodie') {
-        state = 'resting'; anchor = 'corner';
+        state = 'resting';
         line = '🍽️ ' + s.name + '은(는) 먹이를 기다리며 서성였어요';
       } else if (s.personality === 'explorer') {
-        state = 'resting'; anchor = 'corner';
+        state = 'resting';
         line = '🐌 ' + s.name + '은(는) 서식지 구석구석을 돌아다녔어요';
       } else {
-        state = 'resting'; anchor = 'corner';
+        state = 'resting';
         line = '🎵 ' + s.name + '은(는) 느긋하게 쉬었어요';
       }
-      scene.push({ id: s.id, state: state, anchor: anchor });
+      scene.push({ id: s.id, state: state });
       lines.push(line);
     });
 
@@ -899,7 +911,7 @@ const GAME = (function () {
       m.bonus_given = true;
       coins += CONFIG.MISSION_BONUS_COINS;
       food += CONFIG.MISSION_BONUS_FOOD;
-      p.mission_completions = (p.mission_completions || 0) + 1; // 장식 해금 조건 누적
+      p.mission_completions = (p.mission_completions || 0) + 1; // 완주 누적 통계 (서버 동기화 유지)
       events.push('mission_all_done');
     }
 
@@ -1084,6 +1096,8 @@ const GAME = (function () {
     VARIANTS: VARIANTS,
     RARITIES: RARITIES,
     spritePath: spritePath,
+    BACKGROUNDS: BACKGROUNDS,
+    backgroundOf: backgroundOf,
     MISSION_DEFS: MISSION_DEFS,
     FOOD_DEFS: FOOD_DEFS,
     keeperLevel: keeperLevel,
