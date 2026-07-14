@@ -60,9 +60,32 @@
 }
 
 body[data-weather="rain"] .snail-habitat::before {
-  opacity: 0.45;
-  background: repeating-linear-gradient(75deg, transparent 0 10px, rgba(235, 242, 255, 0.55) 10px 11px);
-  animation: rain-fall 0.5s linear infinite;
+  opacity: 0.5;
+  /* 굵기 다른 빗줄기 2겹 — 얕은 시차감 */
+  background:
+    repeating-linear-gradient(75deg, transparent 0 10px, rgba(235, 242, 255, 0.55) 10px 11px),
+    repeating-linear-gradient(75deg, transparent 0 23px, rgba(235, 242, 255, 0.3) 23px 25px);
+  animation: rain-fall 0.45s linear infinite;
+}
+
+/* 비 갠 직후 무지개 (data-rainbow — 슬롯 전환 첫 1시간, 맑음일 때만) */
+body[data-rainbow="1"] .snail-habitat::before {
+  opacity: 0.55;
+  background: radial-gradient(ellipse 130% 95% at 50% 128%,
+    transparent 55%,
+    rgba(235, 120, 110, 0.30) 56.5%,
+    rgba(240, 185, 95, 0.30) 58.5%,
+    rgba(240, 230, 140, 0.28) 60.5%,
+    rgba(150, 205, 145, 0.28) 62.5%,
+    rgba(130, 170, 230, 0.28) 64.5%,
+    rgba(170, 140, 215, 0.26) 66.5%,
+    transparent 68%);
+  animation: rainbow-in 2.5s ease;
+}
+
+@keyframes rainbow-in {
+  from { opacity: 0; }
+  to   { opacity: 0.55; }
 }
 
 body[data-weather="fog"] .snail-habitat::before {

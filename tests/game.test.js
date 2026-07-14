@@ -115,6 +115,17 @@ const night = GAME.simulateAwayLife(lifeSnails, lifePlayer, 200, '2026-07-13', (
 assert(night.scene.every(function (s) { return s.state === 'napping'; }), '밤엔 전부 취침 장면');
 assert(GAME.simulateAwayLife(lifeSnails, lifePlayer, 10, '2026-07-13', seedRng).lines.length === 0, '부재 30분 미만 생활 문장 없음');
 
+// ── [11.5] 날씨 낮/밤 슬롯 (13차 Phase 4) ────────────────
+console.log('[11.5] 날씨 슬롯');
+const wDay = GAME.weatherFor('2026-07-14', 12);
+assert(wDay === GAME.weatherFor('2026-07-14', 6) && wDay === GAME.weatherFor('2026-07-14', 17),
+  '낮 슬롯(06~18) 안에서 날씨 동일');
+const wNight = GAME.weatherFor('2026-07-14', 20);
+assert(wNight === GAME.weatherFor('2026-07-15', 3),
+  '밤 슬롯이 자정 넘어 이어짐 (14일 20시 = 15일 03시)');
+assert(['sunny', 'rain', 'fog'].indexOf(GAME.weatherFor('2026-07-14')) !== -1,
+  'hour 생략 시 하루 단위 판정 (레거시 호환)');
+
 // ── [12] 드롭 먹이 TTL / 모습 바꾸기 (13차) ──────────────
 console.log('[12] 드롭 TTL & 모습 바꾸기');
 const nowMs = Date.parse('2026-07-14T12:00:00Z');

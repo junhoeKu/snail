@@ -328,10 +328,22 @@ const GAME = (function () {
   }
 
   /** 날짜 키 → 날씨 id (결정적 해시: 맑음 60% / 비 25% / 안개 15%) */
-  function weatherFor(dateKey) {
+  /**
+   * 결정적 날씨 — 하루 2슬롯: 낮(06~18) / 밤(18~06). 경계는 천사/악마 부화 시간창과 동일.
+   * 새벽(00~06)은 전날 밤 슬롯을 이어간다 (자정에 밤 날씨가 끊기지 않게).
+   * @param {string} dateKey YYYY-MM-DD
+   * @param {number} [hour] 0~23. 생략 시 하루 단위 판정(레거시/테스트 호환)
+   */
+  function weatherFor(dateKey, hour) {
+    let key = dateKey;
+    if (typeof hour === 'number') {
+      const night = hour >= 18 || hour < 6;
+      if (hour < 6) key = _prevDayKey(dateKey);
+      key += night ? '#night' : '#day';
+    }
     let hash = 0;
-    for (let i = 0; i < dateKey.length; i++) {
-      hash = ((hash << 5) - hash + dateKey.charCodeAt(i)) | 0;
+    for (let i = 0; i < key.length; i++) {
+      hash = ((hash << 5) - hash + key.charCodeAt(i)) | 0;
     }
     const roll = Math.abs(hash) % 100;
     if (roll < 60) return 'sunny';

@@ -240,7 +240,7 @@ const HabitatModule = (function () {
   function _computeMods(ent) {
     const rec = DB.Snails.getById(ent.id);
     if (!rec) return;
-    const weather = GAME.WEATHER[GAME.weatherFor(DB.today())];
+    const weather = GAME.WEATHER[GAME.weatherFor(DB.today(), new Date().getHours())];
     const condition = GAME.conditionOf(rec);
     const personality = GAME.PERSONALITIES[rec.personality] ||
       { seekFactor: 1, speedFactor: 1, idleFactor: 1, napFactor: 1, napLenFactor: 1, eatFactor: 1 };
@@ -366,7 +366,7 @@ const HabitatModule = (function () {
     const rec = DB.Snails.getById(ent.id);
     if (!rec) { _startWander(ent); return; }
     const night = _isNight();
-    const weather = GAME.WEATHER[GAME.weatherFor(DB.today())] || { id: 'sunny' };
+    const weather = GAME.WEATHER[GAME.weatherFor(DB.today(), new Date().getHours())] || { id: 'sunny' };
     const rain = weather.id === 'rain';
     const per = rec.personality;
     const now = performance.now();
@@ -411,7 +411,7 @@ const HabitatModule = (function () {
   }
 
   function _beginNap(ent, shelter) {
-    const rain = (GAME.WEATHER[GAME.weatherFor(DB.today())] || {}).id === 'rain';
+    const rain = (GAME.WEATHER[GAME.weatherFor(DB.today(), new Date().getHours())] || {}).id === 'rain';
     ent.napUntil = performance.now() +
       (MOTION.NAP_MIN_MS + _rng() * (MOTION.NAP_MAX_MS - MOTION.NAP_MIN_MS)) * (ent.mods.napLenFactor || 1);
     ent.emoteNext = performance.now() + BEHAVIOR.EMOTE_INTERVAL_MS;
