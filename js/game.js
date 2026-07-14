@@ -61,7 +61,8 @@ const GAME = (function () {
     GRADUATE_COINS: 100,
     GENERATION_BOOST_CAP: 5, // 변이 확률 보정이 커지는 최대 세대 수 (6세대+에서 고정)
 
-    // 장식 해금 조건
+    // 장식
+    DECO_SLOT_COUNT: 5,        // 서식지 배치 슬롯 수 (14차 Phase 4에서 3→5 확대)
     DECO_MISSIONS_REQUIRED: 7, // 들꽃: 미션 완주 누적
     DECO_GENERATION_REQUIRED: 2, // 이끼 바위: 세대
 
@@ -565,7 +566,11 @@ const GAME = (function () {
   }
 
   function _ensureDecorations(player) {
-    if (!player.decorations) player.decorations = { owned: [], slots: [null, null, null] };
+    if (!player.decorations) player.decorations = { owned: [], slots: [] };
+    // 구버전(3슬롯) 레코드를 현재 슬롯 수로 패딩
+    while (player.decorations.slots.length < CONFIG.DECO_SLOT_COUNT) {
+      player.decorations.slots.push(null);
+    }
   }
 
   /** 해금형 장식의 조건 충족 여부 */
@@ -633,7 +638,7 @@ const GAME = (function () {
     const events = [];
     _ensureDecorations(p);
 
-    if (!DECORATIONS[id] || slotIndex < 0 || slotIndex > 2 ||
+    if (!DECORATIONS[id] || slotIndex < 0 || slotIndex >= CONFIG.DECO_SLOT_COUNT ||
         p.decorations.owned.indexOf(id) === -1) {
       events.push('invalid');
       return { player: p, events: events };

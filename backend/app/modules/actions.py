@@ -395,7 +395,8 @@ class SlotsIn(BaseModel):
 @router.post("/decorations/slots")
 def set_decoration_slots(body: SlotsIn,
                          user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    slots = (body.slots + [None, None, None])[:3]
+    count = rules.CONFIG["DECO_SLOT_COUNT"]
+    slots = (body.slots + [None] * count)[:count]
     owned = user.decorations_owned or []
     for deco_id in slots:
         if deco_id is not None and deco_id not in owned:

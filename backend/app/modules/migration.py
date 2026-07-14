@@ -93,7 +93,8 @@ def migrate_local_v6(body: MigrationIn,
     deco = p.get("decorations") or {}
     user.decorations_owned = [d for d in (deco.get("owned") or []) if d in rules.DECORATIONS]
     slots = [(s if s in user.decorations_owned else None) for s in (deco.get("slots") or [])]
-    user.decoration_slots = (slots + [None, None, None])[:3]
+    count = rules.CONFIG["DECO_SLOT_COUNT"]
+    user.decoration_slots = (slots + [None] * count)[:count]
 
     # ── 먹이 인벤토리 ──
     foods = p.get("foods") or {}

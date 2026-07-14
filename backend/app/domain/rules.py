@@ -75,7 +75,8 @@ CONFIG = {
     },
     "KEEPER_LEVEL_COIN_MULT": 30,
     "KEEPER_STAMINA_LEVELS": [5, 8],
-    # 장식 해금
+    # 장식
+    "DECO_SLOT_COUNT": 5,       # 서식지 배치 슬롯 수 (14차 Phase 4에서 3→5)
     "DECO_MISSIONS_REQUIRED": 7,
     "DECO_GENERATION_REQUIRED": 2,
 }

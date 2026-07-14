@@ -204,6 +204,11 @@ function clickSnail(w, entId) {
   const mongAfter = JSON.parse(w2effects.localStorage.getItem('sn_snails')).find(s => s.name === '몽이');
   assert(mongAfter.hunger === Math.min(100, mongBefore.hunger + Math.round(35 * 0.9)),
     '이끼 바위: 5시간 배고픔 +32 (기본 +35, 감쇠 7×5): ' + (mongAfter.hunger - mongBefore.hunger));
+  // 장식 슬롯 3→5: 구버전(3슬롯) 저장 데이터가 5슬롯으로 치유되는지 (Phase 4)
+  const p9After = JSON.parse(w2effects.localStorage.getItem('sn_player'));
+  const heal9 = w2effects.GAME.placeDecoration(p9After, 'pebble', 4); // 새 5번째 슬롯
+  assert(heal9.events.indexOf('deco_placed') !== -1 && heal9.player.decorations.slots.length === 5,
+    '장식 슬롯 5 확장 + 구데이터 패딩: ' + JSON.stringify(heal9.player.decorations.slots));
   const modal9 = w2effects.document.querySelector('.modal-overlay');
   if (modal9) modal9.querySelector('button').click();
 

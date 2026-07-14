@@ -73,11 +73,13 @@ const HabitatModule = (function () {
     { x: '84%', y: '84%' }
   ];
 
-  // 슬롯 위치 (장식 — 서식지 바닥, % 좌표)
+  // 슬롯 위치 (장식 — 서식지 바닥, % 좌표) — 수는 GAME.CONFIG.DECO_SLOT_COUNT와 일치
   const DECO_SLOTS = [
-    { x: '16%', y: '88%' },
-    { x: '50%', y: '93%' },
-    { x: '84%', y: '88%' }
+    { x: '12%', y: '86%' },
+    { x: '31%', y: '90%' },
+    { x: '50%', y: '87%' },
+    { x: '69%', y: '90%' },
+    { x: '88%', y: '86%' }
   ];
 
   // 개체: { id, x, y, target, facing, state, idleUntil, eatUntil, napUntil,

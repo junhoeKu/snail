@@ -78,7 +78,8 @@ const DB = (function () {
       generation: 1,             // 현재 세대 (여행 보내기마다 +1)
       mission_completions: 0,    // 미션 완주 누적 (장식 해금 조건)
       sound_on: true,
-      decorations: { owned: [], slots: [null, null, null] },
+      decorations: { owned: [], slots: [null, null, null, null, null] }, // GAME.CONFIG.DECO_SLOT_COUNT
+
       snail_slots: 1,            // 보금자리 수 (최대 3 — 상점에서 확장)
       explore: { date: null, searches: 0 }, // 탐험 스태미나 (하루 리셋)
       unlocked_maps: [],

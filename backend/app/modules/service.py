@@ -302,7 +302,12 @@ def player_payload(db: Session, user: models.User) -> dict:
         "mission_completions": user.mission_completions,
         "explore": user.explore_state or {"date": None, "searches": 0},
         "unlocked_maps": user.unlocked_maps or [],
-        "decorations": {"owned": user.decorations_owned or [], "slots": user.decoration_slots or [None, None, None]},
+        "decorations": {
+            "owned": user.decorations_owned or [],
+            # 구버전(3슬롯) 레코드를 현재 슬롯 수로 패딩해 응답
+            "slots": (list(user.decoration_slots or []) + [None] * rules.CONFIG["DECO_SLOT_COUNT"])[
+                : rules.CONFIG["DECO_SLOT_COUNT"]],
+        },
         "dropped_foods": user.dropped_foods or [],
         "last_seen": _aware(user.last_seen_at).isoformat(),
         "server_mode": True,
