@@ -373,6 +373,14 @@ const App = (function () {
     navigator.serviceWorker.register('sw.js').catch(function () {
       /* file:// 등 미지원 환경 무시 */
     });
+    // 새 버전 SW가 활성화되면(controllerchange) 1회 새로고침 —
+    // 옛 캐시로 그려진 화면(css/js)과 새 자산이 섞여 "업데이트가 적용 안 됨"으로 보이는 문제 방지
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (reloaded) return;
+      reloaded = true;
+      location.reload();
+    });
   }
 
   document.addEventListener('DOMContentLoaded', function () {
