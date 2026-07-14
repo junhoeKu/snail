@@ -239,6 +239,7 @@
   z-index: 100;
   width: max-content;
   max-width: 90vw;
+  pointer-events: none; /* 토스트는 표시 전용 — 아래 행동 버튼 탭을 막지 않는다 */
 }
 
 .toast {
