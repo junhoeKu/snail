@@ -23,6 +23,7 @@ const HabitatModule = (function () {
     NAP_MAX_MS: 120000,
     EDGE_PADDING: 8,      // px (스프라이트 절반 크기에 더하는 여백)
     PET_RADIUS_MIN: 34,   // px (쓰다듬기 터치 판정 최소 반경)
+    DRAG_THRESHOLD_PX: 8, // 이 거리 미만 = 탭(팝업), 이상 = 드래그(옮기기)
     FLIP_RIGHT: -1,       // 스프라이트가 왼쪽을 보므로 오른쪽 이동 시 반전
     FLIP_LEFT: 1
   };
@@ -35,7 +36,8 @@ const HabitatModule = (function () {
     NAPPING: 'napping',
     RESTING: 'resting',        // 앵커 휴식
     SOCIALIZING: 'socializing', // 동료에게 다가가 인사
-    WATCHING: 'watching'        // 먹는 동료 구경
+    WATCHING: 'watching',       // 먹는 동료 구경
+    DRAGGING: 'dragging'        // 사용자가 집어서 옮기는 중 (루프 제외)
   };
 
   // 행동 선택기(Behavior Director) 수치 — 전부 연출 계층 (GAME.CONFIG 아님, 11차 §2)
@@ -538,6 +540,8 @@ const HabitatModule = (function () {
       case STATE.EATING:
         if (nowTs >= ent.eatUntil) _finishEating(ent);
         break;
+      case STATE.DRAGGING:
+        break; // 위치는 포인터가 결정 — 루프는 손대지 않는다
     }
   }
 
@@ -550,7 +554,7 @@ const HabitatModule = (function () {
       let best = null;
       let bestDist = Infinity;
       _ents.forEach(function (ent) {
-        if (!ent.hungry || ent.state === STATE.EATING || ent.food) return;
+        if (!ent.hungry || ent.state === STATE.EATING || ent.state === STATE.DRAGGING || ent.food) return;
         const d = Math.hypot(food.x - ent.x, food.y - ent.y);
         if (d < bestDist) { bestDist = d; best = ent; }
       });
@@ -853,6 +857,70 @@ const HabitatModule = (function () {
     });
   }
 
+  // ── 포인터 제스처: 탭(팝업/먹이 드롭) vs 드래그(달팽이 옮기기) ──
+
+  let _drag = null; // { ent, pointerId, startX, startY, moved }
+
+  function _pointerXY(e) {
+    const rect = _habitat().getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  }
+
+  function _onPointerDown(e) {
+    const p = _pointerXY(e);
+    let nearest = null;
+    let nearestDist = Infinity;
+    _ents.forEach(function (ent) {
+      const d = Math.hypot(p.x - ent.x, p.y - ent.y);
+      if (d < nearestDist) { nearestDist = d; nearest = ent; }
+    });
+    if (nearest && nearestDist <= Math.max(_edge(nearest), MOTION.PET_RADIUS_MIN)) {
+      // 탭인지 드래그인지는 이동 거리(DRAG_THRESHOLD_PX)로 pointerup에서 판정
+      _drag = { ent: nearest, pointerId: e.pointerId, startX: p.x, startY: p.y, moved: false };
+      if (_habitat().setPointerCapture && e.pointerId !== undefined) {
+        try { _habitat().setPointerCapture(e.pointerId); } catch (err) { /* 미지원 무시 */ }
+      }
+      return;
+    }
+    dropFood(p.x, p.y);
+  }
+
+  function _onPointerMove(e) {
+    if (!_drag || e.pointerId !== _drag.pointerId) return;
+    const ent = _drag.ent;
+    const p = _pointerXY(e);
+
+    if (!_drag.moved) {
+      if (ent.state === STATE.EATING) return; // 식사는 방해하지 않는다 — 탭만 허용
+      if (Math.hypot(p.x - _drag.startX, p.y - _drag.startY) < MOTION.DRAG_THRESHOLD_PX) return;
+      _drag.moved = true; // 드래그 시작 — 집힌 개체는 루프에서 제외
+      if (ent.food) { ent.food.claimedBy = null; ent.food = null; } // 점유 먹이 반납 (재배정)
+      _setState(ent, STATE.DRAGGING);
+      _emote(ent, '💦'); // 놀람
+    }
+
+    const c = _clampPoint(p.x, p.y, _edge(ent));
+    ent.x = c.x;
+    ent.y = c.y;
+    _renderPosition(ent);
+  }
+
+  function _onPointerUp(e) {
+    if (!_drag || e.pointerId !== _drag.pointerId) return;
+    const drag = _drag;
+    _drag = null;
+    if (_habitat().releasePointerCapture && drag.pointerId !== undefined) {
+      try { _habitat().releasePointerCapture(drag.pointerId); } catch (err) { /* 무시 */ }
+    }
+
+    if (!drag.moved) { // 탭 — 기존 동작 (깨우기 + 개체 팝업)
+      if (drag.ent.state === STATE.NAPPING) _setState(drag.ent, STATE.IDLE);
+      HomeModule.openSnailPopup(drag.ent.id);
+      return;
+    }
+    _setState(drag.ent, STATE.IDLE); // IDLE 진입이 clamp + 위치 저장을 처리한다
+  }
+
   function init() {
     window.addEventListener('resize', _onResize);
     document.addEventListener('visibilitychange', function () {
@@ -860,25 +928,11 @@ const HabitatModule = (function () {
       else resume();
     });
 
-    // 서식지 터치: 달팽이 근처면 쓰다듬기, 빈 곳이면 먹이 드롭
-    _habitat().addEventListener('pointerdown', function (e) {
-      const rect = _habitat().getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-
-      let nearest = null;
-      let nearestDist = Infinity;
-      _ents.forEach(function (ent) {
-        const d = Math.hypot(x - ent.x, y - ent.y);
-        if (d < nearestDist) { nearestDist = d; nearest = ent; }
-      });
-      if (nearest && nearestDist <= Math.max(_edge(nearest), MOTION.PET_RADIUS_MIN)) {
-        if (nearest.state === STATE.NAPPING) _setState(nearest, STATE.IDLE); // 클릭하면 깬다
-        HomeModule.openSnailPopup(nearest.id);
-        return;
-      }
-      dropFood(x, y);
-    });
+    // 서식지 터치: 달팽이 근처면 탭=팝업/드래그=옮기기, 빈 곳이면 먹이 드롭
+    _habitat().addEventListener('pointerdown', _onPointerDown);
+    _habitat().addEventListener('pointermove', _onPointerMove);
+    _habitat().addEventListener('pointerup', _onPointerUp);
+    _habitat().addEventListener('pointercancel', _onPointerUp);
 
     renderDecorations();
     sync();

@@ -175,6 +175,19 @@ body[data-weather="fog"] .snail-habitat::before {
   animation: snail-nap 3.2s ease-in-out infinite;
 }
 
+/* 드래그(집어 옮기기) — 들어올린 느낌: 모션 정지 + 그림자 깊게 */
+.snail-entity.state-dragging {
+  z-index: 5;
+}
+
+.snail-entity.state-dragging .snail-motion {
+  animation: none;
+}
+
+.snail-entity.state-dragging .snail-img {
+  filter: drop-shadow(0 10px 8px rgba(20, 18, 10, 0.35));
+}
+
 @keyframes snail-nap {
   0%, 100% { transform: scaleY(1); }
   50%      { transform: scaleY(0.94) translateY(2px); }

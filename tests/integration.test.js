@@ -48,9 +48,11 @@ const player = (w) => JSON.parse(w.localStorage.getItem('sn_player'));
 const snails = (w) => JSON.parse(w.localStorage.getItem('sn_snails'));
 
 function clickSnail(w, entId) {
+  // 탭 = pointerdown + (이동 없이) pointerup — 드래그 판정(13차 Phase 3)과 구분된다
   const ent = w.HabitatModule.debugState().ents.find(e => !entId || e.id === entId);
-  w.document.getElementById('snail-habitat').dispatchEvent(
-    new w.MouseEvent('pointerdown', { clientX: ent.x, clientY: ent.y, bubbles: true }));
+  const habitat = w.document.getElementById('snail-habitat');
+  habitat.dispatchEvent(new w.MouseEvent('pointerdown', { clientX: ent.x, clientY: ent.y, bubbles: true }));
+  habitat.dispatchEvent(new w.MouseEvent('pointerup', { clientX: ent.x, clientY: ent.y, bubbles: true }));
   return ent;
 }
 
@@ -278,8 +280,31 @@ function clickSnail(w, entId) {
   assert(snails(w).find(s => s.id === mong13.id).stage === 'adult', '판정 단계는 성체 유지');
   doc.querySelector('.popup-close').click();
 
-  // ── [14] 콘솔 에러 ──────────────────────────────────────
-  console.log('[14] 콘솔 에러');
+  // ── [14] 드래그 이동 (13차 Phase 3) ─────────────────────
+  console.log('[14] 드래그 이동');
+  const habitat14 = doc.getElementById('snail-habitat');
+  // jsdom은 레이아웃이 없어 크기를 주입해 좌표 계산을 살린다
+  Object.defineProperty(habitat14, 'clientWidth', { value: 390, configurable: true });
+  Object.defineProperty(habitat14, 'clientHeight', { value: 500, configurable: true });
+  const ent14 = w.HabitatModule.debugState().ents[0];
+  habitat14.dispatchEvent(new w.MouseEvent('pointerdown', { clientX: ent14.x, clientY: ent14.y, bubbles: true }));
+  habitat14.dispatchEvent(new w.MouseEvent('pointermove', { clientX: 200, clientY: 300, bubbles: true }));
+  habitat14.dispatchEvent(new w.MouseEvent('pointerup', { clientX: 200, clientY: 300, bubbles: true }));
+  assert(doc.querySelector('.snail-popup') === null, '드래그 후 팝업이 열리지 않음');
+  const ent14b = w.HabitatModule.debugState().ents[0];
+  assert(Math.abs(ent14b.x - 200) < 1 && Math.abs(ent14b.y - 300) < 1,
+    '드롭 위치로 이동: ' + ent14b.x + ',' + ent14b.y);
+  assert(ent14b.state === 'idle', '드롭 후 일상 복귀(idle): ' + ent14b.state);
+  const mongPos = snails(w).find(s => s.id === ent14b.id).pos;
+  assert(Math.abs(mongPos.rx - 200 / 390) < 0.01 && Math.abs(mongPos.ry - 300 / 500) < 0.01,
+    '드롭 위치 저장(rx/ry): ' + JSON.stringify(mongPos));
+  // 이동 없는 탭은 여전히 팝업
+  clickSnail(w, ent14b.id);
+  assert(doc.querySelector('.snail-popup') !== null, '탭은 여전히 팝업');
+  doc.querySelector('.popup-close').click();
+
+  // ── [15] 콘솔 에러 ──────────────────────────────────────
+  console.log('[15] 콘솔 에러');
   assert(consoleErrors.length === 0, '콘솔 에러 0개' + (consoleErrors.length ? ' — ' + consoleErrors.join(' | ') : ''));
 
   console.log(failures === 0 ? '\n✅ 통합 테스트 전체 통과' : '\n❌ 실패 ' + failures + '건');
