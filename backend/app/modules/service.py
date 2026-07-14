@@ -307,6 +307,8 @@ def player_payload(db: Session, user: models.User) -> dict:
         "last_seen": _aware(user.last_seen_at).isoformat(),
         "server_mode": True,
         "migration_done": user.migration_done,
+        # 계정 연결 상태 (14차 A.2 — 설정 계정 패널 표시용)
+        "account": {"type": user.auth_type, "provider": user.provider, "nickname": user.nickname},
     }
 
 
