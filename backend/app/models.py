@@ -71,6 +71,7 @@ class Snail(Base):
     user_id: Mapped[str] = mapped_column(String(32), ForeignKey("users.id"), index=True)
     name: Mapped[str] = mapped_column(String(24), default="")
     stage: Mapped[str] = mapped_column(String(12), default="egg")  # egg|baby|junior|adult
+    skin_stage: Mapped[str | None] = mapped_column(String(12), nullable=True)  # 모습 바꾸기(연출 전용) — 판정은 stage
     level: Mapped[int] = mapped_column(Integer, default=0)
     exp: Mapped[int] = mapped_column(Integer, default=0)
     hunger: Mapped[float] = mapped_column(Float, default=0)

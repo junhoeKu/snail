@@ -1,9 +1,9 @@
-"""13차(피드백 개선) — 서식지 드롭 먹이 지속 (Phase 2)."""
+"""13차(피드백 개선) — 서식지 드롭 먹이 지속 (Phase 2) + 모습 바꾸기 (Phase 3)."""
 from datetime import timedelta
 
 from app.domain import rules
 from app.modules import service
-from app.tests.test_api import client, guest, hatch_first, rid  # noqa: F401
+from app.tests.test_api import client, guest, hatch_first, rid, set_snail  # noqa: F401
 
 
 def _drop(guest, drop_id, food_id="lettuce", rx=0.3, ry=0.7):
@@ -90,6 +90,37 @@ def test_prune_dropped_foods_ttl():
     broken = {"id": "c", "food_id": "lettuce", "dropped_at": "not-a-date"}
     kept = rules.prune_dropped_foods([fresh, stale, broken], now)
     assert [d["id"] for d in kept] == ["a"]
+
+
+# ── 모습 바꾸기 (skin_stage — 연출 전용, 도달한 단계만) ──
+
+def test_skin_gate_and_change(guest):
+    snail_id, _ = hatch_first(guest)
+    # 아기(Lv1)는 junior 모습을 고를 수 없다
+    r = client.patch(f"/v1/snails/{snail_id}/skin", json={"stage": "junior"},
+                     headers=guest["headers"])
+    assert r.status_code == 409
+    assert r.json()["error"]["code"] == "skin_locked"
+
+    # 성체가 되면 아기 모습으로 회귀 가능 — 판정용 stage는 그대로 adult
+    set_snail(snail_id, level=20, stage="adult")
+    r = client.patch(f"/v1/snails/{snail_id}/skin", json={"stage": "baby"},
+                     headers=guest["headers"])
+    assert r.status_code == 200 and r.json()["skin_stage"] == "baby"
+    snail = _state(guest)["changes"]["snails"][0]
+    assert snail["skin_stage"] == "baby" and snail["stage"] == "adult"
+
+    # 실제 단계와 같은 모습을 고르면 저장하지 않는다 (None)
+    r = client.patch(f"/v1/snails/{snail_id}/skin", json={"stage": "adult"},
+                     headers=guest["headers"])
+    assert r.status_code == 200 and r.json()["skin_stage"] is None
+
+
+def test_stage_up_resets_skin():
+    s = {"id": "x", "stage": "baby", "level": 9, "exp": 44, "skin_stage": "baby"}
+    events = rules.gain_exp(s, 1)  # Lv10 도달 → junior 진화
+    assert any(e["type"] == "stage_up" for e in events)
+    assert s["skin_stage"] is None
 
 
 def test_settle_prunes_stale_drops(guest):

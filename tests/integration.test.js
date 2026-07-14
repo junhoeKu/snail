@@ -259,8 +259,27 @@ function clickSnail(w, entId) {
   assert(w5.document.querySelectorAll('.food-item').length === 0, '복원 먹이 이어 먹기 완료');
   assert(JSON.parse(w5.localStorage.getItem('sn_player')).dropped_foods.length === 0, '먹은 뒤 드롭 기록 제거');
 
-  // ── [13] 콘솔 에러 ──────────────────────────────────────
-  console.log('[13] 콘솔 에러');
+  // ── [13] 모습 바꾸기 (13차 Phase 3 — 연출 전용) ─────────
+  console.log('[13] 모습 바꾸기');
+  const list13 = snails(w);
+  const mong13 = list13.find(s => s.name === '몽이');
+  mong13.level = 20; mong13.stage = 'adult';
+  w.localStorage.setItem('sn_snails', JSON.stringify(list13));
+  w.HomeModule.render();
+  clickSnail(w, mong13.id);
+  assert(doc.querySelector('.popup-skin') !== null, '팝업에 [모습 바꾸기] 버튼 (성체)');
+  doc.querySelector('.popup-skin').click();
+  const skinRows = doc.querySelectorAll('.skin-row');
+  assert(skinRows.length === 3, '도달한 단계 3종 후보: ' + skinRows.length);
+  skinRows[0].click(); // 아기 모습 선택
+  assert(snails(w).find(s => s.id === mong13.id).skin_stage === 'baby', 'skin_stage=baby 저장');
+  const sprite13 = doc.querySelector('#snail-layer .snail-entity .snail-img');
+  assert(sprite13.getAttribute('src').indexOf('_baby') !== -1, '서식지 스프라이트 아기 모습');
+  assert(snails(w).find(s => s.id === mong13.id).stage === 'adult', '판정 단계는 성체 유지');
+  doc.querySelector('.popup-close').click();
+
+  // ── [14] 콘솔 에러 ──────────────────────────────────────
+  console.log('[14] 콘솔 에러');
   assert(consoleErrors.length === 0, '콘솔 에러 0개' + (consoleErrors.length ? ' — ' + consoleErrors.join(' | ') : ''));
 
   console.log(failures === 0 ? '\n✅ 통합 테스트 전체 통과' : '\n❌ 실패 ' + failures + '건');

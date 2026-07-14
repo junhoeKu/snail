@@ -247,7 +247,8 @@ def mailbox_unread(db: Session, user: models.User) -> int:
 
 def snail_dict(s: models.Snail) -> dict:
     return {
-        "id": s.id, "name": s.name, "stage": s.stage, "level": s.level, "exp": s.exp,
+        "id": s.id, "name": s.name, "stage": s.stage, "skin_stage": s.skin_stage,
+        "level": s.level, "exp": s.exp,
         "hunger": s.hunger, "happiness": s.happiness, "color": s.color,
         "personality": s.personality, "wild_variant": s.wild_variant,
         "last_state_at": _aware(s.last_state_at), "graduated_at": s.graduated_at,
@@ -256,6 +257,7 @@ def snail_dict(s: models.Snail) -> dict:
 
 def apply_snail_dict(s: models.Snail, d: dict) -> None:
     s.name, s.stage, s.level, s.exp = d["name"], d["stage"], d["level"], d["exp"]
+    s.skin_stage = d.get("skin_stage")
     s.hunger, s.happiness = d["hunger"], d["happiness"]
     s.color, s.personality, s.wild_variant = d["color"], d["personality"], d["wild_variant"]
     s.last_state_at = d["last_state_at"]
@@ -311,6 +313,7 @@ def player_payload(db: Session, user: models.User) -> dict:
 def snail_payload(s: models.Snail) -> dict:
     return {
         "schema_version": 6, "id": s.id, "name": s.name, "stage": s.stage,
+        "skin_stage": s.skin_stage,
         "level": s.level, "exp": s.exp,
         "hunger": int(round(s.hunger)), "happiness": int(round(s.happiness)),
         "color": s.color, "personality": s.personality, "wild_variant": s.wild_variant,

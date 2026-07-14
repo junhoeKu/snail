@@ -398,6 +398,20 @@
   margin-top: 2px;
 }
 
+/* 모습 바꾸기 행 — food-sheet-row 재사용 + 스프라이트 미리보기 */
+.skin-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.skin-row-img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
 .shop-item.locked {
   opacity: 0.65;
 }

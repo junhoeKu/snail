@@ -293,6 +293,25 @@ def rename(snail_id: str, body: NameIn,
     return {"ok": True, "name": name, "version": snail.version}
 
 
+class SkinIn(BaseModel):
+    stage: str | None = None  # None → 원래 모습으로
+
+
+@router.patch("/snails/{snail_id}/skin")
+def set_skin(snail_id: str, body: SkinIn,
+             user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """모습 바꾸기 — 연출 전용(skin_stage). 판정(레벨/도감/성장)은 실제 stage를 쓴다."""
+    snail = _snail_of(db, user, snail_id)
+    stage = None if body.stage == snail.stage else body.stage  # 실제 단계면 저장하지 않는다
+    if not rules.skin_allowed(service.snail_dict(snail), stage):
+        raise ApiError(409, "skin_locked", "아직 도달하지 않은 모습이에요.")
+    snail.skin_stage = stage
+    snail.version += 1
+    service.bump_revision(user)
+    db.commit()
+    return {"ok": True, "skin_stage": stage, "version": snail.version}
+
+
 # ── 상점 ────────────────────────────────────────────────
 
 class PurchaseIn(ActionIn):

@@ -148,6 +148,9 @@ const Api = (function () {
     setDecoSlots: function (slots) {
       return _request('POST', '/v1/decorations/slots', { slots: slots });
     },
+    setSkin: function (snailId, stage) { // stage=null → 원래 모습 (연출 전용)
+      return _request('PATCH', '/v1/snails/' + snailId + '/skin', { stage: stage });
+    },
     syncPosition: function (positions) {
       return _request('POST', '/v1/game/sync-position', { positions: positions });
     },
@@ -448,6 +451,7 @@ const Api = (function () {
     purchase: endpoints.purchase,
     explore: endpoints.explore,
     setDecoSlots: endpoints.setDecoSlots,
+    setSkin: endpoints.setSkin,
     syncPosition: endpoints.syncPosition,
     updateSettings: endpoints.updateSettings,
     migrate: endpoints.migrate,

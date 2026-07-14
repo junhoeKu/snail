@@ -101,6 +101,7 @@ const DB = (function () {
       hunger: 0,
       happiness: 100,
       stage: 'egg',
+      skin_stage: null,      // 모습 바꾸기(연출 전용) — 도달한 단계만, 판정은 stage
       color: 'brown',        // 껍질 변이 (부화 시 결정)
       personality: null,     // 성격 (부화 시 결정, 구버전 데이터는 부팅 시 소급 부여)
       wild_variant: null,    // 야생 알: 발견한 맵에서 예약된 변이 (부화 시 사용)

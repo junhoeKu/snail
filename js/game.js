@@ -462,6 +462,22 @@ const GAME = (function () {
     return level * CONFIG.EXP_PER_LEVEL;
   }
 
+  /** 도달한 성장 단계 목록 — 모습 바꾸기 후보 (13차 Phase 3) */
+  function reachedStages(snail) {
+    if (snail.stage === 'egg') return [];
+    return ['baby', 'junior', 'adult'].filter(function (id) {
+      return STAGES[id].minLevel <= snail.level;
+    });
+  }
+
+  /** 표시용 단계 — 유효한 skin_stage(도달한 단계)가 있으면 우선. 판정은 항상 실제 stage를 쓴다 */
+  function displayStage(snail) {
+    if (snail.skin_stage && reachedStages(snail).indexOf(snail.skin_stage) !== -1) {
+      return snail.skin_stage;
+    }
+    return snail.stage;
+  }
+
   /**
    * 경험치 획득 → 레벨업 → 단계 변화까지 처리
    * @returns {{snail: object, events: string[]}}
@@ -480,6 +496,7 @@ const GAME = (function () {
       const nextStage = stageForLevel(s.level);
       if (nextStage !== s.stage) {
         s.stage = nextStage;
+        s.skin_stage = null; // 진화하면 새 모습을 먼저 보여준다
         events.push('stage_up');
       }
     }
@@ -1199,6 +1216,8 @@ const GAME = (function () {
     missionProgress: missionProgress,
     stageForLevel: stageForLevel,
     expToNext: expToNext,
+    reachedStages: reachedStages,
+    displayStage: displayStage,
     gainExp: gainExp,
     hatch: hatch,
     feed: feed,

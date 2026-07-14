@@ -201,16 +201,17 @@ const HabitatModule = (function () {
     return ent;
   }
 
-  /** 변이/단계/컨디션 반영 (일러스트 스프라이트 교체) */
+  /** 변이/단계/컨디션 반영 (일러스트 스프라이트 교체) — 단계는 표시용(skin) 우선 */
   function _applyLook(ent, rec) {
     const condition = GAME.conditionOf(rec);
     const color = GAME.VARIANTS[rec.color] ? rec.color : 'brown'; // 무효 변이 방어
-    ent.spriteEl.className = 'snail-sprite stage-' + rec.stage +
+    const stage = GAME.displayStage(rec);
+    ent.spriteEl.className = 'snail-sprite stage-' + stage +
       ' variant-' + color +
       (condition.id !== 'normal' ? ' cond-' + condition.id : '');
 
     const img = ent.spriteEl.querySelector('.snail-img');
-    const src = GAME.spritePath(color, rec.stage);
+    const src = GAME.spritePath(color, stage);
     if (img && img.getAttribute('src') !== src) img.setAttribute('src', src);
 
     // 머리 위 배지 갱신

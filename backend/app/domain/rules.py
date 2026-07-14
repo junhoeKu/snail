@@ -182,8 +182,19 @@ def gain_exp(snail: dict, amount: int) -> list[dict]:
         next_stage = stage_for_level(snail["level"])
         if next_stage != snail["stage"]:
             snail["stage"] = next_stage
+            snail["skin_stage"] = None  # 진화하면 새 모습을 먼저 보여준다
             events.append({"type": "stage_up", "snailId": snail["id"], "stage": next_stage})
     return events
+
+
+def skin_allowed(snail: dict, stage: str | None) -> bool:
+    """모습(skin_stage, 연출 전용)은 이미 도달한 단계만 고를 수 있다. None=원래 모습."""
+    if stage is None:
+        return True
+    if snail["stage"] == "egg":
+        return False
+    min_levels = {"baby": 1, **STAGE_LEVELS}
+    return stage in min_levels and snail["level"] >= min_levels[stage]
 
 
 # ── 변이/성격 ───────────────────────────────────────────
