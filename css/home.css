@@ -101,6 +101,50 @@ body[data-weather="fog"] .snail-habitat::before {
   to   { background-position: -15px 56px; }
 }
 
+/* 방문객 (나비/무당벌레/반딧불이) — 연출 전용, 클릭 통과 */
+.visitor {
+  position: absolute;
+  z-index: 3;
+  pointer-events: none;
+  transform: scaleX(var(--vflip, 1));
+  filter: drop-shadow(0 2px 2px rgba(20, 18, 10, 0.2));
+}
+
+/* transform은 좌우 반전이 쓰므로 상하 모션은 margin으로 */
+.visitor-butterfly {
+  animation: visitor-flutter 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes visitor-flutter {
+  from { margin-top: -7px; }
+  to   { margin-top: 7px; }
+}
+
+.visitor-ladybug {
+  animation: visitor-waddle 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes visitor-waddle {
+  from { margin-top: 0; }
+  to   { margin-top: -2px; }
+}
+
+.visitor-firefly {
+  animation: firefly-glow 1.6s ease-in-out infinite alternate,
+             visitor-flutter 2.8s ease-in-out infinite alternate;
+}
+
+@keyframes firefly-glow {
+  from {
+    filter: drop-shadow(0 0 3px rgba(255, 235, 130, 0.5));
+    opacity: 0.55;
+  }
+  to {
+    filter: drop-shadow(0 0 10px rgba(255, 235, 130, 0.95));
+    opacity: 1;
+  }
+}
+
 /* 바닥 디테일은 일러스트 배경이 담당한다 */
 
 /* 전경 풀숲 — 달팽이(z2) 앞, 날씨 오버레이(z4) 뒤. 하단 가장자리 깊이감 */

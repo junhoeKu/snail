@@ -783,6 +783,55 @@ const HabitatModule = (function () {
     _assignFoods(); // 남은 먹이 재배정
   }
 
+  // ── 방문객 (연출 전용 — 14차 Phase 4) ─────────────────
+  // 낮: 나비/무당벌레, 밤(연출 밤 기준): 반딧불이. 게임 수치 무영향, 화면을 가로질러 사라진다.
+
+  const VISITORS = {
+    butterfly: { src: 'assets/visitors/visitor_butterfly.png', size: 36, duration: 14000, band: [0.15, 0.45], cls: 'visitor-butterfly' },
+    ladybug: { src: 'assets/visitors/visitor_ladybug.png', size: 24, duration: 20000, band: [0.78, 0.9], cls: 'visitor-ladybug' },
+    firefly: { src: 'assets/visitors/visitor_firefly.png', size: 18, duration: 16000, band: [0.2, 0.6], cls: 'visitor-firefly' }
+  };
+  const VISITOR_CHECK_MS = 45000; // 45초마다 방문 판정
+  const VISITOR_CHANCE = 0.35;
+  let _visitorTimer = null;
+  let _visitorBusy = false; // 동시 1마리 (성능/소란 가드)
+
+  function _spawnVisitor() {
+    const b = _bounds();
+    if (!b.w || _visitorBusy) return;
+    const pool = _isNight() ? ['firefly'] : ['butterfly', 'ladybug'];
+    const def = VISITORS[pool[Math.floor(_rng() * pool.length)]];
+
+    const el = document.createElement('img');
+    el.className = 'visitor ' + def.cls;
+    el.src = def.src;
+    el.alt = '';
+    el.style.width = def.size + 'px';
+    const fromLeft = _rng() < 0.5;
+    el.style.top = ((def.band[0] + _rng() * (def.band[1] - def.band[0])) * b.h) + 'px';
+    el.style.left = (fromLeft ? -def.size : b.w + def.size) + 'px';
+    el.style.setProperty('--vflip', fromLeft ? -1 : 1); // 스프라이트는 왼쪽을 본다
+    _habitat().appendChild(el);
+
+    _visitorBusy = true;
+    requestAnimationFrame(function () {
+      el.style.transition = 'left ' + def.duration + 'ms linear';
+      el.style.left = (fromLeft ? b.w + def.size : -def.size * 2) + 'px';
+    });
+    setTimeout(function () {
+      el.remove();
+      _visitorBusy = false;
+    }, def.duration + 500);
+  }
+
+  function _startVisitors() {
+    if (_visitorTimer) return;
+    _visitorTimer = setInterval(function () {
+      if (!_running) return; // 홈 화면 + 보이는 탭일 때만
+      if (_rng() < VISITOR_CHANCE) _spawnVisitor();
+    }, VISITOR_CHECK_MS);
+  }
+
   // ── 장식 ──────────────────────────────────────────────
 
   function renderDecorations() {
@@ -978,6 +1027,7 @@ const HabitatModule = (function () {
     renderDecorations();
     sync();
     restoreDrops(); // 지난 세션에 떨어뜨린 먹이 복원 → 이어 먹기
+    _startVisitors();
   }
 
   return {
