@@ -15,14 +15,11 @@ from .modules import actions, admin, auth, config_service, game, mailbox, migrat
 
 
 def seed_items() -> None:
-    """먹이·장식 카탈로그 시드 (멱등)."""
+    """먹이 카탈로그 시드 (멱등). 장식 카탈로그는 13차 정리에서 제거 — 기존 행은 무해하게 남는다."""
     with SessionLocal() as db:
         for food_id, d in rules.FOOD_DEFS.items():
             if db.get(models.Item, food_id) is None:
                 db.add(models.Item(id=food_id, item_type="food", name=d["label"], meta=d))
-        for deco_id, d in rules.DECORATIONS.items():
-            if db.get(models.Item, deco_id) is None:
-                db.add(models.Item(id=deco_id, item_type="decoration", name=d["label"], meta=d))
         db.commit()
 
 

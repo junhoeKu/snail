@@ -10,7 +10,7 @@ const App = (function () {
 
   /**
    * 화면(탭) 전환
-   * @param {string} screen 'home' | 'stats' | 'shop' | 'deco' | 'settings'
+   * @param {string} screen 'home' | 'user' | 'dex' | 'shop' | 'explore' | 'settings'
    */
   function navigate(screen) {
     document.querySelectorAll('.screen').forEach(function (el) {
@@ -82,10 +82,9 @@ const App = (function () {
    */
   function _settleTime() {
     const player = DB.Player.get();
-    const decoFx = GAME.decorationEffects(player);
     let intervals = 0;
     const updated = DB.Snails.get().map(function (snail) {
-      const result = GAME.applyTimeDecay(snail, player.last_seen, DB.now(), decoFx);
+      const result = GAME.applyTimeDecay(snail, player.last_seen, DB.now());
       intervals = Math.max(intervals, result.intervals);
       return result.snail;
     });
@@ -356,7 +355,6 @@ const App = (function () {
       _ensurePersonality();
       _settleAway();
       _claimDailyReward();
-      DecoModule.claimUnlocks();
     }
 
     applyBackground();

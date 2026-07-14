@@ -162,12 +162,11 @@ def settle(db: Session, user: models.User) -> list[dict]:
 
     events: list[dict] = []
     now = utcnow()
-    deco_fx = rules.decoration_effects(user.decoration_slots)
 
     # 1) 개체별 감쇠
     for snail in active_snails(db, user):
         s = snail_dict(snail)
-        rules.apply_decay(s, now, deco_fx)
+        rules.apply_decay(s, now)
         apply_snail_dict(snail, s)
 
     # 1.5) 드롭 먹이 TTL 정리 (소모 아님 — 재고 무변동)
@@ -302,12 +301,8 @@ def player_payload(db: Session, user: models.User) -> dict:
         "mission_completions": user.mission_completions,
         "explore": user.explore_state or {"date": None, "searches": 0},
         "unlocked_maps": user.unlocked_maps or [],
-        "decorations": {
-            "owned": user.decorations_owned or [],
-            # 구버전(3슬롯) 레코드를 현재 슬롯 수로 패딩해 응답
-            "slots": (list(user.decoration_slots or []) + [None] * rules.CONFIG["DECO_SLOT_COUNT"])[
-                : rules.CONFIG["DECO_SLOT_COUNT"]],
-        },
+        # [deprecated] 장식 시스템 제거(13차 정리) — 구버전 클라 렌더 호환용 필드만 유지 (다음 릴리스에 제거)
+        "decorations": {"owned": user.decorations_owned or [], "slots": user.decoration_slots or []},
         "dropped_foods": user.dropped_foods or [],
         "last_seen": _aware(user.last_seen_at).isoformat(),
         "server_mode": True,

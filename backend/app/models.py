@@ -52,8 +52,9 @@ class User(Base):
     minigame_quiz: Mapped[dict] = mapped_column(JSON, default=dict)     # {date, count} 퀴즈 하루 제한
     dropped_foods: Mapped[list] = mapped_column(JSON, default=list)     # 서식지 드롭 먹이 [{id, food_id, rx, ry, dropped_at}]
     unlocked_maps: Mapped[list] = mapped_column(JSON, default=list)
+    # [deprecated] 장식 시스템 제거(13차 정리) — 구클라 호환 유예 후 컬럼 제거 예정
     decorations_owned: Mapped[list] = mapped_column(JSON, default=list)
-    decoration_slots: Mapped[list] = mapped_column(JSON, default=lambda: [None] * 5)  # DECO_SLOT_COUNT
+    decoration_slots: Mapped[list] = mapped_column(JSON, default=list)
 
     migration_done: Mapped[bool] = mapped_column(Boolean, default=False)
     suspended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)  # 운영자 정지

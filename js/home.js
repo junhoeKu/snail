@@ -162,7 +162,6 @@ const HomeModule = (function () {
         Toast.show('🎉 오늘의 돌봄 완주! +' + GAME.CONFIG.MISSION_BONUS_COINS +
           ' 코인, 상추 +' + GAME.CONFIG.MISSION_BONUS_FOOD);
         DB.Journal.add('mission', '오늘의 돌봄을 모두 완료했어요.');
-        DecoModule.claimUnlocks();
         App.gainKeeperXp('mission_all');
       }
     });
@@ -603,7 +602,6 @@ const HomeModule = (function () {
     HabitatModule.sync();
     App.refreshHeader();
     App.gainKeeperXp('graduate');
-    DecoModule.claimUnlocks();
     render();
     StatsModule.render();
     Sound.play('fanfare');

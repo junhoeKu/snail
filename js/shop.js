@@ -10,7 +10,7 @@ const ShopModule = (function () {
     document.getElementById('shop-coins').textContent = player.coins;
     _renderFoods(player);
     _renderEggSlot(player);
-    DecoModule.render(); // 배경/장식 (상점에 통합)
+    DecoModule.render(); // 배경 선택 표시 (장식 기능은 13차 정리에서 제거)
   }
 
   /** 먹이 목록 (해금/보유/묶음 할인) */

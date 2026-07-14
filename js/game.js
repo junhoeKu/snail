@@ -61,10 +61,8 @@ const GAME = (function () {
     GRADUATE_COINS: 100,
     GENERATION_BOOST_CAP: 5, // 변이 확률 보정이 커지는 최대 세대 수 (6세대+에서 고정)
 
-    // 장식
-    DECO_SLOT_COUNT: 5,        // 서식지 배치 슬롯 수 (14차 Phase 4에서 3→5 확대)
-    DECO_MISSIONS_REQUIRED: 7, // 들꽃: 미션 완주 누적
-    DECO_GENERATION_REQUIRED: 2, // 이끼 바위: 세대
+    // 탐험 맵 게이트
+    MAP_GENERATION_REQUIRED: 2, // 이슬 연못: 2세대 도달 (또는 코인 해금)
 
     // 미니게임 — 달팽이 경주
     RACE_LANES: 5,               // 출전 달팽이 수
@@ -289,25 +287,6 @@ const GAME = (function () {
     return table;
   }
 
-  /** 장식 — 배치(슬롯)된 것만 패시브 효과 발동 (7차_MVP_구현계획.md §5) */
-  const DECORATIONS = {
-    pebble: { id: 'pebble', label: '조약돌', type: 'buy', price: 50, fxDesc: '행복 감소 15% 완화' },
-    mushroom: { id: 'mushroom', label: '버섯', type: 'buy', price: 80, fxDesc: '먹이 배고픔 회복 +10%' },
-    wildflower: { id: 'wildflower', label: '들꽃', type: 'unlock', unlockDesc: '미션 완주 누적 7회', fxDesc: '쓰다듬기 행복 +3' },
-    mossrock: { id: 'mossrock', label: '이끼 바위', type: 'unlock', unlockDesc: '2세대 도달', fxDesc: '배고픔 증가 10% 완화' }
-  };
-
-  /** 배치된 장식의 패시브 수정치 집계 */
-  function decorationEffects(player) {
-    const slots = (player && player.decorations && player.decorations.slots) || [];
-    return {
-      happinessDecayMult: slots.indexOf('pebble') !== -1 ? 0.85 : 1,
-      feedHungerMult: slots.indexOf('mushroom') !== -1 ? 1.1 : 1,
-      petHappinessBonus: slots.indexOf('wildflower') !== -1 ? 3 : 0,
-      hungerDecayMult: slots.indexOf('mossrock') !== -1 ? 0.9 : 1
-    };
-  }
-
   /** 가중치 테이블에서 하나 추첨 */
   function _pickWeighted(table, roll) {
     const keys = Object.keys(table);
@@ -368,24 +347,20 @@ const GAME = (function () {
     const rain = weather.id === 'rain';
     const night = (typeof nightOverride === 'boolean')
       ? nightOverride : (function () { const h = new Date().getHours(); return h >= 22 || h < 7; })();
-    const slots = ((player.decorations || {}).slots) || [];
-    const hasMoss = slots.indexOf('mossrock') >= 0;
-    const hasMushroom = slots.indexOf('mushroom') >= 0;
-    const shelterName = hasMoss ? '이끼 바위' : (hasMushroom ? '버섯 그늘' : '서식지 구석');
-    const shelterAnchor = hasMoss ? 'mossrock' : (hasMushroom ? 'mushroom' : 'corner');
+    const shelterName = '서식지 구석';
 
     const scene = [];
     const lines = [];
     hatched.forEach(function (s) {
       let state, anchor, line;
       if (night) {
-        state = 'napping'; anchor = shelterAnchor;
-        line = '🌙 ' + s.name + '은(는) ' + shelterName + ' 옆에서 곤히 잤어요';
+        state = 'napping'; anchor = 'corner';
+        line = '🌙 ' + s.name + '은(는) ' + shelterName + '에서 곤히 잤어요';
       } else if (rain) {
-        state = 'resting'; anchor = shelterAnchor;
-        line = '☔ 비가 와서 ' + s.name + '은(는) ' + shelterName + ' 밑으로 숨었어요';
+        state = 'resting'; anchor = 'corner';
+        line = '☔ 비가 와서 ' + s.name + '은(는) ' + shelterName + '으로 숨었어요';
       } else if (s.personality === 'sleepy') {
-        state = 'napping'; anchor = hasMushroom ? 'mushroom' : 'corner';
+        state = 'napping'; anchor = 'corner';
         line = '💤 ' + s.name + '은(는) 그늘에서 오래 낮잠을 잤어요';
       } else if (s.personality === 'foodie') {
         state = 'resting'; anchor = 'corner';
@@ -565,99 +540,6 @@ const GAME = (function () {
     return { snail: s, events: events };
   }
 
-  function _ensureDecorations(player) {
-    if (!player.decorations) player.decorations = { owned: [], slots: [] };
-    // 구버전(3슬롯) 레코드를 현재 슬롯 수로 패딩
-    while (player.decorations.slots.length < CONFIG.DECO_SLOT_COUNT) {
-      player.decorations.slots.push(null);
-    }
-  }
-
-  /** 해금형 장식의 조건 충족 여부 */
-  function decorationUnlockMet(id, player) {
-    if (id === 'wildflower') return (player.mission_completions || 0) >= CONFIG.DECO_MISSIONS_REQUIRED;
-    if (id === 'mossrock') return (player.generation || 1) >= CONFIG.DECO_GENERATION_REQUIRED;
-    return false;
-  }
-
-  /**
-   * 구매형 장식 구매
-   * @returns {{player: object, events: string[]}}
-   */
-  function buyDecoration(player, id) {
-    const p = _clone(player);
-    const events = [];
-    const def = DECORATIONS[id];
-    _ensureDecorations(p);
-
-    if (!def || def.type !== 'buy') {
-      events.push('invalid');
-      return { player: p, events: events };
-    }
-    if (p.decorations.owned.indexOf(id) !== -1) {
-      events.push('already_owned');
-      return { player: p, events: events };
-    }
-    if (p.coins < def.price) {
-      events.push('not_enough_coins');
-      return { player: p, events: events };
-    }
-
-    p.coins -= def.price;
-    p.decorations.owned.push(id);
-    events.push('deco_bought');
-    return { player: p, events: events };
-  }
-
-  /**
-   * 해금형 장식 자동 지급 (조건 충족분을 owned에 추가)
-   * @returns {{player: object, unlocked: string[]}}
-   */
-  function claimDecorationUnlocks(player) {
-    const p = _clone(player);
-    const unlocked = [];
-    _ensureDecorations(p);
-
-    Object.keys(DECORATIONS).forEach(function (id) {
-      if (DECORATIONS[id].type === 'unlock' &&
-          p.decorations.owned.indexOf(id) === -1 &&
-          decorationUnlockMet(id, p)) {
-        p.decorations.owned.push(id);
-        unlocked.push(id);
-      }
-    });
-    return { player: p, unlocked: unlocked };
-  }
-
-  /**
-   * 장식을 슬롯에 배치 (다른 슬롯에 있었으면 이동)
-   * @returns {{player: object, events: string[]}}
-   */
-  function placeDecoration(player, id, slotIndex) {
-    const p = _clone(player);
-    const events = [];
-    _ensureDecorations(p);
-
-    if (!DECORATIONS[id] || slotIndex < 0 || slotIndex >= CONFIG.DECO_SLOT_COUNT ||
-        p.decorations.owned.indexOf(id) === -1) {
-      events.push('invalid');
-      return { player: p, events: events };
-    }
-
-    p.decorations.slots = p.decorations.slots.map(function (s) { return s === id ? null : s; });
-    p.decorations.slots[slotIndex] = id;
-    events.push('deco_placed');
-    return { player: p, events: events };
-  }
-
-  /** 슬롯 비우기 */
-  function removeDecoration(player, slotIndex) {
-    const p = _clone(player);
-    _ensureDecorations(p);
-    p.decorations.slots[slotIndex] = null;
-    return { player: p, events: ['deco_removed'] };
-  }
-
   /**
    * 도감 발견 목록 — 별도 저장 없이 앨범 + 현재 달팽이에서 파생한다
    * @returns {string[]} 발견한 변이 id 목록
@@ -723,7 +605,7 @@ const GAME = (function () {
     const map = EXPLORE_MAPS[mapId];
     if (!map) return false;
     if (!map.locked) return true;
-    return (player.generation || 1) >= CONFIG.DECO_GENERATION_REQUIRED ||
+    return (player.generation || 1) >= CONFIG.MAP_GENERATION_REQUIRED ||
       (player.unlocked_maps || []).indexOf(mapId) !== -1;
   }
 
@@ -928,8 +810,7 @@ const GAME = (function () {
 
     if ((p.foods[def.id] || 0) > 0) p.foods[def.id] -= 1;
     p.coins += CONFIG.FEED_COINS;
-    const fx = decorationEffects(p); // 버섯: 회복 +10%
-    s.hunger = _clamp(s.hunger - Math.round(def.hunger * fx.feedHungerMult));
+    s.hunger = _clamp(s.hunger - def.hunger);
     s.happiness = _clamp(s.happiness + def.happiness);
     events.push('fed');
 
@@ -1051,13 +932,11 @@ const GAME = (function () {
   /**
    * 경과 시간 정산: 1시간 단위로만 적용하고, 적용한 구간 수를 intervals로 반환한다.
    * 호출부는 intervals만큼만 last_seen을 전진시켜 잔여 시간을 잃지 않게 한다.
-   * @param {object} [mods] 장식 패시브 수정치 (decorationEffects — 생략 시 무보정)
    * @returns {{snail: object, events: string[], intervals: number}}
    */
-  function applyTimeDecay(snail, lastSeenISO, nowISO, mods) {
+  function applyTimeDecay(snail, lastSeenISO, nowISO) {
     const s = _clone(snail);
     const events = [];
-    const fx = mods || { hungerDecayMult: 1, happinessDecayMult: 1 };
 
     if (s.stage === 'egg' || !lastSeenISO) {
       return { snail: s, events: events, intervals: 0 };
@@ -1069,8 +948,8 @@ const GAME = (function () {
       return { snail: s, events: events, intervals: 0 };
     }
 
-    s.hunger = _clamp(s.hunger + Math.round(intervals * CONFIG.DECAY_HUNGER * (fx.hungerDecayMult || 1)));
-    s.happiness = _clamp(s.happiness - Math.round(intervals * CONFIG.DECAY_HAPPINESS * (fx.happinessDecayMult || 1)));
+    s.hunger = _clamp(s.hunger + Math.round(intervals * CONFIG.DECAY_HUNGER));
+    s.happiness = _clamp(s.happiness - Math.round(intervals * CONFIG.DECAY_HAPPINESS));
     events.push('decayed');
     return { snail: s, events: events, intervals: intervals };
   }
@@ -1089,8 +968,7 @@ const GAME = (function () {
       return { snail: s, player: p, events: events };
     }
 
-    const fx = decorationEffects(p); // 들꽃: 쓰다듬기 행복 +3
-    s.happiness = _clamp(s.happiness + CONFIG.PET_HAPPINESS + fx.petHappinessBonus);
+    s.happiness = _clamp(s.happiness + CONFIG.PET_HAPPINESS);
     events.push('petted');
     return { snail: s, player: p, events: events };
   }
@@ -1116,10 +994,9 @@ const GAME = (function () {
     report.away_minutes = Math.max(0, Math.floor((new Date(nowISO) - new Date(p.last_seen)) / 60000));
 
     // 1) 개체별 시간 감쇠 (last_seen은 적용 구간만큼만 전진 — 잔여 시간 보존)
-    const decoFx = decorationEffects(p);
     let intervals = 0;
     const updated = list.map(function (s) {
-      const decay = applyTimeDecay(s, p.last_seen, nowISO, decoFx);
+      const decay = applyTimeDecay(s, p.last_seen, nowISO);
       if (decay.intervals > 0) {
         intervals = Math.max(intervals, decay.intervals);
         report.snails.push({
@@ -1207,8 +1084,6 @@ const GAME = (function () {
     VARIANTS: VARIANTS,
     RARITIES: RARITIES,
     spritePath: spritePath,
-    DECORATIONS: DECORATIONS,
-    decorationEffects: decorationEffects,
     MISSION_DEFS: MISSION_DEFS,
     FOOD_DEFS: FOOD_DEFS,
     keeperLevel: keeperLevel,
@@ -1225,11 +1100,6 @@ const GAME = (function () {
     explore: explore,
     convertWildEgg: convertWildEgg,
     newEgg: _newEgg,
-    decorationUnlockMet: decorationUnlockMet,
-    buyDecoration: buyDecoration,
-    claimDecorationUnlocks: claimDecorationUnlocks,
-    placeDecoration: placeDecoration,
-    removeDecoration: removeDecoration,
     weatherFor: weatherFor,
     simulateAwayLife: simulateAwayLife,
     raceRoll: raceRoll,

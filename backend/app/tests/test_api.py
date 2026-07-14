@@ -250,7 +250,7 @@ def test_migration_roundtrip_and_once(guest):
     player = r["changes"]["player"]
     assert player["coins"] == 4321 and player["foods"]["carrot"] == 2
     assert player["keeper"]["level"] == 3 and player["generation"] == 2
-    assert player["decorations"]["slots"][0] == "pebble"
+    assert player["decorations"]["slots"] == []  # 장식 시스템 제거 — 이전하지 않는다
     names = [s["name"] for s in r["changes"]["snails"]]
     assert "몽이" in names and len(r["changes"]["snails"]) == 2
     assert len(r["album"]) == 1 and len(r["journal"]) == 1

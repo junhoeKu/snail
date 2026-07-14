@@ -29,7 +29,7 @@ def get_config():
         "config": rules.CONFIG,
         "foods": rules.FOOD_DEFS,
         "variants": rules.VARIANTS,
-        "decorations": rules.DECORATIONS,
+        "decorations": {},  # [deprecated] 장식 시스템 제거 — 응답 형태 호환용 (다음 릴리스에 제거)
         "maps": rules.EXPLORE_MAPS,
         "missions": rules.MISSION_DEFS,
         "maxSnails": settings.max_snails,

@@ -41,22 +41,6 @@ def _keeper(db: Session, user: models.User, action: str) -> list[dict]:
     return events
 
 
-def _deco_unlocks(db: Session, user: models.User) -> list[dict]:
-    events: list[dict] = []
-    owned = list(user.decorations_owned or [])
-    checks = [
-        ("wildflower", user.mission_completions >= rules.CONFIG["DECO_MISSIONS_REQUIRED"]),
-        ("mossrock", user.generation >= rules.CONFIG["DECO_GENERATION_REQUIRED"]),
-    ]
-    for deco_id, met in checks:
-        if met and deco_id not in owned:
-            owned.append(deco_id)
-            events.append({"type": "deco_unlocked", "decoId": deco_id})
-            service.add_journal(db, user, "deco", f"{rules.DECORATIONS[deco_id]['label']} 장식을 해금했어요.")
-    user.decorations_owned = owned
-    return events
-
-
 def _missions(db: Session, user: models.User, kinds: list[str]) -> list[dict]:
     """미션 진행 + 보상 + 양육자 XP 연쇄 (클라이언트 파이프라인과 동일 순서)."""
     events: list[dict] = []
@@ -81,7 +65,6 @@ def _missions(db: Session, user: models.User, kinds: list[str]) -> list[dict]:
             service.add_item(db, user, "lettuce", reward["food"], "mission_reward")
         if any(e["type"] == "mission_all_done" for e in mission_events):
             service.add_journal(db, user, "mission", "오늘의 돌봄을 모두 완료했어요.")
-            events += _deco_unlocks(db, user)
     return events
 
 
@@ -199,7 +182,7 @@ def feed(snail_id: str, body: FeedIn,
         s = service.snail_dict(snail)
         foods = service.get_inventory(db, user)
         food_id = body.foodId or user.selected_food or "lettuce"
-        d, events = rules.feed(s, food_id, foods, user.decoration_slots)
+        d, events = rules.feed(s, food_id, foods)
         service.apply_snail_dict(snail, s)
         service.add_item(db, user, food_id, -1, "feed_consume", snail.id)
         service.add_coins(db, user, rules.CONFIG["FEED_COINS"], "feed_reward", snail.id)
@@ -223,7 +206,7 @@ def pet(snail_id: str, body: ActionIn,
     def fn():
         snail = _snail_of(db, user, snail_id)
         s = service.snail_dict(snail)
-        events = rules.pet(s, user.decoration_slots)
+        events = rules.pet(s)
         service.apply_snail_dict(snail, s)
         events += _missions(db, user, ["pet"])
         return events
@@ -283,7 +266,6 @@ def graduate(snail_id: str, body: ActionIn,
         service.new_egg(db, user)  # 그 자리의 새 알
         events = [{"type": "graduated", "snailId": snail.id, "name": snail.name}]
         events += _keeper(db, user, "graduate")
-        events += _deco_unlocks(db, user)
         events += service.grant_dex_rewards(db, user)  # 앨범 추가로 등급이 완성될 수 있다
         return events
     return _run(db, user, "graduate", body.requestId, snail_id, body.model_dump(), fn)
@@ -365,14 +347,8 @@ def purchase(body: PurchaseIn,
             events.append({"type": "egg_bought", "slots": user.snail_slots})
 
         elif body.kind == "decoration":
-            deco = rules.DECORATIONS.get(body.itemId or "")
-            if not deco or deco["type"] != "buy":
-                raise ApiError(422, "invalid_item", "구매할 수 없는 장식입니다.")
-            if body.itemId in (user.decorations_owned or []):
-                raise ApiError(409, "already_owned", "이미 보유한 장식입니다.")
-            service.add_coins(db, user, -deco["price"], "shop_decoration", None)
-            user.decorations_owned = list(user.decorations_owned or []) + [body.itemId]
-            events.append({"type": "deco_bought", "decoId": body.itemId})
+            # 장식 시스템 제거(13차 정리) — 구버전 클라의 구매 시도는 거절 (코인 보호)
+            raise ApiError(422, "invalid_item", "장식 기능이 종료되었어요.")
 
         elif body.kind == "map":
             if rules.map_available(body.itemId or "", user.generation, user.unlocked_maps):
@@ -395,12 +371,11 @@ class SlotsIn(BaseModel):
 @router.post("/decorations/slots")
 def set_decoration_slots(body: SlotsIn,
                          user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    count = rules.CONFIG["DECO_SLOT_COUNT"]
-    slots = (body.slots + [None] * count)[:count]
-    owned = user.decorations_owned or []
-    for deco_id in slots:
-        if deco_id is not None and deco_id not in owned:
-            raise ApiError(409, "not_owned", "보유하지 않은 장식입니다.")
+    """[deprecated] 장식 시스템 제거(13차 정리) — 구버전 클라 호환용 무해 저장만 유지.
+
+    효과·검증 없음 (패시브는 이미 중립화). 다음 릴리스에서 엔드포인트·컬럼과 함께 제거 예정.
+    """
+    slots = list(body.slots or [])[:8]
     user.decoration_slots = slots
     db.commit()
     return {"ok": True, "slots": slots}
