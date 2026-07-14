@@ -55,15 +55,15 @@
 ### 서버 (backend)
 - `User.dropped_foods` JSON 컬럼 추가 — Alembic **expand 마이그레이션**(방어적·idempotent, CI 왕복 검사 통과).
 - 항목: `{ id, food_id, rx, ry, dropped_at }` — 좌표는 서식지 `pos` 관례대로 **비율(rx/ry)** 저장.
-- API (`modules/actions.py` 인접):
-  - `POST /v1/habitat/foods` — 드롭 등록. `request_id` 멱등, 재고 **사전 검증만**(차감 없음), 상한 10(`FOOD_MAX`와 동일 값 — rules 상수로 승격) 검증.
-  - 먹기 완료: 기존 `POST /snails/{id}/feed` body에 `drop_id` 추가 → 성공 시 해당 드롭 제거.
-  - `GET /v1/state` 응답에 `dropped_foods` 포함(부팅 복원용).
+- API (`modules/actions.py`):
+  - `POST /v1/habitat/foods` — 드롭 등록. 드롭 `id` 멱등(같은 id 재전송 무시), 재고 **사전 검증만**(차감 없음), 상한 검증(`FIELD_FOOD_MAX` — rules 상수로 승격).
+  - 먹기 완료: 기존 `POST /snails/{id}/feed` body에 `dropId` 추가 → 성공 시 해당 드롭 제거.
+  - 상태/행동 응답의 player payload에 `dropped_foods` 포함(부팅 복원용 — `GET /v1/game/state` 포함 전 경로).
 - TTL: 24시간 지난 드롭은 lazy 정리(시간 판정 관례 준수 — 배치 없음).
 
 ### 클라이언트
-- `habitat.js dropFood()` 성공 시 `Api.dropFood()` 등록 — 실패(network)는 기존 오프라인 큐(`Api.queueFeed` 패턴) 재사용.
-- 부팅/`sync()` 시 서버 `dropped_foods` → `_foods` 복원 → 기존 `_assignFoods()`가 자동으로 이어 먹기 시작(추가 로직 불필요).
+- `habitat.js dropFood()` 성공 시 `Api.dropFood()` 등록 — 등록 실패(network)는 무시(이번 세션 연출 유지, 복원 대상에서만 제외). 먹기 완료의 오프라인 재전송은 기존 큐(`Api.queueFeed`)가 `dropId`까지 나른다.
+- **부팅 시 1회** `restoreDrops()`가 서버/로컬 `dropped_foods` → `_foods` 복원 → 기존 `_assignFoods()`가 자동으로 이어 먹기 시작.
 - **로컬 모드 대칭**: `DB.Player`에 `dropped_foods` 저장(스키마 버전 업 + 마이그레이션) — 서버/로컬 동작 동일.
 
 ### 엣지 케이스
