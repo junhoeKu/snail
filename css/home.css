@@ -176,18 +176,6 @@ body[data-weather="fog"] .snail-habitat::before {
 
 /* 바닥 디테일은 일러스트 배경이 담당한다 */
 
-/* 전경 풀숲 — 달팽이(z2) 앞, 날씨 오버레이(z4) 뒤. 하단 가장자리 깊이감 */
-#fg-layer {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 12%;
-  z-index: 3;
-  pointer-events: none;
-  background: url("../assets/backgrounds/fg_grass.png") bottom / 100% 100% no-repeat;
-}
-
 /*
  * 3계층 분리 (2차_MVP_구현계획.md §3)
  * entity: 좌표 이동(translate3d) · motion: 들썩임/먹기 · sprite: 크기/좌우 반전
@@ -611,7 +599,8 @@ body[data-daytime="night"] #snail-habitat::after {
   content: '🌙';
   position: absolute;
   inset: 0;
-  background: rgba(24, 34, 78, 0.30);
+  /* 홈만 색감이 달라 보이지 않게 은은하게 (0.30 → 0.10) — 달 아이콘이 밤의 주 신호 */
+  background: rgba(24, 34, 78, 0.10);
   font-size: 22px;
   text-align: right;
   padding: 10px 12px;

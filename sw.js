@@ -2,7 +2,7 @@
  * Snail 서비스 워커 — 정적 자산 캐시 우선 (오프라인 실행)
  * CACHE_VERSION을 올리면 다음 방문 시 새 캐시로 교체된다.
  */
-const CACHE_VERSION = 'snail-v1.8.0';
+const CACHE_VERSION = 'snail-v1.9.0';
 
 const PRECACHE = [
   '.',
@@ -36,7 +36,6 @@ const PRECACHE = [
   'assets/backgrounds/bg_moss.jpg',
   'assets/backgrounds/bg_pond.jpg',
   'assets/backgrounds/bg_fern.jpg',
-  'assets/backgrounds/fg_grass.png',
   'assets/visitors/visitor_butterfly.png',
   'assets/visitors/visitor_ladybug.png',
   'assets/visitors/visitor_firefly.png',

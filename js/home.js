@@ -444,25 +444,33 @@ const HomeModule = (function () {
     actions.appendChild(petBtn);
     box.appendChild(actions);
 
-    // 모습 바꾸기 — 도달한 단계가 2개 이상일 때만 (연출 전용, 판정은 실제 stage)
+    // 모습 바꾸기 — 항상 노출, 도달한 단계가 2개 미만이면 해금 조건과 함께 비활성
+    const skinBtn = document.createElement('button');
+    skinBtn.className = 'btn btn-ghost btn-wide popup-skin';
     if (GAME.reachedStages(rec).length >= 2) {
-      const skinBtn = document.createElement('button');
-      skinBtn.className = 'btn btn-ghost btn-wide popup-skin';
       skinBtn.textContent = '🎭 모습 바꾸기';
       skinBtn.addEventListener('click', function () { _showSkinSheet(snailId); });
-      box.appendChild(skinBtn);
+    } else {
+      skinBtn.textContent = '🎭 모습 바꾸기 (Lv.' + GAME.STAGES.junior.minLevel + ' 해금)';
+      skinBtn.disabled = true;
     }
+    box.appendChild(skinBtn);
 
+    // 여행 보내기 — 항상 노출, 조건 미달이면 필요 레벨과 함께 비활성
+    const gradBtn = document.createElement('button');
+    gradBtn.className = 'btn btn-primary btn-wide popup-graduate';
     if (GAME.canGraduate(rec)) {
-      const gradBtn = document.createElement('button');
-      gradBtn.className = 'btn btn-primary btn-wide popup-graduate';
       gradBtn.innerHTML = '<i class="fa-solid fa-suitcase"></i> 여행 보내기';
       gradBtn.addEventListener('click', function () {
         overlay.remove();
         _confirmGraduate(snailId);
       });
-      box.appendChild(gradBtn);
+    } else {
+      gradBtn.innerHTML = '<i class="fa-solid fa-suitcase"></i> 여행 보내기 (성체 Lv.' +
+        GAME.CONFIG.GRADUATE_MIN_LEVEL + ')';
+      gradBtn.disabled = true;
     }
+    box.appendChild(gradBtn);
 
     const close = document.createElement('button');
     close.className = 'btn btn-ghost btn-wide popup-close';

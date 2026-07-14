@@ -164,7 +164,18 @@ const Api = (function () {
     claimMail: function (id) { return _request('POST', '/v1/mailbox/' + id + '/claim'); },
     notices: function () { return _request('GET', '/v1/notices/active'); },
     race: function (guess) { return _request('POST', '/v1/minigame/race', { guess: guess }); },
-    quiz: function (index, answer) { return _request('POST', '/v1/minigame/quiz', { index: index, answer: answer }); }
+    quiz: function (index, answer) { return _request('POST', '/v1/minigame/quiz', { index: index, answer: answer }); },
+    // 계정 연결/기기 이전 (14차 A.2) — 성공 시 토큰 교체까지 처리
+    linkGoogle: async function (idToken) {
+      const pair = await _request('POST', '/v1/auth/link/google', { idToken: idToken });
+      _saveTokens(pair);
+      return pair;
+    },
+    loginGoogle: async function (idToken) {
+      const pair = await _request('POST', '/v1/auth/google', { idToken: idToken });
+      _saveTokens(pair);
+      return pair;
+    }
   };
 
   // ── Net — 서버 응답을 로컬 미러/UI에 반영 ─────────────
@@ -304,7 +315,10 @@ const Api = (function () {
         food_locked: '아직 잠긴 먹이예요. 양육자 레벨을 올려보세요!',
         max_slots: '보금자리가 가득해요.',
         cannot_graduate: '성체 Lv.12부터 여행을 보낼 수 있어요.',
-        social_conflict: '이미 다른 계정에 연결된 소셜 계정입니다.'
+        social_conflict: '이미 다른 계정에 연결된 소셜 계정입니다.',
+        no_linked_account: '이 Google 계정에 연결된 달팽이가 없어요.',
+        google_invalid: 'Google 인증에 실패했어요. 다시 시도해주세요.',
+        google_not_configured: '서버에 Google 로그인이 아직 설정되지 않았어요.'
       };
       Toast.show(messages[error && error.code] || (error && error.message) || '요청을 처리하지 못했어요.', 'warn');
       if (error && error.code !== 'network') {
@@ -457,6 +471,8 @@ const Api = (function () {
     notices: endpoints.notices,
     race: endpoints.race,
     quiz: endpoints.quiz,
+    linkGoogle: endpoints.linkGoogle,
+    loginGoogle: endpoints.loginGoogle,
     Net: Net
   };
 })();

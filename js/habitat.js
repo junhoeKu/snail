@@ -52,7 +52,6 @@ const HabitatModule = (function () {
     REST_MAX_MS: 20000,
     SOCIAL_COOLDOWN_MS: 90000,
     GREET_MS: 1500,
-    ANCHOR_INSET: 0.16,        // 모서리 앵커 안쪽 비율
     EMOTE_MS: 2500,
     EMOTE_INTERVAL_MS: 4000,   // resting/napping/idle 중 간헐 이모트 간격
     BUDDY_GREETS: 3            // 세션 내 인사 누적 N회 → 단짝 연출 (💞·같이 쉬기 확률↑)
@@ -293,14 +292,18 @@ const HabitatModule = (function () {
     DB.Snails.saveOne(rec);
   }
 
-  function _startWander(ent) {
-    const edge = _edge(ent);
+  /** 서식지 안 무작위 지점 — 배회/낮잠/휴식 목적지 공용 (특정 좌표 몰림 방지) */
+  function _randomPoint(edge) {
     const b = _bounds();
-    ent.target = _clampPoint(
-      edge + Math.random() * Math.max(b.w - edge * 2, 1),
-      edge + Math.random() * Math.max(b.h - edge * 2, 1),
+    return _clampPoint(
+      edge + _rng() * Math.max(b.w - edge * 2, 1),
+      edge + _rng() * Math.max(b.h - edge * 2, 1),
       edge
     );
+  }
+
+  function _startWander(ent) {
+    ent.target = _randomPoint(_edge(ent));
     _setState(ent, STATE.WANDERING);
   }
 
@@ -311,27 +314,6 @@ const HabitatModule = (function () {
       (ent.mods.napLenFactor || 1);
     _setState(ent, STATE.NAPPING);
     _emote(ent, '💤');
-  }
-
-  // ── 앵커 (장소성) ──────────────────────────────────────
-
-  /** 앵커 = 서식지 네 모서리 안쪽 (쉬거나 잠드는 장소성) */
-  function _anchors() {
-    const b = _bounds();
-    const m = BEHAVIOR.ANCHOR_INSET;
-    return [
-      { x: b.w * m, y: b.h * (1 - m) }, { x: b.w * (1 - m), y: b.h * (1 - m) },
-      { x: b.w * m, y: b.h * m + 30 }, { x: b.w * (1 - m), y: b.h * m + 30 }
-    ];
-  }
-
-  function _nearestAnchor(ent) {
-    let best = null, bd = Infinity;
-    _anchors().forEach(function (a) {
-      const d = Math.hypot(a.x - ent.x, a.y - ent.y);
-      if (d < bd) { bd = d; best = a; }
-    });
-    return best;
   }
 
   // ── 이모트 잔류 버블 ───────────────────────────────────
@@ -379,17 +361,15 @@ const HabitatModule = (function () {
   }
 
   /** 앵커로 이동 후 nap/rest 시작 — 이동 자체가 디오라마. WANDERING pending으로 처리 */
+  /** 무작위 지점으로 이동 후 nap 시작 — 이동 자체가 디오라마. WANDERING pending으로 처리 */
   function _startAnchorNap(ent) {
-    const a = _nearestAnchor(ent);
-    if (!a) { _startNapHere(ent); return; }
-    ent.target = { x: a.x, y: a.y };
+    ent.target = _randomPoint(_edge(ent));
     ent.pending = 'nap';
     _setState(ent, STATE.WANDERING);
   }
 
   function _startRest(ent) {
-    const a = _nearestAnchor(ent);
-    ent.target = a ? { x: a.x, y: a.y } : null;
+    ent.target = _randomPoint(_edge(ent));
     ent.pending = 'rest';
     _setState(ent, STATE.WANDERING);
   }
@@ -919,8 +899,10 @@ const HabitatModule = (function () {
       // 식사 중(추적/먹기)이거나 사용자가 집고 있는 개체는 장면 배치로 방해하지 않는다
       if (ent.state === STATE.SEEKING || ent.state === STATE.EATING ||
           ent.state === STATE.DRAGGING) return;
-      const a = _nearestAnchor(ent);
-      if (a) { ent.x = a.x; ent.y = a.y; _renderPosition(ent); }
+      const p = _randomPoint(_edge(ent)); // 복귀 장면도 무작위 지점 (몰림 방지)
+      ent.x = p.x;
+      ent.y = p.y;
+      _renderPosition(ent);
       if (item.state === 'napping') _beginNap(ent);
       else _beginRest(ent);
     });
@@ -1060,8 +1042,7 @@ const HabitatModule = (function () {
     const drag = _releaseDrag(e);
     if (!drag) return;
 
-    if (drag.holding) return; // 롱프레스 쓰다듬기 종료 — 팝업 없이 마무리
-    if (!drag.moved) { // 탭 — 기존 동작 (깨우기 + 개체 팝업)
+    if (!drag.moved) { // 탭/롱프레스 — 어느 쪽이든 손을 떼면 항상 정보 팝업
       if (drag.ent.state === STATE.NAPPING) _setState(drag.ent, STATE.IDLE);
       HomeModule.openSnailPopup(drag.ent.id);
       return;
