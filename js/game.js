@@ -53,8 +53,8 @@ const GAME = (function () {
     MISSION_BONUS_COINS: 20,   // 3개 완주 보너스 코인
     MISSION_BONUS_FOOD: 1,     // 3개 완주 보너스 상추
 
-    // 쓰다듬기
-    PET_HAPPINESS: 5,
+    // 쓰다듬기 (v1.9.0: 5→20 — 밸런스 문서 §2 참고)
+    PET_HAPPINESS: 20,
 
     // 여행 보내기 (세대 교체)
     GRADUATE_MIN_LEVEL: 20,

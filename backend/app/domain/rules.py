@@ -27,8 +27,8 @@ CONFIG = {
     "MISSION_REWARD_COINS": 10,
     "MISSION_BONUS_COINS": 20,
     "MISSION_BONUS_FOOD": 1,
-    # 쓰다듬기
-    "PET_HAPPINESS": 5,
+    # 쓰다듬기 (v1.9.0: 5→20 — 밸런스 문서 §2)
+    "PET_HAPPINESS": 20,
     # 성장
     "EXP_PER_LEVEL": 5,
     "HATCH_HUNGER": 40,

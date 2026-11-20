@@ -71,6 +71,26 @@ class GoogleLinkIn(BaseModel):
     idToken: str
 
 
+def _verify_google(id_token: str) -> dict:
+    """Google idToken 검증 — 성공 시 tokeninfo dict 반환 (sub/name/aud ...)."""
+    if not settings.google_client_id:
+        raise ApiError(501, "google_not_configured", "서버에 Google 클라이언트가 설정되지 않았습니다.")
+    resp = httpx.get("https://oauth2.googleapis.com/tokeninfo", params={"id_token": id_token}, timeout=10)
+    if resp.status_code != 200:
+        raise ApiError(401, "google_invalid", "Google 토큰 검증에 실패했습니다.")
+    info = resp.json()
+    if info.get("aud") != settings.google_client_id:
+        raise ApiError(401, "google_invalid", "Google 클라이언트가 일치하지 않습니다.")
+    return info
+
+
+def _find_by_google(db: Session, google_id: str) -> models.User | None:
+    return db.execute(select(models.User).where(
+        models.User.provider == "google",
+        models.User.provider_user_id == google_id,
+    )).scalar_one_or_none()
+
+
 @router.post("/link/google", response_model=TokenPair)
 def link_google(
     body: GoogleLinkIn,
@@ -78,29 +98,30 @@ def link_google(
     db: Session = Depends(get_db),
 ) -> TokenPair:
     """게스트 계정을 유지한 채 Google 인증 수단만 연결한다 (데이터 이관 없음)."""
-    if not settings.google_client_id:
-        raise ApiError(501, "google_not_configured", "서버에 Google 클라이언트가 설정되지 않았습니다.")
-
-    resp = httpx.get("https://oauth2.googleapis.com/tokeninfo", params={"id_token": body.idToken}, timeout=10)
-    if resp.status_code != 200:
-        raise ApiError(401, "google_invalid", "Google 토큰 검증에 실패했습니다.")
-    info = resp.json()
-    if info.get("aud") != settings.google_client_id:
-        raise ApiError(401, "google_invalid", "Google 클라이언트가 일치하지 않습니다.")
-
-    google_id = info["sub"]
-    existing = db.execute(select(models.User).where(
-        models.User.provider == "google",
-        models.User.provider_user_id == google_id,
-    )).scalar_one_or_none()
+    info = _verify_google(body.idToken)
+    existing = _find_by_google(db, info["sub"])
     if existing is not None and existing.id != user.id:
         # 자동 병합 금지 — 프론트가 충돌 화면을 표시한다
         raise ApiError(409, "social_conflict", "이미 다른 계정에 연결된 Google 계정입니다.")
 
     user.auth_type = "social"
     user.provider = "google"
-    user.provider_user_id = google_id
+    user.provider_user_id = info["sub"]
     user.nickname = user.nickname or info.get("name")
     tokens = _issue_tokens(db, user)
+    db.commit()
+    return tokens
+
+
+@router.post("/google", response_model=TokenPair)
+def login_google(body: GoogleLinkIn, db: Session = Depends(get_db)) -> TokenPair:
+    """Google 계정으로 로그인 (기기 이전) — 연결해 둔 계정의 토큰을 발급한다."""
+    info = _verify_google(body.idToken)
+    existing = _find_by_google(db, info["sub"])
+    if existing is None:
+        raise ApiError(404, "no_linked_account", "이 Google 계정에 연결된 달팽이가 없어요.")
+    if existing.suspended_at is not None:
+        raise ApiError(403, "suspended", "이용이 정지된 계정입니다. 운영자에게 문의해주세요.")
+    tokens = _issue_tokens(db, existing)
     db.commit()
     return tokens

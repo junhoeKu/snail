@@ -2,7 +2,7 @@
  * Snail 서비스 워커 — 정적 자산 캐시 우선 (오프라인 실행)
  * CACHE_VERSION을 올리면 다음 방문 시 새 캐시로 교체된다.
  */
-const CACHE_VERSION = 'snail-v1.8.0';
+const CACHE_VERSION = 'snail-v1.9.1';
 
 const PRECACHE = [
   '.',
@@ -18,6 +18,7 @@ const PRECACHE = [
   'js/db.js',
   'js/game.js',
   'js/toast.js',
+  'js/track.js',
   'js/api.js',
   'js/sound.js',
   'js/fx.js',
@@ -36,7 +37,6 @@ const PRECACHE = [
   'assets/backgrounds/bg_moss.jpg',
   'assets/backgrounds/bg_pond.jpg',
   'assets/backgrounds/bg_fern.jpg',
-  'assets/backgrounds/fg_grass.png',
   'assets/visitors/visitor_butterfly.png',
   'assets/visitors/visitor_ladybug.png',
   'assets/visitors/visitor_firefly.png',
@@ -122,6 +122,8 @@ self.addEventListener('fetch', function (event) {
   if (event.request.method !== 'GET') return;
   // 서버 API는 절대 캐시하지 않는다 — 낡은 게임 상태 응답 방지
   if (event.request.url.indexOf('/v1/') !== -1) return;
+  // 도리존 집계 스크립트는 캐시하지 않는다 — 허브 쪽에서 고치면 바로 반영되도록
+  if (event.request.url.indexOf('//dorizone.com/') !== -1) return;
 
   // config.js는 네트워크 우선 (설정 변경이 즉시 반영되도록, 오프라인 시 캐시 폴백)
   if (event.request.url.indexOf('config.js') !== -1) {

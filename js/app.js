@@ -355,9 +355,16 @@ const App = (function () {
       _claimDailyReward();
     }
 
+    // 도리존 집계: 열어둔 채 날이 바뀌어 돌아오면 방문을 다시 기록한다
+    Track.resume(DB.today());
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) Track.resume(DB.today());
+    });
+
     applyBackground();
     applyWeather();
     refreshHeader();
+    renderLiveBanner();
     navigate('home');
     HabitatModule.init();
     _startTick();
@@ -417,6 +424,10 @@ const App = (function () {
     const el = document.getElementById('live-banner');
     if (!el) return;
     const items = [];
+    // 옛 주소(GitHub Pages)로 온 사람에게 새 주소 안내 — 저장은 주소별이라 여기서 키운 달팽이는 여기 남는다
+    const moved = location.hostname.indexOf('github.io') !== -1;
+    if (moved) items.push('🏠 새 집이 생겼어요 → snail.dorizone.com (눌러서 이동 · 새로 시작하는 분은 여기로!)');
+    el.onclick = moved ? function () { location.href = 'https://snail.dorizone.com'; } : null;
     _liveEvents.forEach(function (e) { items.push('🌟 ' + e.title); });
     _notices.filter(function (n) { return n.priority !== 'urgent'; })
       .forEach(function (n) { items.push('📢 ' + n.title); });

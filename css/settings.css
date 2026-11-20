@@ -24,6 +24,18 @@
   background: rgba(120, 145, 100, 0.12);
 }
 
+/* ── 계정 패널 ─────────────────────── */
+.google-btn-slot {
+  display: flex;
+  justify-content: center;
+  margin: 14px 0;
+  min-height: 44px;
+}
+
+.account-hint {
+  margin-top: 4px;
+}
+
 /* ── 설정 ───────────────────────────── */
 .settings-subtitle {
   font-size: 15px;

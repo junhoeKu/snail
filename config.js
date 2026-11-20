@@ -10,7 +10,9 @@
  *   http://localhost:31111/?api=http://localhost:8000   ← 켜기(기억됨)
  *   http://localhost:31111/?api=                        ← 끄기
  */
-window.SNAIL_API_BASE = 'https://snail-production-2a89.up.railway.app';
+// 2026-11: Railway 백엔드가 내려가 있어 로컬 모드로 운영한다. 서버를 다시 올리면 주소를 넣는다
+// (이전 값: https://snail-production-2a89.up.railway.app).
+window.SNAIL_API_BASE = '';
 
 window.SNAIL_GOOGLE_CLIENT_ID =
   "328398093853-he4elssdif0a5u318k114d899lhmedco.apps.googleusercontent.com";

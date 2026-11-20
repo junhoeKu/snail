@@ -7,7 +7,7 @@
     "check": "for f in js/*.js; do node --check \"$f\"; done",
     "test:game": "node tests/game.test.js",
     "test:integration": "node tests/integration.test.js",
-    "test": "node tests/game.test.js && node tests/integration.test.js"
+    "test": "node tests/game.test.js && node tests/integration.test.js && node tests/track.test.js"
   },
   "devDependencies": {
     "jsdom": "^24.1.0"
