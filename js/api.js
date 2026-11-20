@@ -266,6 +266,7 @@ const Api = (function () {
             break;
           case 'mission_all_done':
             Toast.show('🎉 오늘의 돌봄 완주! +' + e.coins + ' 코인, 상추 +' + e.food);
+            Track.done();
             break;
           case 'keeper_levelup':
             Sound.play('fanfare');

@@ -16,7 +16,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const localDateKey = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 
 const NAMESPACES = {
-  'js/db.js': 'DB', 'js/game.js': 'GAME', 'js/toast.js': 'Toast', 'js/api.js': 'Api',
+  'js/db.js': 'DB', 'js/game.js': 'GAME', 'js/toast.js': 'Toast', 'js/track.js': 'Track', 'js/api.js': 'Api',
   'js/sound.js': 'Sound', 'js/fx.js': 'FX',
   'js/stats.js': 'StatsModule', 'js/dex.js': 'DexModule', 'js/home.js': 'HomeModule', 'js/shop.js': 'ShopModule',
   'js/deco.js': 'DecoModule', 'js/explore.js': 'ExploreModule', 'js/race.js': 'RaceModule', 'js/quiz.js': 'QuizModule', 'js/share.js': 'ShareModule', 'js/settings.js': 'SettingsModule',

@@ -140,6 +140,7 @@ const HomeModule = (function () {
 
   /** 행동 이벤트 → 미션 진행 반영 (서버 모드는 서버가 판정) */
   function _recordMissions(events) {
+    Track.care(events, DB.today());
     if (Api.enabled()) return;
     const kinds = [];
     if (events.indexOf('fed') !== -1) kinds.push('feed');
@@ -162,6 +163,7 @@ const HomeModule = (function () {
         Toast.show('🎉 오늘의 돌봄 완주! +' + GAME.CONFIG.MISSION_BONUS_COINS +
           ' 코인, 상추 +' + GAME.CONFIG.MISSION_BONUS_FOOD);
         DB.Journal.add('mission', '오늘의 돌봄을 모두 완료했어요.');
+        Track.done();
         App.gainKeeperXp('mission_all');
       }
     });
